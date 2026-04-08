@@ -1,41 +1,51 @@
 import streamlit as st
 import pandas as pd
+import plotly.express as px # Recomendado para gráficos interactivos
 
-st.set_page_config(page_title="Portal de Satisfacción", layout="wide")
-
-st.title("📊 Indicadores de Satisfacción")
-
-# Configuración de la URL de Google Sheets
-# Nota: Convertimos la URL normal en una URL de exportación CSV
-sheet_id = "1ER40wQho6sPz24oBvEUmQnsHnAxrnzmP3ppPukMy24Y"
-sheet_name = "Resp.%20de%20form.%20de%20Satisf." # El nombre de la hoja con codificación URL
-url = f"https://docs.google.com/spreadsheets/d/{sheet_id}/gviz/tq?tqx=out:csv&sheet={sheet_name}"
-
-@st.cache_data
-def load_data():
-    df = pd.read_csv(url)
-    return df
+# ... (Mantener el código anterior de carga de datos) ...
 
 try:
-    data = load_data()
+    df = load_data()
     
-    # --- Filtros en la barra lateral ---
-    st.sidebar.header("Filtros")
-    # Ejemplo: Si tienes una columna llamada 'Fecha' o 'Sucursal'
-    # sucursal = st.sidebar.multiselect("Selecciona Sucursal", options=data["Sucursal"].unique())
+    st.header("Análisis Detallado de Satisfacción")
 
-    # --- Visualización de Datos ---
-    st.write("Datos recientes de la encuesta:")
-    st.dataframe(data.head())
+    # 1. Definimos el nombre exacto de la columna (Cópialo tal cual aparece en tu Sheet)
+    pregunta_turno = "Cuán satisfecho estuvo con la facilidad para obtener un turno que se adapte a sus necesidades?"
 
-    # --- Ejemplo de Métrica ---
-    if not data.empty:
-        total_respuestas = len(data)
-        st.metric("Total de Encuestas", total_respuestas)
+    if pregunta_turno in df.columns:
+        st.subheader("Indicador: Facilidad de Turnos")
         
-        # Aquí puedes agregar gráficos como:
-        # st.bar_chart(data["Calificación"].value_counts())
+        # Limpieza: Asegurarnos de que los valores sean numéricos
+        df[pregunta_turno] = pd.to_numeric(df[pregunta_turno], errors='coerce')
+        df = df.dropna(subset=[pregunta_turno])
+
+        # Cálculos de métricas
+        promedio_turno = df[pregunta_turno].mean()
+        max_valor = 5 # Cambia a 10 si tu escala es del 1 al 10
+        satisfaccion_pct = (promedio_turno / max_valor) * 100
+
+        # Mostrar métricas en columnas
+        col1, col2, col3 = st.columns(3)
+        with col1:
+            st.metric("Promedio", f"{promedio_turno:.2f} / {max_valor}")
+        with col2:
+            st.metric("% Satisfacción", f"{satisfaccion_pct:.1f}%")
+        with col3:
+            total_votos = len(df[pregunta_turno])
+            st.metric("Total Respuestas", total_votos)
+
+        # 2. Gráfico de distribución para esta pregunta
+        st.write("Distribución de calificaciones:")
+        conteo_votos = df[pregunta_turno].value_counts().sort_index().reset_index()
+        conteo_votos.columns = ['Calificación', 'Cantidad']
+        
+        fig = px.bar(conteo_votos, x='Calificación', y='Cantidad', 
+                     color='Cantidad', color_continuous_scale='RdYlGn',
+                     text_auto=True)
+        st.plotly_chart(fig, use_container_width=True)
+
+    else:
+        st.warning(f"No se encontró la columna: {pregunta_turno}. Revisa los encabezados de tu Sheet.")
 
 except Exception as e:
-    st.error(f"Error al conectar con Google Sheets: {e}")
-    st.info("Asegúrate de que el Google Sheet esté compartido como 'Cualquier persona con el enlace'.")
+    st.error(f"Error procesando indicadores: {e}")
