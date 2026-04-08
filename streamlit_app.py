@@ -1,51 +1,49 @@
 import streamlit as st
 import pandas as pd
-import plotly.express as px # Recomendado para gráficos interactivos
+import plotly.express as px
 
-# ... (Mantener el código anterior de carga de datos) ...
+st.set_page_config(page_title="Portal de Satisfacción", layout="wide")
 
+st.title("📊 Indicadores de Satisfacción")
+
+# --- 1. DEFINICIÓN DE LA FUNCIÓN (Esto es lo que falta) ---
+@st.cache_data
+def load_data():
+    sheet_id = "1ER40wQho6sPz24oBvEUmQnsHnAxrnzmP3ppPukMy24Y"
+    sheet_name = "Resp.%20de%20form.%20de%20Satisf."
+    url = f"https://docs.google.com/spreadsheets/d/{sheet_id}/gviz/tq?tqx=out:csv&sheet={sheet_name}"
+    df = pd.read_csv(url)
+    return df
+
+# --- 2. EJECUCIÓN Y CÁLCULOS ---
 try:
-    df = load_data()
+    # Aquí llamamos a la función
+    data = load_data()
     
     st.header("Análisis Detallado de Satisfacción")
 
-    # 1. Definimos el nombre exacto de la columna (Cópialo tal cual aparece en tu Sheet)
+    # Nombre exacto de la columna de tu Sheet
     pregunta_turno = "Cuán satisfecho estuvo con la facilidad para obtener un turno que se adapte a sus necesidades?"
 
-    if pregunta_turno in df.columns:
-        st.subheader("Indicador: Facilidad de Turnos")
-        
-        # Limpieza: Asegurarnos de que los valores sean numéricos
-        df[pregunta_turno] = pd.to_numeric(df[pregunta_turno], errors='coerce')
-        df = df.dropna(subset=[pregunta_turno])
+    if pregunta_turno in data.columns:
+        # Convertir a numérico por si hay errores
+        data[pregunta_turno] = pd.to_numeric(data[pregunta_turno], errors='coerce')
+        df_limpio = data.dropna(subset=[pregunta_turno])
 
-        # Cálculos de métricas
-        promedio_turno = df[pregunta_turno].mean()
-        max_valor = 5 # Cambia a 10 si tu escala es del 1 al 10
-        satisfaccion_pct = (promedio_turno / max_valor) * 100
+        # Métricas
+        promedio = df_limpio[pregunta_turno].mean()
+        col1, col2 = st.columns(2)
+        col1.metric("Puntaje Promedio", f"{promedio:.2f} / 5")
+        col2.metric("Total Respuestas", len(df_limpio))
 
-        # Mostrar métricas en columnas
-        col1, col2, col3 = st.columns(3)
-        with col1:
-            st.metric("Promedio", f"{promedio_turno:.2f} / {max_valor}")
-        with col2:
-            st.metric("% Satisfacción", f"{satisfaccion_pct:.1f}%")
-        with col3:
-            total_votos = len(df[pregunta_turno])
-            st.metric("Total Respuestas", total_votos)
-
-        # 2. Gráfico de distribución para esta pregunta
-        st.write("Distribución de calificaciones:")
-        conteo_votos = df[pregunta_turno].value_counts().sort_index().reset_index()
-        conteo_votos.columns = ['Calificación', 'Cantidad']
-        
-        fig = px.bar(conteo_votos, x='Calificación', y='Cantidad', 
-                     color='Cantidad', color_continuous_scale='RdYlGn',
-                     text_auto=True)
+        # Gráfico
+        fig = px.histogram(df_limpio, x=pregunta_turno, 
+                           title="Distribución de Respuestas",
+                           nbins=5, 
+                           color_discrete_sequence=['#00CC96'])
         st.plotly_chart(fig, use_container_width=True)
-
     else:
-        st.warning(f"No se encontró la columna: {pregunta_turno}. Revisa los encabezados de tu Sheet.")
+        st.error(f"No se encontró la columna. Columnas disponibles: {list(data.columns)}")
 
 except Exception as e:
     st.error(f"Error procesando indicadores: {e}")
