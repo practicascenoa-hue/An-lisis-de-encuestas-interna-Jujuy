@@ -1,8 +1,8 @@
 import streamlit as st
 import pandas as pd
 
-st.set_page_config(page_title="Portal de Calidad Cenoa", layout="wide")
-st.title("📊 Portal de Calidad Cenoa")
+st.set_page_config(page_title="CALIDAD TALLER CENOA", layout="wide")
+st.title("📊 ENCUESTAS DE SATISFACCIÓN")
 
 # URL directa al CSV
 SHEET_URL = "https://docs.google.com/spreadsheets/d/1ER40wQho6sPz24oBvEUmQnsHnAxrnzmP3ppPukMy24Y/export?format=csv&gid=309618647"
@@ -18,11 +18,16 @@ def load_data():
 df = load_data()
 
 if df is not None:
-    # NOMBRE EXACTO DE TU COLUMNA (Copiado de tu imagen)
-    col_nps = "En una escala del 1 al 10, donde 1 es terrible y 10 es excelente ¿Cuán satisfecho estuvo con la facilidad para obtener un turno que se adapte a sus necesidades?:"
+    # --- BUSCADOR AUTOMÁTICO DE COLUMNA NPS ---
+    # Buscamos cualquier columna que hable de satisfacción o escala del 1 al 10
+    col_nps = None
+    for c in df.columns:
+        if "escala del 1 al 10" in c.lower() or "satisfecho" in c.lower():
+            col_nps = c
+            break
     
-    # Si esa columna existe en el archivo
-    if col_nps in df.columns:
+    if col_nps:
+        # Limpieza de datos
         df[col_nps] = pd.to_numeric(df[col_nps], errors='coerce')
         df = df.dropna(subset=[col_nps])
         total = len(df)
@@ -33,18 +38,20 @@ if df is not None:
             pas = len(df[(df[col_nps] >= 7) & (df[col_nps] <= 8)])
             nps_val = ((prom - det) / total) * 100
             
+            # Mostrar métricas en grande
             c1, c2, c3, c4 = st.columns(4)
             c1.metric("NPS Global", f"{int(nps_val)}")
             c2.metric("Promotores", prom)
             c3.metric("Pasivos", pas)
             c4.metric("Detractores", det)
             
-            st.subheader("Distribución de Notas")
+            st.subheader("Distribución de Satisfacción")
+            # Crear un gráfico de barras simple
             st.bar_chart(df[col_nps].value_counts().sort_index())
         else:
-            st.warning("Hay respuestas, pero no tienen números todavía.")
+            st.warning("No hay datos numéricos en la columna de satisfacción.")
     else:
-        st.error("Aún no detecto la columna de notas. Revisa que el nombre sea idéntico.")
+        st.error("No se encontró la columna de satisfacción. Verifica los títulos en tu Excel.")
     
-    st.subheader("Base de Datos Completa")
+    st.subheader("Vista previa de respuestas")
     st.write(df)
