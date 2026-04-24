@@ -8,7 +8,7 @@ st.set_page_config(
     layout="wide"
 )
 
-st.title("📊 Portal de Satisfacción y NPS")
+st.title("📊 Medición de Satisfacción Cliente")
 st.markdown("---")
 
 # URL de exportación directa (formato CSV)
