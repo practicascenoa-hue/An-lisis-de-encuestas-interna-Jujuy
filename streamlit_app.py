@@ -1,93 +1,56 @@
 import streamlit as st
 import pandas as pd
-import plotly.express as px
 
-# 1. Configuración del Portal
-st.set_page_config(page_title="Dashboard Chapa y Pintura", layout="wide")
+# Configuración de la página
+st.set_page_config(page_title="Dashboard de Satisfacción - Cenoa", layout="wide")
 
-st.title("🚗 Panel de Indicadores - Taller de Chapa y Pintura")
-st.markdown("---")
+st.title("📊 Portal de Monitoreo NPS - Taller Cenoa")
 
-# 2. Carga de Datos
-@st.cache_data(ttl=300)
+# URL de tu Google Sheet convertido a formato CSV
+SHEET_URL = "https://docs.google.com/spreadsheets/d/1ER40wQho6sPz24oBvEUmQnsHnAxrnzmP3ppPukMy24Y/export?format=csv&gid=309618647"
+
+@st.cache_data
 def load_data():
-    sheet_id = "1ER40wQho6sPz24oBvEUmQnsHnAxrnzmP3ppPukMy24Y"
-    sheet_name = "Resp.%20de%20form.%20de%20Satisf."
-    url = f"https://docs.google.com/spreadsheets/d/{sheet_id}/gviz/tq?tqx=out:csv&sheet={sheet_name}"
-    df = pd.read_csv(url)
-    df.columns = df.columns.str.strip()
+    # Cargamos los datos
+    df = pd.read_csv(SHEET_URL)
     return df
 
 try:
     df = load_data()
 
-    # --- DEFINICIÓN DE PREGUNTAS (Tal cual las escribiste) ---
-    p_nps = "¿Qué tan probable es que recomiendes el servicio del Taller de Chapa y Pintura a familiares o amigos?"
-    p_tiempo = "¿Qué tan satisfecho estás con el tiempo que tardaron en completar la reparación?"
-    p_calidad = "¿Cómo calificarías la calidad del trabajo de chapa y pintura realizado en su vehículo?\""
-    p_ambiente = "¿Cuán satisfecho estuvo con el ambiente del Taller (recepción del servicio, estacionamiento del cliente, zona de espera, etc.)?"
-    p_asesor = "¿Cuán satisfecho estuvo con la atención, cortesía y claridad del Asesor de Servicio para explicarle el trabajo y responder sus consultas?"
-    p_turno = "¿Cuán satisfecho estuvo con la facilidad para obtener un turno que se adapte a sus necesidades?"
+    # --- LÓGICA DE NPS ---
+    # Asumiendo que existe una columna llamada 'Puntuación' o 'Recomendación' (escala 0-10)
+    # Si el nombre es distinto, cámbialo aquí:
+    col_puntuacion = 'Puntuación' 
 
-    # --- SECCIÓN 1: MÉTRICAS PRINCIPALES ---
-    col1, col2, col3 = st.columns(3)
+    if col_puntuacion in df.columns:
+        total_respuestas = len(df)
+        promotores = len(df[df[col_puntuacion] >= 9])
+        detractores = len(df[df[col_puntuacion] <= 6])
+        pasivos = len(df[(df[col_puntuacion] == 7) | (df[col_puntuacion] == 8)])
 
-    # Indicador 1: NPS (Lealtad)
-    if p_nps in df.columns:
-        nps_data = pd.to_numeric(df[p_nps], errors='coerce').dropna()
-        promotores = len(nps_data[nps_data >= 9])
-        detractores = len(nps_data[nps_data <= 6])
-        nps_score = ((promotores - detractores) / len(nps_data)) * 100 if len(nps_data) > 0 else 0
-        col1.metric("NPS (Net Promoter Score)", f"{int(nps_score)}", help="Objetivo: >70")
+        nps = ((promotores - detractores) / total_respuestas) * 100
 
-    # Indicador 2: Calidad Percibida (Promedio)
-    if p_calidad in df.columns:
-        avg_calidad = pd.to_numeric(df[p_calidad], errors='coerce').mean()
-        col2.metric("Índice de Calidad", f"{avg_calidad:.2f} / 10")
+        # Mostrar métricas principales
+        col1, col2, col3, col4 = st.columns(4)
+        col1.metric("NPS Total", f"{int(nps)}")
+        col2.metric("Promotores (9-10)", f"{promotores}")
+        col3.metric("Pasivos (7-8)", f"{pasivos}")
+        col4.metric("Detractores (0-6)", f"{detractores}")
 
-    # Indicador 3: Eficiencia en Tiempos
-    if p_tiempo in df.columns:
-        avg_tiempo = pd.to_numeric(df[p_tiempo], errors='coerce').mean()
-        col3.metric("Satisfacción Tiempo", f"{avg_tiempo:.2f} / 10")
+        # Gráfico de barras simple
+        st.subheader("Distribución de Feedback")
+        chart_data = pd.DataFrame({
+            'Categoría': ['Promotores', 'Pasivos', 'Detractores'],
+            'Cantidad': [promotores, pasivos, detractores]
+        })
+        st.bar_chart(data=chart_data, x='Categoría', y='Cantidad')
+    else:
+        st.warning(f"No se encontró la columna '{col_puntuacion}'. Por favor, verifica el nombre en tu Google Sheet.")
 
-    st.markdown("---")
-
-    # --- SECCIÓN 2: ANÁLISIS POR CATEGORÍA ---
-    st.header("Análisis de Procesos")
-    c1, c2 = st.columns(2)
-
-    with c1:
-        # Gráfico de Radar o Barras para comparar áreas
-        indicadores = {
-            "Turnos": pd.to_numeric(df[p_turno], errors='coerce').mean() if p_turno in df.columns else 0,
-            "Asesor": pd.to_numeric(df[p_asesor], errors='coerce').mean() if p_asesor in df.columns else 0,
-            "Ambiente": pd.to_numeric(df[p_ambiente], errors='coerce').mean() if p_ambiente in df.columns else 0
-        }
-        df_radar = pd.DataFrame(dict(r=list(indicadores.values()), theta=list(indicadores.keys())))
-        fig_radar = px.line_polar(df_radar, r='r', theta='theta', line_close=True, title="Puntajes por Área (Escala 1-10)")
-        fig_radar.update_traces(fill='toself')
-        st.plotly_chart(fig_radar, use_container_width=True)
-
-    with c2:
-        # Histograma de calidad del trabajo
-        if p_calidad in df.columns:
-            fig_hist = px.histogram(df, x=p_calidad, nbins=10, 
-                                   title="Distribución de Calidad del Trabajo",
-                                   color_discrete_sequence=['#2ecc71'])
-            fig_hist.update_layout(xaxis_title="Calificación", yaxis_title="Cantidad de Clientes")
-            st.plotly_chart(fig_hist, use_container_width=True)
-
-    # --- SECCIÓN 3: TABLA DE ALERTAS ---
-    st.markdown("---")
-    st.subheader("⚠️ Clientes Detractores (Calificación baja en Recomendación)")
-    if p_nps in df.columns:
-        detractores_df = df[pd.to_numeric(df[p_nps], errors='coerce') <= 6]
-        if not detractores_df.empty:
-            st.warning(f"Se han detectado {len(detractores_df)} clientes insatisfechos.")
-            st.write(detractores_df)
-        else:
-            st.success("¡No hay detractores registrados!")
+    # Mostrar tabla de datos
+    with st.expander("Ver base de datos completa"):
+        st.write(df)
 
 except Exception as e:
-    st.error(f"Error al procesar el tablero: {e}")
-    st.info("Asegúrate de que los nombres de las columnas en el Sheet coincidan exactamente con las preguntas.")
+    st.error(f"Error al conectar con los datos: {e}")
