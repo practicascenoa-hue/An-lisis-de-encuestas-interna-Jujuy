@@ -1,7 +1,7 @@
 import streamlit as st
 import pandas as pd
 
-st.set_page_config(page_title="NPS Cenoa", layout="wide")
+st.set_page_config(page_title="NPS ENCUESTAS", layout="wide")
 
 st.title("📊 Medición de Satisfacción Cliente")
 
