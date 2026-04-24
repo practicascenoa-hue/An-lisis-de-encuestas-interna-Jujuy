@@ -1,12 +1,10 @@
 import streamlit as st
 import pandas as pd
 
-# Configuración de la página
 st.set_page_config(page_title="Portal de Calidad Cenoa", layout="wide")
-
 st.title("📊 Portal de Calidad Cenoa")
 
-# URL directa al CSV de tu Google Sheet
+# URL directa al CSV
 SHEET_URL = "https://docs.google.com/spreadsheets/d/1ER40wQho6sPz24oBvEUmQnsHnAxrnzmP3ppPukMy24Y/export?format=csv&gid=309618647"
 
 @st.cache_data(ttl=60)
@@ -20,14 +18,11 @@ def load_data():
 df = load_data()
 
 if df is not None:
-    # Identificar columna de puntaje
-    col_nps = None
-    for c in df.columns:
-        if any(k in c.lower() for k in ['punt', 'nota', 'nps', 'recomienda']):
-            col_nps = c
-            break
+    # NOMBRE EXACTO DE TU COLUMNA (Copiado de tu imagen)
+    col_nps = "En una escala del 1 al 10, donde 1 es terrible y 10 es excelente ¿Cuán satisfecho e:"
     
-    if col_nps:
+    # Si esa columna existe en el archivo
+    if col_nps in df.columns:
         df[col_nps] = pd.to_numeric(df[col_nps], errors='coerce')
         df = df.dropna(subset=[col_nps])
         total = len(df)
@@ -43,12 +38,13 @@ if df is not None:
             c2.metric("Promotores", prom)
             c3.metric("Pasivos", pas)
             c4.metric("Detractores", det)
+            
+            st.subheader("Distribución de Notas")
             st.bar_chart(df[col_nps].value_counts().sort_index())
         else:
-            st.warning("No hay datos numéricos aún.")
+            st.warning("Hay respuestas, pero no tienen números todavía.")
     else:
-        st.error("No se encontró columna de puntuación.")
+        st.error("Aún no detecto la columna de notas. Revisa que el nombre sea idéntico.")
     
+    st.subheader("Base de Datos Completa")
     st.write(df)
-else:
-    st.error("Error al conectar con la base de datos.")
