@@ -19,7 +19,7 @@ df = load_data()
 
 if df is not None:
     # NOMBRE EXACTO DE TU COLUMNA (Copiado de tu imagen)
-    col_nps = "En una escala del 1 al 10, donde 1 es terrible y 10 es excelente ¿Cuán satisfecho e:"
+    col_nps = "En una escala del 1 al 10, donde 1 es terrible y 10 es excelente ¿Cuán satisfecho estuvo con la facilidad para obtener un turno que se adapte a sus necesidades?:"
     
     # Si esa columna existe en el archivo
     if col_nps in df.columns:
