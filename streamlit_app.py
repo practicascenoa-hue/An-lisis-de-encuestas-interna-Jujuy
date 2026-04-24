@@ -2,87 +2,67 @@ import streamlit as st
 import pandas as pd
 
 # Configuración de la página
-st.set_page_config(
-    page_title="NPS - Planificación Taller Cenoa",
-    page_icon="📊",
-    layout="wide"
-)
+st.set_page_config(page_title="NPS - Cenoa", page_icon="📊", layout="wide")
 
-st.title("📊 Medición de Satisfacción Cliente")
-st.markdown("---")
+st.title("📊 Portal de Satisfacción y NPS")
 
-# URL de exportación directa (formato CSV)
+# URL de exportación directa
 SHEET_URL = "https://docs.google.com/spreadsheets/d/1ER40wQho6sPz24oBvEUmQnsHnAxrnzmP3ppPukMy24Y/export?format=csv&gid=309618647"
 
-@st.cache_data(ttl=600) # Se actualiza cada 10 minutos
+@st.cache_data(ttl=600)
 def load_data():
     try:
         df = pd.read_csv(SHEET_URL)
-        # Limpieza básica: eliminar filas vacías
-        df = df.dropna(how='all')
+        df = df.dropna(how='all') # Eliminar filas totalmente vacías
         return df
     except Exception as e:
-        st.error(f"Error al cargar los datos: {e}")
+        st.error(f"Error de conexión: {e}")
         return None
 
 df = load_data()
 
 if df is not None:
-    # --- Identificación de Columnas ---
-    # Basado en tu archivo, buscamos la columna de puntuación. 
-    # Si el nombre exacto es "Puntuación", "Calificación" o similar, la buscamos:
-    posibles_nombres = ['Puntuación', 'NPS', 'Calificación', '¿Qué nota nos pones?', 'Puntaje']
-    col_nps = next((c for c in posibles_nombres if c in df.columns), df.columns[0])
+    # Intentamos encontrar la columna de puntaje (NPS suele ser del 1 al 10)
+    # Buscamos columnas que contengan 'Punt' o 'Nota' o 'NPS'
+    col_nps = None
+    for c in df.columns:
+        if any(keyword in c.lower() for keyword in ['punt', 'nota', 'nps', 'recomienda']):
+            col_nps = c
+            break
+    
+    # Si no la encuentra, usamos la primera columna numérica que veamos
+    if not col_nps:
+        numeric_cols = df.select_dtypes(include=['number']).columns
+        if len(numeric_cols) > 0:
+            col_nps = numeric_cols[0]
 
-    # Convertir a numérico por si hay textos
-    df[col_nps] = pd.to_numeric(df[col_nps], errors='coerce')
-    df = df.dropna(subset=[col_nps])
-
-    # --- Cálculos de NPS ---
-    total_respuestas = len(df)
-    promotores = len(df[df[col_nps] >= 9])
-    detractores = len(df[df[col_nps] <= 6])
-    pasivos = len(df[(df[col_nps] >= 7) & (df[col_nps] <= 8)])
-
-    if total_respuestas > 0:
-        nps_score = ((promotores - detractores) / total_respuestas) * 100
-    else:
-        nps_score = 0
-
-    # --- Interfaz de Métricas ---
-    c1, c2, c3, c4 = st.columns(4)
-    c1.metric("NPS Global", f"{int(nps_score)}")
-    c2.metric("👍 Promotores", f"{promotores}", f"{int(promotores/total_respuestas*100)}%")
-    c3.metric("😐 Pasivos", f"{pasivos}", f"{int(pasivos/total_respuestas*100)}%")
-    c4.metric("👎 Detractores", f"{detractores}", f"{int(detractores/total_respuestas*100)}%")
-
-    st.markdown("---")
-
-    # --- Gráficos ---
-    col_izq, col_der = st.columns(2)
-
-    with col_izq:
-        st.subheader("Distribución de Categorías")
-        dist_data = pd.DataFrame({
-            'Categoría': ['Promotores', 'Pasivos', 'Detractores'],
-            'Cantidad': [promotores, pasivos, detractores]
-        })
-        st.bar_chart(data=dist_data, x='Categoría', y='Cantidad', color='#29b5e8')
-
-    with col_der:
-        st.subheader("Histórico de Respuestas")
-        # Si tienes una columna de fecha, la usamos para un gráfico de líneas
-        col_fecha = next((c for c in ['Marca temporal', 'Fecha'] if c in df.columns), None)
-        if col_fecha:
-            df[col_fecha] = pd.to_datetime(df[col_fecha])
-            df_fecha = df.groupby(df[col_fecha].dt.date)[col_nps].count()
-            st.line_chart(df_fecha)
+    if col_nps:
+        # Limpiamos datos no numéricos
+        df[col_nps] = pd.to_numeric(df[col_nps], errors='coerce')
+        df = df.dropna(subset=[col_nps])
+        
+        total = len(df)
+        
+        if total > 0:
+            promotores = len(df[df[col_nps] >= 9])
+            detractores = len(df[df[col_nps] <= 6])
+            pasivos = len(df[(df[col_nps] >= 7) & (df[col_nps] <= 8)])
+            
+            nps_score = ((promotores - detractores) / total) * 100
+            
+            # Métricas con protección contra división por cero
+            c1, c2, c3, c4 = st.columns(4)
+            c1.metric("NPS Global", f"{int(nps_score)}")
+            c2.metric("👍 Promotores", f"{promotores}", f"{int((promotores/total)*100)}%")
+            c3.metric("😐 Pasivos", f"{pasivos}", f"{int((pasivos/total)*100)}%")
+            c4.metric("👎 Detractores", f"{detractores}", f"{int((detractores/total)*100)}%")
+            
+            st.bar_chart(df[col_nps].value_counts().sort_index())
         else:
-            st.info("No se encontró columna de fecha para el gráfico histórico.")
+            st.warning("Se encontró la columna, pero no hay datos numéricos (puntuaciones) todavía.")
+    else:
+        st.error("No pudimos identificar la columna de puntuación. Verifica que el Google Sheet tenga una columna llamada 'Puntuación'.")
+        st.write("Columnas detectadas:", df.columns.tolist())
 
-    # --- Tabla de Datos ---
-    st.subheader("Detalle de Encuestas")
-    st.dataframe(df, use_container_width=True)
-
-else:
-    st.stop()
+    st.subheader("Datos actuales")
+    st.dataframe(df)
