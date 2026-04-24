@@ -1,18 +1,11 @@
 import streamlit as st
 import pandas as pd
 
-# 1. Configuración de Estilo
+# 1. Configuración básica
 st.set_page_config(page_title="Dashboard Calidad Cenoa", layout="wide")
 
-# CSS personalizado para mejorar el diseño
-st.markdown("""
-    <style>
-    .main { background-color: #f5f7f9; }
-    .stMetric { background-color: #ffffff; padding: 15px; border-radius: 10px; box-shadow: 0 2px 4px rgba(0,0,0,0.05); }
-    </style>
-    """, unsafe_allow_stdio=True)
-
-st.title("🚀 Dashboard de Calidad y Satisfacción")
+# Título del Portal
+st.title("🚀 Dashboard de Calidad Cenoa (NPS & CSAT)")
 st.markdown("---")
 
 # 2. Carga de Datos
@@ -29,61 +22,64 @@ def load_data():
 df = load_data()
 
 if df is not None:
-    # Buscador automático de columna de notas
-    col_nps = next((c for c in df.columns if "escala del 1 al 10" in c.lower() or "satisfecho" in c.lower()), None)
+    # --- BUSCADOR AUTOMÁTICO DE COLUMNA DE SATISFACCIÓN ---
+    # Buscamos la columna que contenga "escala" o "satisfecho"
+    col_nps = next((c for c in df.columns if "escala" in c.lower() or "satisfecho" in c.lower()), None)
 
     if col_nps:
+        # Limpieza de datos: Convertimos a número y quitamos vacíos
         df[col_nps] = pd.to_numeric(df[col_nps], errors='coerce')
         df = df.dropna(subset=[col_nps])
         
-        # Cálculos
         total = len(df)
-        prom = len(df[df[col_nps] >= 9])
-        det = len(df[df[col_nps] <= 6])
-        pas = len(df[(df[col_nps] >= 7) & (df[col_nps] <= 8)])
-        nps_val = ((prom - det) / total) * 100
-        csat_val = df[col_nps].mean() # El promedio de todas las notas
-
-        # --- FILA 1: MÉTRICAS PRINCIPALES ---
-        m1, m2, m3 = st.columns(3)
         
-        with m1:
-            st.metric("NPS (Net Promoter Score)", f"{int(nps_val)} pts")
-            st.caption("Fórmula: %Promotores - %Detractores")
+        if total > 0:
+            # Cálculos de indicadores
+            prom = len(df[df[col_nps] >= 9])
+            det = len(df[df[col_nps] <= 6])
+            pas = len(df[(df[col_nps] >= 7) & (df[col_nps] <= 8)])
             
-        with m2:
-            st.metric("CSAT (Satisfacción Media)", f"{csat_val:.2f} / 10")
-            st.progress(csat_val / 10)
+            nps_val = ((prom - det) / total) * 100
+            csat_val = df[col_nps].mean()
+
+            # --- VISTA AMIGABLE (Métricas) ---
+            c1, c2, c3 = st.columns(3)
+            with c1:
+                st.metric("NPS Global", f"{int(nps_val)} pts")
+                st.info("🎯 Objetivo: > 70")
+            with c2:
+                st.metric("CSAT (Promedio)", f"{csat_val:.2f} / 10")
+                st.progress(csat_val / 10)
+            with c3:
+                st.metric("Total Respuestas", total)
+                st.write("✅ Datos actualizados")
+
+            st.markdown("---")
+
+            # --- GRÁFICOS ---
+            col_izq, col_der = st.columns(2)
             
-        with m3:
-            st.metric("Total Respuestas", f"{total} encuestas")
-            st.caption("Volumen total de feedback recibido")
+            with col_izq:
+                st.subheader("📊 Distribución de Clientes")
+                labels = ["Promotores (9-10)", "Pasivos (7-8)", "Detractores (0-6)"]
+                valores = [prom, pas, det]
+                # Gráfico de barras simple pero efectivo
+                st.bar_chart(pd.DataFrame({"Cantidad": valores}, index=labels))
 
-        st.markdown("---")
+            with col_der:
+                st.subheader("📈 Frecuencia de Notas")
+                # Histograma de las notas del 1 al 10
+                notas_count = df[col_nps].value_counts().sort_index()
+                st.area_chart(notas_count)
 
-        # --- FILA 2: GRÁFICOS ---
-        g1, g2 = st.columns([1, 1])
-
-        with g1:
-            st.subheader("📊 Distribución por Categoría")
-            # Crear DataFrame para el gráfico de torta/dona
-            df_pie = pd.DataFrame({
-                "Categoría": ["Promotores (9-10)", "Pasivos (7-8)", "Detractores (0-6)"],
-                "Cant": [prom, pas, det]
-            })
-            st.bar_chart(data=df_pie, x="Categoría", y="Cant", color="#29b5e8")
-
-        with g2:
-            st.subheader("📈 Tendencia de Notas")
-            counts = df[col_nps].value_counts().sort_index()
-            st.area_chart(counts)
-
-        # --- FILA 3: TABLA DETALLADA ---
-        st.markdown("---")
-        with st.expander("🔍 Ver detalle de todas las respuestas"):
-            st.dataframe(df, use_container_width=True)
-            
+        else:
+            st.warning("Se encontró la columna, pero no hay datos numéricos aún.")
     else:
-        st.error("No se encontró la columna de satisfacción en el Excel.")
+        st.error("No se detectó la columna de satisfacción. Revisa los títulos en el Excel.")
+    
+    # Vista de tabla al final
+    with st.expander("Ver Base de Datos Completa"):
+        st.write(df)
+
 else:
-    st.error("No se pudo conectar con la base de datos.")
+    st.error("No se pudo conectar con la fuente de datos.")
