@@ -7,15 +7,12 @@ from datetime import datetime
 st.set_page_config(page_title="Dashboard Calidad Cenoa", layout="wide")
 
 # --- BARRA LATERAL (SIDEBAR) ---
-st.sidebar.header("⚙️ Filtros de Control")
+st.sidebar.header("Seleccionar fecha para filtrar análisis")
 
 # Selector de Rango de Fechas con formato DD-MM-YYYY
 st.sidebar.subheader("Calendario")
 fecha_inicio = st.sidebar.date_input("Fecha Inicio", datetime(2026, 1, 1), format="DD/MM/YYYY")
 fecha_fin = st.sidebar.date_input("Fecha Fin", datetime.now(), format="DD/MM/YYYY")
-
-st.sidebar.markdown("---")
-st.sidebar.write("📌 Use los selectores para filtrar el análisis.")
 
 # --- CARGA DE DATOS ---
 SHEET_URL = "https://docs.google.com/spreadsheets/d/1ER40wQho6sPz24oBvEUmQnsHnAxrnzmP3ppPukMy24Y/export?format=csv&gid=309618647"
