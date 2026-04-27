@@ -1,28 +1,61 @@
 import streamlit as st
 import pandas as pd
 import plotly.graph_objects as go
+from datetime import datetime
 
-# Configuración
-st.set_page_config(page_title="Dashboard Calidad Cenoa", layout="wide")
-st.title("🚀 Dashboard de Calidad Cenoa")
+# Configuración de la página
+st.set_page_config(page_title="Gestión de Calidad Cenoa", layout="wide")
 
-# Carga de Datos
+# --- BARRA LATERAL (LADO IZQUIERDO) ---
+st.sidebar.image("https://upload.wikimedia.org/wikipedia/commons/thumb/1/12/Google_Drive_icon_%282020%29.svg/512px-Google_Drive_icon_%282020%29.svg.png", width=50) # Puedes cambiar por logo Cenoa
+st.sidebar.header("⚙️ Filtros de Control")
+
+# 1. Selector de Rango de Fechas
+st.sidebar.subheader("Calendario")
+fecha_inicio = st.sidebar.date_input("Fecha Inicio", datetime(2024, 1, 1))
+fecha_fin = st.sidebar.date_input("Fecha Fin", datetime.now())
+
+st.sidebar.markdown("---")
+
+# 2. Otros Selectores Sugeridos (Se llenan dinámicamente)
+st.sidebar.subheader("Segmentación")
+
+# --- CARGA DE DATOS ---
 SHEET_URL = "https://docs.google.com/spreadsheets/d/1ER40wQho6sPz24oBvEUmQnsHnAxrnzmP3ppPukMy24Y/export?format=csv&gid=309618647"
 
 @st.cache_data(ttl=600)
 def load_data():
     try:
         df = pd.read_csv(SHEET_URL)
-        return df.dropna(how='all')
-    except: return None
+        # Intentar convertir columna de fecha si existe
+        col_fecha = next((c for c in df.columns if "fecha" in c.lower() or "marca temporal" in c.lower()), None)
+        if col_fecha:
+            df[col_fecha] = pd.to_datetime(df[col_fecha], errors='coerce')
+        return df.dropna(how='all'), col_fecha
+    except: return None, None
 
-df = load_data()
+df, col_fecha_nombre = load_data()
 
 if df is not None:
-    # 1. Búsqueda de columna de nota (NPS/CSAT)
+    # --- APLICAR FILTRO DE FECHA ---
+    if col_fecha_nombre:
+        df = df[(df[col_fecha_nombre].dt.date >= fecha_inicio) & (df[col_fecha_nombre].dt.date <= fecha_fin)]
+
+    # --- SELECTORES DINÁMICOS EN SIDEBAR ---
+    # Buscamos columnas como "Sucursal" o "Asesor" para filtrar
+    col_sucursal = next((c for c in df.columns if "sucursal" in c.lower() or "local" in c.lower()), None)
+    if col_sucursal:
+        sucursal_sel = st.sidebar.multiselect("Seleccionar Sucursal", options=df[col_sucursal].unique(), default=df[col_sucursal].unique())
+        df = df[df[col_sucursal].isin(sucursal_sel)]
+
+    # --- CUERPO PRINCIPAL ---
+    st.title("📊 Portal de Calidad Cenoa")
+    st.info(f"📅 Mostrando datos desde {fecha_inicio} hasta {fecha_fin}")
+
+    # Lógica de NPS y CSAT (Igual que antes)
     col_nps = next((c for c in df.columns if "escala" in c.lower() or "satisfecho" in c.lower()), None)
     
-    if col_nps:
+    if col_nps and len(df) > 0:
         df[col_nps] = pd.to_numeric(df[col_nps], errors='coerce')
         df = df.dropna(subset=[col_nps])
         total = len(df)
@@ -31,7 +64,7 @@ if df is not None:
         nps_score = ((promotores - detractores) / total) * 100
         csat_score = df[col_nps].mean()
 
-        # --- FILA 1: RELOJES (NPS y CSAT) ---
+        # --- RELOJES ---
         c1, c2 = st.columns(2)
         with c1:
             fig_nps = go.Figure(go.Indicator(
@@ -50,39 +83,18 @@ if df is not None:
                                    {'range': [8.5, 10], 'color': "#00CC96"}]}))
             st.plotly_chart(fig_csat, use_container_width=True)
 
+        # --- PILARES DE PROCESO ---
         st.markdown("---")
-        st.header("🔍 Análisis por Pilares de Procesos")
+        st.subheader("🛠️ Desempeño por Pilar de Servicio")
+        pilares = {"FIR (Solución)": "solucionado", "Explicación": "explicaron", "Tiempo": "acordada", "Limpieza": "limpieza"}
+        cols_p = st.columns(4)
+        for i, (n, cl) in enumerate(pilares.items()):
+            cp = next((c for c in df.columns if cl in c.lower()), None)
+            if cp:
+                si = len(df[df[cp].astype(str).str.lower().str.contains("sí|si")])
+                p = (si/total)*100
+                cols_p[i].metric(n, f"{int(p)}%")
+                cols_p[i].progress(p/100)
 
-        # --- FILA 2: INDICADORES DE PROCESO (SÍ/NO) ---
-        # Definimos las palabras clave para encontrar las preguntas de proceso
-        pilares = {
-            "🛠️ Reparación (FIR)": "solucionado",
-            "💰 Explicación Factura": "explicaron",
-            "⏰ Entrega a Tiempo": "acordada",
-            "✨ Limpieza": "limpieza"
-        }
-
-        cols = st.columns(len(pilares))
-        
-        for i, (nombre, clave) in enumerate(pilares.items()):
-            # Buscamos la columna que contenga la palabra clave
-            col_pilar = next((c for c in df.columns if clave in c.lower()), None)
-            
-            with cols[i]:
-                if col_pilar:
-                    # Calculamos el % de "Sí"
-                    si_count = len(df[df[col_pilar].astype(str).str.lower().str.contains("sí|si|yes")])
-                    pct = (si_count / total) * 100
-                    st.metric(nombre, f"{int(pct)}%")
-                    st.progress(pct / 100)
-                else:
-                    st.caption(f"No se encontró: {nombre}")
-
-        st.markdown("---")
-        st.subheader("📋 Detalle de Comentarios")
-        # Buscamos la columna de comentarios o sugerencias
-        col_coment = next((c for c in df.columns if "comentario" in c.lower() or "sugerencia" in c.lower() or "porque" in c.lower()), None)
-        if col_coment:
-            st.dataframe(df[[col_coment]].dropna(), use_container_width=True)
-
-    else: st.error("No se detectó la columna de puntuación.")
+    else:
+        st.warning("No hay datos para el rango de fechas seleccionado.")
