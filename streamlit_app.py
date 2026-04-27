@@ -1,14 +1,14 @@
 import streamlit as st
 import pandas as pd
 
-# 1. Configuración de Diseño
+# 1. Configuración de Diseño y Estilo
 st.set_page_config(
     page_title="Dashboard Calidad Cenoa",
-    page_icon="📊",
+    page_icon="🚀",
     layout="wide",
 )
 
-# Título Principal
+# Título Principal con un toque visual
 st.title("🚀 Principales Indicadores de Calidad - Taller Cenoa")
 st.markdown("---")
 
@@ -27,10 +27,11 @@ def load_data():
 df = load_data()
 
 if df is not None:
-    # Buscador inteligente de columna NPS
+    # Buscador inteligente de la columna de satisfacción
     col_nps = next((c for c in df.columns if "escala" in c.lower() or "satisfecho" in c.lower()), None)
     
     if col_nps:
+        # Limpieza y conversión
         df[col_nps] = pd.to_numeric(df[col_nps], errors='coerce')
         df = df.dropna(subset=[col_nps])
 
@@ -41,9 +42,9 @@ if df is not None:
         pasivos = len(df[(df[col_nps] >= 7) & (df[col_nps] <= 8)])
         
         nps_score = ((promotores - detractores) / total) * 100
-        csat_score = df[col_nps].mean()
+        csat_score = df[col_nps].mean() # Aquí está la variable correcta
 
-        # --- SECCIÓN 1: MÉTRICAS DESTACADAS ---
+        # --- SECCIÓN 1: TARJETAS DE INDICADORES (KPIs) ---
         st.subheader("📊 Indicadores Clave de Desempeño")
         m1, m2, m3 = st.columns(3)
         
@@ -56,10 +57,11 @@ if df is not None:
             )
             
         with m2:
+            # CORRECCIÓN AQUÍ: Usamos csat_score que es como se definió arriba
             st.metric(
                 label="CSAT (Satisfacción Media)",
                 value=f"{csat_score:.2f} / 10",
-                help="Promedio de todas las notas recibidas."
+                help="Promedio general de todas las notas."
             )
             st.progress(csat_score / 10)
             
@@ -67,34 +69,35 @@ if df is not None:
             st.metric(
                 label="Total de Encuestas",
                 value=total,
-                help="Volumen total de respuestas procesadas."
+                help="Cantidad de clientes que respondieron."
             )
 
         st.markdown("---")
 
-        # --- SECCIÓN 2: ANÁLISIS VISUAL ---
+        # --- SECCIÓN 2: ANÁLISIS GRÁFICO (Estilo Gerencial) ---
         col_izq, col_der = st.columns(2)
 
         with col_izq:
-            st.markdown("### 📈 Distribución de Notas")
-            # Conteo de notas del 1 al 10
+            st.markdown("### 📈 Distribución de Calificaciones")
+            # Conteo de cada nota del 1 al 10
             counts = df[col_nps].value_counts().sort_index()
             st.bar_chart(counts, color="#29b5e8")
 
         with col_der:
-            st.markdown("### 👥 Segmentación de Clientes")
-            df_segmentos = pd.DataFrame({
+            st.markdown("### 👥 Composición de Clientes")
+            df_pie = pd.DataFrame({
                 "Categoría": ["Promotores", "Pasivos", "Detractores"],
                 "Total": [promotores, pasivos, detractores]
             })
-            st.bar_chart(df_segmentos, x="Categoría", y="Total", color="#FF4B4B")
+            # Gráfico de barras para ver los segmentos
+            st.bar_chart(df_pie, x="Categoría", y="Total", color="#FF4B4B")
 
-        # --- SECCIÓN 3: TABLA DETALLADA ---
+        # --- SECCIÓN 3: DETALLE DE DATOS ---
         st.markdown("---")
-        with st.expander("🔍 Ver detalle de todas las respuestas"):
+        with st.expander("🔍 Explorar base de datos completa"):
             st.dataframe(df, use_container_width=True)
 
     else:
-        st.error("❌ No se encontró la columna de puntuación en el archivo.")
+        st.error("No se detectó la columna de puntuación en el archivo.")
 else:
-    st.warning("⚠️ Sin datos para mostrar.")
+    st.info("Conectando con la base de datos de Google Sheets...")
