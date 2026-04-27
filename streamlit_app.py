@@ -88,39 +88,47 @@ if df_raw is not None:
             ))
             st.plotly_chart(fig_csat, use_container_width=True)
 
-        # --- SECCIÓN DE ANÁLISIS POR PILARES ---
+# --- SECCIÓN DE ANÁLISIS POR PILARES ---
         st.markdown("---")
         st.header("🔍 Análisis por Pilares de Calidad")
         cp1, cp2, cp3 = st.columns(3)
 
-        # Buscar columnas por palabras clave
-        col_fir_name = next((c for c in df.columns if "solucionado" in c.lower()), None)
-        col_time_name = next((c for c in df.columns if "acordada" in c.lower() or "entrega" in c.lower()), None)
-        col_fact_name = next((c for c in df.columns if "explicaron" in c.lower() or "factura" in c.lower()), None)
-
-        def calcular_pct(columna):
-            if columna:
-                si = len(df[df[columna].astype(str).str.lower().str.contains("sí|si")])
-                return (si / total) * 100
-            return 0
+        # 1. Definimos las nuevas Claves para encontrar las columnas reales
+        # Cambiamos 'solucionado' por 'chapa' para medir la reparación real
+        col_reparacion = next((c for c in df.columns if "chapa" in c.lower() or "calidad" in c.lower()), None)
+        col_tiempo = next((c for c in df.columns if "acordada" in c.lower() or "entrega" in c.lower()), None)
+        col_atencion = next((c for c in df.columns if "explicaron" in c.lower() or "factura" in c.lower()), None)
 
         with cp1:
-            st.subheader("🛠️ Reparación")
-            pct = calcular_pct(col_fir_name)
-            st.metric("Indicador FIR", f"{int(pct)}%")
-            st.progress(pct/100)
+            st.subheader("🛠️ Calidad Reparación")
+            if col_reparacion:
+                # Como es escala 1-10, medimos cuántos pusieron 9 o 10
+                df[col_reparacion] = pd.to_numeric(df[col_reparacion], errors='coerce')
+                exitos = len(df[df[col_reparacion] >= 9])
+                pct_rep = (exitos / total) * 100
+                st.metric("Indice Chapa y Pintura", f"{int(pct_rep)}%")
+                st.progress(pct_rep/100)
+                st.caption("Clientes que calificaron con 9 o 10 la calidad del trabajo.")
+            else:
+                st.warning("No se halló la columna de 'Chapa y Pintura'")
 
         with cp2:
             st.subheader("⏰ Tiempo")
-            pct = calcular_pct(col_time_name)
-            st.metric("Cumplimiento Entrega", f"{int(pct)}%")
-            st.progress(pct/100)
+            # Este sigue buscando si se entregó en fecha (Sí/No)
+            if col_tiempo:
+                si_t = len(df[df[col_time_name].astype(str).str.lower().str.contains("sí|si")])
+                pct_t = (si_t / total) * 100
+                st.metric("Cumplimiento Entrega", f"{int(pct_t)}%")
+                st.progress(pct_t/100)
 
         with cp3:
             st.subheader("📞 Atención")
-            pct = calcular_pct(col_fact_name)
-            st.metric("Claridad en Factura", f"{int(pct)}%")
-            st.progress(pct/100)
+            # Este busca si se explicó la factura (Sí/No)
+            if col_atencion:
+                si_a = len(df[df[col_fact_name].astype(str).str.lower().str.contains("sí|si")])
+                pct_a = (si_a / total) * 100
+                st.metric("Claridad en Factura", f"{int(pct_a)}%")
+                st.progress(pct_a/100)
 
     else:
         st.warning("No hay datos suficientes para el rango de fechas seleccionado.")
