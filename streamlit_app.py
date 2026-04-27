@@ -11,11 +11,11 @@ st.sidebar.header("⚙️ Filtros de Control")
 
 # Selector de Rango de Fechas con formato DD-MM-YYYY
 st.sidebar.subheader("Calendario")
-fecha_inicio = st.sidebar.date_input("Fecha Inicio", datetime(2024, 1, 1), format="DD/MM/YYYY")
+fecha_inicio = st.sidebar.date_input("Fecha Inicio", datetime(2026, 1, 1), format="DD/MM/YYYY")
 fecha_fin = st.sidebar.date_input("Fecha Fin", datetime.now(), format="DD/MM/YYYY")
 
 st.sidebar.markdown("---")
-st.sidebar.write("📌 Use los selectores para filtrar el análisis de NPS y procesos.")
+st.sidebar.write("📌 Use los selectores para filtrar el análisis.")
 
 # --- CARGA DE DATOS ---
 SHEET_URL = "https://docs.google.com/spreadsheets/d/1ER40wQho6sPz24oBvEUmQnsHnAxrnzmP3ppPukMy24Y/export?format=csv&gid=309618647"
@@ -56,64 +56,76 @@ if df_raw is not None:
         nps_score = ((promotores - detractores) / total) * 100
         csat_score = df[col_nps].mean()
 
-        # --- FILA 1: RELOJES ---
+        # --- FILA 1: RELOJES (GAUGES) ---
         c1, c2 = st.columns(2)
+        
         with c1:
             fig_nps = go.Figure(go.Indicator(
-                mode = "gauge+number", value = nps_score, title = {'text': "NPS (Net Promoter Score)"},
-                gauge = {'axis': {'range': [-100, 100]}, 'bar': {'color': "black"},
-                         'steps': [{'range': [-100, 0], 'color': "#FF4B4B"},
-                                   {'range': 0, 70], 'color': "#FFA500"},
-                                   {'range': 70, 100], 'color': "#00CC96"}]}))
+                mode = "gauge+number", value = nps_score, 
+                title = {'text': "NPS (Net Promoter Score)"},
+                gauge = {
+                    'axis': {'range': [-100, 100]}, 
+                    'bar': {'color': "black"},
+                    'steps': [
+                        {'range': [-100, 0], 'color': "#FF4B4B"},
+                        {'range': [0, 70], 'color': "#FFA500"},
+                        {'range': [70, 100], 'color': "#00CC96"}
+                    ]
+                }
+            ))
             st.plotly_chart(fig_nps, use_container_width=True)
+            
         with c2:
             fig_csat = go.Figure(go.Indicator(
-                mode = "gauge+number", value = csat_score, title = {'text': "CSAT (Satisfacción Media)"},
-                gauge = {'axis': {'range': [0, 10]}, 'bar': {'color': "black"},
-                         'steps': [{'range': [0, 6], 'color': "#FF4B4B"},
-                                   {'range': 6, 8.5], 'color': "#FFA500"},
-                                   {'range': 8.5, 10], 'color': "#00CC96"}]}))
+                mode = "gauge+number", value = csat_score, 
+                title = {'text': "CSAT (Satisfacción Media)"},
+                gauge = {
+                    'axis': {'range': [0, 10]}, 
+                    'bar': {'color': "black"},
+                    'steps': [
+                        {'range': [0, 6], 'color': "#FF4B4B"},
+                        {'range': [6, 8.5], 'color': "#FFA500"},
+                        {'range': [8.5, 10], 'color': "#00CC96"}
+                    ]
+                }
+            ))
             st.plotly_chart(fig_csat, use_container_width=True)
 
-        # --- SECCIÓN DE ANÁLISIS DETALLADO (PILARES) ---
+        # --- SECCIÓN DE ANÁLISIS POR PILARES ---
         st.markdown("---")
         st.header("🔍 Análisis por Pilares de Calidad")
         cp1, cp2, cp3 = st.columns(3)
 
-        # Mapeo de columnas para cálculos automáticos
-        # Buscamos por palabras clave: 'solucionado', 'entrega/acordada', 'explicaron/factura'
+        # Buscar columnas por palabras clave
         col_fir_name = next((c for c in df.columns if "solucionado" in c.lower()), None)
         col_time_name = next((c for c in df.columns if "acordada" in c.lower() or "entrega" in c.lower()), None)
         col_fact_name = next((c for c in df.columns if "explicaron" in c.lower() or "factura" in c.lower()), None)
 
+        def calcular_pct(columna):
+            if columna:
+                si = len(df[df[columna].astype(str).str.lower().str.contains("sí|si")])
+                return (si / total) * 100
+            return 0
+
         with cp1:
             st.subheader("🛠️ Reparación")
-            if col_fir_name:
-                si_fir = len(df[df[col_fir_name].astype(str).str.lower().str.contains("sí|si")])
-                pct_fir = (si_fir/total)*100
-                st.metric("Indicador FIR", f"{int(pct_fir)}%")
-                st.progress(pct_fir/100)
-            else: st.write("Columna FIR no detectada")
+            pct = calcular_pct(col_fir_name)
+            st.metric("Indicador FIR", f"{int(pct)}%")
+            st.progress(pct/100)
 
         with cp2:
             st.subheader("⏰ Tiempo")
-            if col_time_name:
-                si_time = len(df[df[col_time_name].astype(str).str.lower().str.contains("sí|si")])
-                pct_time = (si_time/total)*100
-                st.metric("Cumplimiento Entrega", f"{int(pct_time)}%")
-                st.progress(pct_time/100)
-            else: st.write("Columna Tiempo no detectada")
+            pct = calcular_pct(col_time_name)
+            st.metric("Cumplimiento Entrega", f"{int(pct)}%")
+            st.progress(pct/100)
 
         with cp3:
             st.subheader("📞 Atención")
-            if col_fact_name:
-                si_fact = len(df[df[col_fact_name].astype(str).str.lower().str.contains("sí|si")])
-                pct_fact = (si_fact/total)*100
-                st.metric("Claridad en Factura", f"{int(pct_fact)}%")
-                st.progress(pct_fact/100)
-            else: st.write("Columna Factura no detectada")
+            pct = calcular_pct(col_fact_name)
+            st.metric("Claridad en Factura", f"{int(pct)}%")
+            st.progress(pct/100)
 
     else:
         st.warning("No hay datos suficientes para el rango de fechas seleccionado.")
 else:
-    st.error("No se pudo conectar con el Google Sheet.")
+    st.error("No se pudo conectar con la fuente de datos.")
