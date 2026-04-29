@@ -25,10 +25,9 @@ def load_data():
 df_raw, col_fecha_nombre = load_data()
 
 if df_raw is not None:
-    # --- PROCESAMIENTO DE FILTROS ---
+    # --- FILTROS LATERALES ---
     df_raw['Año'] = df_raw[col_fecha_nombre].dt.year.astype(int)
     df_raw['Mes_Num'] = df_raw[col_fecha_nombre].dt.month.astype(int)
-    
     meses_dict = {1:"Enero", 2:"Febrero", 3:"Marzo", 4:"Abril", 5:"Mayo", 6:"Junio", 
                   7:"Julio", 8:"Agosto", 9:"Septiembre", 10:"Octubre", 11:"Noviembre", 12:"Diciembre"}
     
@@ -48,7 +47,6 @@ if df_raw is not None:
     col_cliente = next((c for c in df.columns if "nombre" in c.lower() and "apellido" in c.lower()), None)
     col_coment = next((c for c in df.columns if "porque" in c.lower() or "comentario" in c.lower() or "sugerencia" in c.lower()), None)
 
-    # --- CUERPO PRINCIPAL ---
     st.title("🚀 Dashboard de Calidad Cenoa")
     st.info(f"📅 Reporte: {mes_sel_nombre} {anio_sel}")
 
@@ -56,13 +54,17 @@ if df_raw is not None:
         df[col_nps_preg] = pd.to_numeric(df[col_nps_preg], errors='coerce')
         df = df.dropna(subset=[col_nps_preg])
         
-        # NPS Score
+        # Segmentación
         total = len(df)
-        promotores = len(df[df[col_nps_preg] >= 9])
-        detractores = len(df[df[col_nps_preg] <= 6])
-        nps_score = ((promotores - detractores) / total) * 100
+        df['Segmento'] = df[col_nps_preg].apply(lambda x: 'Promotor' if x >= 9 else ('Detractor' if x <= 6 else 'Pasivo'))
+        
+        promotores = df[df['Segmento'] == 'Promotor']
+        pasivos = df[df['Segmento'] == 'Pasivo']
+        detractores = df[df['Segmento'] == 'Detractor']
+        
+        nps_score = ((len(promotores) - len(detractores)) / total) * 100
 
-        # CSI Score (Promedio Calidad + Tiempo)
+        # CSI Score
         df['v_calidad'] = pd.to_numeric(df[col_calidad], errors='coerce') if col_calidad else 0
         def conv_t(v):
             v_s = str(v).lower()
@@ -70,7 +72,7 @@ if df_raw is not None:
         df['v_tiempo'] = df[col_tiempo].apply(conv_t) if col_tiempo else 0
         csi_score = df[['v_calidad', 'v_tiempo']].mean(axis=1).mean()
 
-        # --- FILA 1: RELOJES (GAUGES CORREGIDOS) ---
+        # --- FILA 1: RELOJES ---
         c1, c2 = st.columns(2)
         with c1:
             fig_nps = go.Figure(go.Indicator(
@@ -80,13 +82,20 @@ if df_raw is not None:
                     'bar': {'color': "black"},
                     'steps': [
                         {'range': [-100, 0], 'color': "#FF4B4B"},
-                        {'range': [0, 70], 'color': "#FFA500"},
+                        {'range': 0, 70], 'color': "#FFA500"},
                         {'range': [70, 100], 'color': "#00CC96"}
                     ]
                 }
             ))
             st.plotly_chart(fig_nps, use_container_width=True)
             
+            # --- BOTONES ESTILO REFERENCIA ---
+            st.write("### Ver detalle de:")
+            b1, b2, b3 = st.columns(3)
+            ver_prom = b1.button(f"🟢 {len(promotores)} Prom")
+            ver_neu = b2.button(f"🟡 {len(pasivos)} Neu")
+            ver_det = b3.button(f"🔴 {len(detractores)} Det")
+
         with c2:
             fig_csi = go.Figure(go.Indicator(
                 mode = "gauge+number", value = csi_score, title = {'text': "CSI (Calidad + Tiempo)"},
@@ -102,32 +111,21 @@ if df_raw is not None:
             ))
             st.plotly_chart(fig_csi, use_container_width=True)
 
-        # --- SECCIÓN DE SEGMENTACIÓN ---
+        # --- MOSTRAR INFORMACIÓN SEGÚN BOTÓN ---
         st.markdown("---")
-        st.subheader("👥 Detalle de Clientes por NPS")
-        
-        # Clasificar
-        df['Segmento'] = df[col_nps_preg].apply(lambda x: 'Promotor' if x >= 9 else ('Detractor' if x <= 6 else 'Pasivo'))
-        
-        tab1, tab2, tab3 = st.tabs(["✅ Promotores", "😐 Pasivos", "❌ Detractores"])
-        
-        # Columnas a mostrar en las tablas
         cols_mostrar = [c for c in [col_cliente, col_asesor, col_nps_preg, col_coment] if c is not None]
 
-        with tab1:
-            df_p = df[df['Segmento'] == 'Promotor']
-            st.success(f"Total: {len(df_p)} clientes satisfechos")
-            st.dataframe(df_p[cols_mostrar], use_container_width=True)
-
-        with tab2:
-            df_pas = df[df['Segmento'] == 'Pasivo']
-            st.warning(f"Total: {len(df_pas)} clientes neutrales")
-            st.dataframe(df_pas[cols_mostrar], use_container_width=True)
-
-        with tab3:
-            df_d = df[df['Segmento'] == 'Detractor']
-            st.error(f"Total: {len(df_d)} clientes insatisfechos")
-            st.dataframe(df_d[cols_mostrar], use_container_width=True)
+        if ver_prom:
+            st.success("Listado de Promotores")
+            st.dataframe(promotores[cols_mostrar], use_container_width=True)
+        elif ver_neu:
+            st.warning("Listado de Pasivos (Neutrales)")
+            st.dataframe(pasivos[cols_mostrar], use_container_width=True)
+        elif ver_det:
+            st.error("Listado de Detractores")
+            st.dataframe(detractores[cols_mostrar], use_container_width=True)
+        else:
+            st.write("👆 Haz clic en los botones de colores para ver el detalle de los clientes.")
 
     else:
         st.warning("Sin datos para este periodo.")
