@@ -72,40 +72,43 @@ if df_raw is not None:
         df['v_tiempo'] = df[col_tiempo].apply(conv_t) if col_tiempo else 0
         csi_score = df[['v_calidad', 'v_tiempo']].mean(axis=1).mean()
 
-        # --- FILA 1: RELOJES ---
+        # --- FILA 1: RELOJES (ESTRUCTURA CORREGIDA) ---
         c1, c2 = st.columns(2)
         with c1:
             fig_nps = go.Figure(go.Indicator(
-                mode = "gauge+number", value = nps_score, title = {'text': "NPS Recomendación"},
+                mode = "gauge+number", 
+                value = nps_score, 
+                title = {'text': "NPS Recomendación"},
                 gauge = {
                     'axis': {'range': [-100, 100]},
                     'bar': {'color': "black"},
                     'steps': [
                         {'range': [-100, 0], 'color': "#FF4B4B"},
-                        {'range': 0, 70], 'color': "#FFA500"},
-                        {'range': 70, 100], 'color': "#00CC96"}
+                        {'range': [0, 70], 'color': "#FFA500"},
+                        {'range': [70, 100], 'color': "#00CC96"}
                     ]
                 }
             ))
             st.plotly_chart(fig_nps, use_container_width=True)
             
-            # BOTONES DE ACCIÓN (ESTILO TARJETA)
-            st.write("🔍 **Filtrar detalle de clientes:**")
-            b1, b2, b3 = st.columns(3)
-            
-            if "filtro_nps" not in st.session_state:
-                st.session_state.filtro_nps = None
+            # --- BOTONES DE FILTRO ---
+            st.write("🔍 **Ver listado de:**")
+            if "filtro_activo" not in st.session_state:
+                st.session_state.filtro_activo = None
 
+            b1, b2, b3 = st.columns(3)
             if b1.button(f"🟢 {len(promotores)} Prom"):
-                st.session_state.filtro_nps = "Promotor"
+                st.session_state.filtro_activo = "Promotor"
             if b2.button(f"🟡 {len(pasivos)} Neu"):
-                st.session_state.filtro_nps = "Pasivo"
+                st.session_state.filtro_activo = "Pasivo"
             if b3.button(f"🔴 {len(detractores)} Det"):
-                st.session_state.filtro_nps = "Detractor"
+                st.session_state.filtro_activo = "Detractor"
 
         with c2:
             fig_csi = go.Figure(go.Indicator(
-                mode = "gauge+number", value = csi_score, title = {'text': "CSI (Calidad + Tiempo)"},
+                mode = "gauge+number", 
+                value = csi_score, 
+                title = {'text': "CSI (Calidad + Tiempo)"},
                 gauge = {
                     'axis': {'range': [0, 10]},
                     'bar': {'color': "black"},
@@ -118,23 +121,23 @@ if df_raw is not None:
             ))
             st.plotly_chart(fig_csi, use_container_width=True)
 
-        # --- MOSTRAR INFORMACIÓN ---
+        # --- MOSTRAR DATOS ---
         st.markdown("---")
         cols_finales = [c for c in [col_cliente, col_asesor, col_nps_preg, col_coment] if c is not None]
 
-        if st.session_state.filtro_nps == "Promotor":
+        if st.session_state.filtro_activo == "Promotor":
             st.success(f"Mostrando {len(promotores)} Promotores")
             st.dataframe(promotores[cols_finales], use_container_width=True)
-        elif st.session_state.filtro_nps == "Pasivo":
+        elif st.session_state.filtro_activo == "Pasivo":
             st.warning(f"Mostrando {len(pasivos)} Pasivos/Neutrales")
             st.dataframe(pasivos[cols_finales], use_container_width=True)
-        elif st.session_state.filtro_nps == "Detractor":
+        elif st.session_state.filtro_activo == "Detractor":
             st.error(f"Mostrando {len(detractores)} Detractores")
             st.dataframe(detractores[cols_finales], use_container_width=True)
         else:
-            st.info("Selecciona uno de los botones arriba (Prom, Neu o Det) para ver los datos de los clientes.")
+            st.info("Haz clic en los botones (Prom, Neu o Det) para ver los comentarios de los clientes.")
 
     else:
-        st.warning("No hay encuestas suficientes para este mes.")
+        st.warning("No hay suficientes datos para este mes.")
 else:
-    st.error("Error al conectar con la base de datos de Google Sheets.")
+    st.error("No se pudo conectar con el Google Sheet.")
