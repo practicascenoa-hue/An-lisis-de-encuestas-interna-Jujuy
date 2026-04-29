@@ -3,38 +3,30 @@ import pandas as pd
 import plotly.graph_objects as go
 from datetime import datetime
 
-# 1. Configuración de página y Estilo Visual Personalizado
+# 1. Configuración de página y Estilo Visual
 st.set_page_config(page_title="Dashboard Calidad Cenoa", layout="wide")
 
-# CSS para inyectar colores específicos a cada botón por su etiqueta
+# CSS para botones con colores reales y diseño de tarjetas
 st.markdown("""
     <style>
     div.stButton > button {
         width: 100%;
-        height: 90px;
+        height: 100px;
         border-radius: 15px;
         border: none;
+        color: white;
         font-weight: bold;
-        font-size: 18px;
+        font-size: 20px;
         transition: 0.3s;
     }
-    /* Estilos individuales por el texto del botón */
-    button[kind="secondary"]:has(div:contains("PROMOTORES")) {
-        background-color: #28a745 !important;
-        color: white !important;
-    }
-    button[kind="secondary"]:has(div:contains("PASIVOS")) {
-        background-color: #ffc107 !important;
-        color: #212529 !important;
-    }
-    button[kind="secondary"]:has(div:contains("DETRACTORES")) {
-        background-color: #dc3545 !important;
-        color: white !important;
-    }
+    /* Estilo por cada botón usando el orden en las columnas */
+    .stColumn:nth-of-type(1) div.stButton > button { background-color: #28a745; } /* Verde */
+    .stColumn:nth-of-type(2) div.stButton > button { background-color: #ffc107; color: #212529; } /* Amarillo */
+    .stColumn:nth-of-type(3) div.stButton > button { background-color: #dc3545; } /* Rojo */
+    
     div.stButton > button:hover {
-        opacity: 0.85;
-        transform: translateY(-2px);
-        box-shadow: 0 4px 8px rgba(0,0,0,0.2);
+        opacity: 0.8;
+        transform: scale(1.02);
     }
     </style>
     """, unsafe_allow_html=True)
@@ -71,7 +63,7 @@ if df_raw is not None:
     
     df = df_raw[(df_raw['Año'] == anio_sel) & (df_raw['Mes_Num'] == mes_sel_num)].copy()
 
-    # Identificación de columnas críticas
+    # Identificación de columnas
     col_nps_preg = next((c for c in df.columns if "recomiendes" in c.lower()), None)
     col_calidad = next((c for c in df.columns if "chapa" in c.lower() or "calidad" in c.lower()), None)
     col_tiempo = next((c for c in df.columns if "acordada" in c.lower() or "tiempo" in c.lower()), None)
@@ -101,7 +93,7 @@ if df_raw is not None:
         df['v_tiempo'] = df[col_tiempo].apply(conv_t) if col_tiempo else 0
         csi_score = df[['v_calidad', 'v_tiempo']].mean(axis=1).mean()
 
-        # --- SECCIÓN SUPERIOR: GRÁFICOS ---
+        # --- RELOJES ---
         c1, c2 = st.columns(2)
         with c1:
             fig_nps = go.Figure(go.Indicator(
@@ -115,14 +107,14 @@ if df_raw is not None:
             ))
             st.plotly_chart(fig_nps, use_container_width=True)
             
-            # --- BOTONES DE COLORES CON CONTADORES ---
-            st.write("### Auditoría por Segmento:")
-            if "filtro_final" not in st.session_state: st.session_state.filtro_final = None
+            # --- BOTONES DE COLORES ---
+            st.write("### Seleccione para auditar clientes:")
+            if "filtro_nps" not in st.session_state: st.session_state.filtro_nps = None
             
-            b1, b2, b3 = st.columns(3)
-            if b1.button(f"PROMOTORES\n({len(prom)})"): st.session_state.filtro_final = "Promotor"
-            if b2.button(f"PASIVOS\n({len(pas)})"): st.session_state.filtro_final = "Pasivo"
-            if b3.button(f"DETRACTORES\n({len(det)})"): st.session_state.filtro_final = "Detractor"
+            col_b1, col_b2, col_b3 = st.columns(3)
+            if col_b1.button(f"PROMOTORES\n({len(prom)})"): st.session_state.filtro_nps = "Promotor"
+            if col_b2.button(f"PASIVOS\n({len(pas)})"): st.session_state.filtro_nps = "Pasivo"
+            if col_b3.button(f"DETRACTORES\n({len(det)})"): st.session_state.filtro_nps = "Detractor"
 
         with c2:
             fig_csi = go.Figure(go.Indicator(
@@ -136,8 +128,16 @@ if df_raw is not None:
             ))
             st.plotly_chart(fig_csi, use_container_width=True)
 
-        # --- SECCIÓN INFERIOR: TABLA DE DATOS ---
+        # --- TABLA DETALLADA ---
         st.markdown("---")
-        if st.session_state.filtro_final:
-            df_auditoria = df[df['Segmento'] == st.session_state.filtro_final]
-            cols_auditoria = [c for c
+        if st.session_state.filtro_nps:
+            df_auditoria = df[df['Segmento'] == st.session_state.filtro_nps]
+            # Corregido: Verificamos que las columnas existan antes de armar la lista
+            cols_lista = [c for c in [col_cliente, col_asesor, col_nps_preg, col_coment] if c]
+            st.subheader(f"Listado Detallado de {st.session_state.filtro_nps}s")
+            st.dataframe(df_auditoria[cols_lista], use_container_width=True)
+        else:
+            st.info("💡 Haga clic en uno de los botones de colores para ver el detalle.")
+
+    else: st.warning("Sin datos para este periodo.")
+else: st.error("No se pudo conectar con el Google Sheet.")
