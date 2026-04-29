@@ -25,7 +25,7 @@ def load_data():
 df_raw, col_fecha_nombre = load_data()
 
 if df_raw is not None:
-    # --- FILTROS LATERALES ---
+    # --- PROCESAMIENTO DE FILTROS ---
     df_raw['Año'] = df_raw[col_fecha_nombre].dt.year.astype(int)
     df_raw['Mes_Num'] = df_raw[col_fecha_nombre].dt.month.astype(int)
     meses_dict = {1:"Enero", 2:"Febrero", 3:"Marzo", 4:"Abril", 5:"Mayo", 6:"Junio", 
@@ -72,33 +72,38 @@ if df_raw is not None:
         df['v_tiempo'] = df[col_tiempo].apply(conv_t) if col_tiempo else 0
         csi_score = df[['v_calidad', 'v_tiempo']].mean(axis=1).mean()
 
-        # --- FILA 1: RELOJES ---
+        # --- FILA 1: RELOJES (CUIDADO AQUÍ CON LA SINTAXIS) ---
         c1, c2 = st.columns(2)
         with c1:
             fig_nps = go.Figure(go.Indicator(
-                mode = "gauge+number", value = nps_score, title = {'text': "NPS Recomendación"},
+                mode = "gauge+number", value = nps_score, 
+                title = {'text': "NPS (Recomendación)"},
                 gauge = {
                     'axis': {'range': [-100, 100]},
                     'bar': {'color': "black"},
                     'steps': [
                         {'range': [-100, 0], 'color': "#FF4B4B"},
                         {'range': 0, 70], 'color': "#FFA500"},
-                        {'range': [70, 100], 'color': "#00CC96"}
+                        {'range': 70, 100], 'color': "#00CC96"}
                     ]
                 }
             ))
             st.plotly_chart(fig_nps, use_container_width=True)
             
-            # --- BOTONES ESTILO REFERENCIA ---
-            st.write("### Ver detalle de:")
+            # --- BOTONES DE ACCIÓN (Tal como pediste) ---
+            st.write("### Detalle por Segmento:")
             b1, b2, b3 = st.columns(3)
-            ver_prom = b1.button(f"🟢 {len(promotores)} Prom")
-            ver_neu = b2.button(f"🟡 {len(pasivos)} Neu")
-            ver_det = b3.button(f"🔴 {len(detractores)} Det")
+            # Usamos session_state para que el click "se quede" marcado
+            if "filtro" not in st.session_state: st.session_state.filtro = None
+            
+            if b1.button(f"🟢 {len(promotores)} Prom"): st.session_state.filtro = "Promotor"
+            if b2.button(f"🟡 {len(pasivos)} Neu"): st.session_state.filtro = "Pasivo"
+            if b3.button(f"🔴 {len(detractores)} Det"): st.session_state.filtro = "Detractor"
 
         with c2:
             fig_csi = go.Figure(go.Indicator(
-                mode = "gauge+number", value = csi_score, title = {'text': "CSI (Calidad + Tiempo)"},
+                mode = "gauge+number", value = csi_score, 
+                title = {'text': "CSI (Calidad + Tiempo)"},
                 gauge = {
                     'axis': {'range': [0, 10]},
                     'bar': {'color': "black"},
@@ -111,23 +116,23 @@ if df_raw is not None:
             ))
             st.plotly_chart(fig_csi, use_container_width=True)
 
-        # --- MOSTRAR INFORMACIÓN SEGÚN BOTÓN ---
+        # --- MOSTRAR TABLA SEGÚN EL BOTÓN PRESIONADO ---
         st.markdown("---")
         cols_mostrar = [c for c in [col_cliente, col_asesor, col_nps_preg, col_coment] if c is not None]
 
-        if ver_prom:
-            st.success("Listado de Promotores")
+        if st.session_state.filtro == "Promotor":
+            st.success(f"Listado de Promotores ({len(promotores)})")
             st.dataframe(promotores[cols_mostrar], use_container_width=True)
-        elif ver_neu:
-            st.warning("Listado de Pasivos (Neutrales)")
+        elif st.session_state.filtro == "Pasivo":
+            st.warning(f"Listado de Pasivos/Neutrales ({len(pasivos)})")
             st.dataframe(pasivos[cols_mostrar], use_container_width=True)
-        elif ver_det:
-            st.error("Listado de Detractores")
+        elif st.session_state.filtro == "Detractor":
+            st.error(f"Listado de Detractores ({len(detractores)})")
             st.dataframe(detractores[cols_mostrar], use_container_width=True)
         else:
-            st.write("👆 Haz clic en los botones de colores para ver el detalle de los clientes.")
+            st.info("👆 Selecciona un botón arriba para ver los nombres y comentarios de los clientes.")
 
     else:
-        st.warning("Sin datos para este periodo.")
+        st.warning("No hay datos cargados para el periodo seleccionado.")
 else:
-    st.error("Error al conectar con Google Sheets.")
+    st.error("Error crítico: No se pudo conectar con el Google Sheet.")
