@@ -10,8 +10,8 @@ st.set_page_config(page_title="ENCUESTAS SATISFACCIÓN TALLER Cenoa", layout="wi
 st.markdown("""
     <style>
     div.stButton > button {
-        width: 80%;
-        height: 80px;
+        width: 90%;
+        height: 90px;
         border-radius: 15px;
         border: none;
         color: white;
