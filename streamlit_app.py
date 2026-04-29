@@ -6,7 +6,7 @@ from datetime import datetime
 # 1. Configuración de página y Estilo Visual
 st.set_page_config(page_title="Dashboard Calidad Cenoa", layout="wide")
 
-# CSS para botones con colores semafóricos reales
+# CSS para botones con colores semafóricos reales y diseño de tarjetas
 st.markdown("""
     <style>
     div.stButton > button {
@@ -62,13 +62,13 @@ if df_raw is not None:
     
     df = df_raw[(df_raw['Año'] == anio_sel) & (df_raw['Mes_Num'] == mes_sel_num)].copy()
 
-    # --- IDENTIFICACIÓN DE COLUMNAS ---
+    # --- IDENTIFICACIÓN DE COLUMNAS POR NOMBRE O POSICIÓN ---
     col_nps_interna = next((c for c in df.columns if "recomiendes" in c.lower()), None)
     col_cliente = next((c for c in df.columns if "nombre" in c.lower() and "apellido" in c.lower()), None)
     col_asesor = next((c for c in df.columns if "asesor" in c.lower() or "recepcionista" in c.lower()), None)
     
-    # Identificar Columna Q (Índice 16 en Python porque empieza de 0)
-    col_comentarios_q = df.columns[16] if len(df.columns) > 16 else None
+    # AJUSTE: Seleccionamos la columna 18 (Índice 17 en Python)
+    col_comentarios_exp = df.columns[17] if len(df.columns) > 17 else None
 
     st.title("🚀 Dashboard de Calidad Cenoa")
 
@@ -98,12 +98,11 @@ if df_raw is not None:
             ))
             st.plotly_chart(fig_nps, use_container_width=True)
             
-            # --- BOTONES CORREGIDOS ---
+            # --- BOTONES CORRECTOS ---
             st.write("### Auditoría de Comentarios:")
             if "filtro_nps" not in st.session_state: st.session_state.filtro_nps = None
             
             col_b1, col_b2, col_b3 = st.columns(3)
-            # Corregido el nombre "PROMOTORES"
             if col_b1.button(f"PROMOTORES\n({len(prom)})"): st.session_state.filtro_nps = "Promotor"
             if col_b2.button(f"PASIVOS\n({len(pas)})"): st.session_state.filtro_nps = "Pasivo"
             if col_b3.button(f"DETRACTORES\n({len(det)})"): st.session_state.filtro_nps = "Detractor"
@@ -130,16 +129,16 @@ if df_raw is not None:
         if st.session_state.filtro_nps:
             df_auditoria = df[df['Segmento'] == st.session_state.filtro_nps]
             
-            # Forzamos la selección de columnas: Nombre, Asesor y la Columna Q
+            # Armamos las columnas finales
             cols_finales = []
             if col_cliente: cols_finales.append(col_cliente)
             if col_asesor: cols_finales.append(col_asesor)
-            if col_comentarios_q: cols_finales.append(col_comentarios_q)
+            if col_comentarios_exp: cols_finales.append(col_comentarios_exp)
             
             st.subheader(f"Comentarios de {st.session_state.filtro_nps}s")
             st.dataframe(df_auditoria[cols_finales], use_container_width=True)
         else:
-            st.info("💡 Selecciona un botón para auditar los comentarios.")
+            st.info("💡 Selecciona un botón arriba para ver los nombres y comentarios.")
 
     else: st.warning("Sin datos para este mes.")
 else: st.error("Error al cargar Google Sheets.")
