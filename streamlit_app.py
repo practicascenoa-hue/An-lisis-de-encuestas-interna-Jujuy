@@ -19,10 +19,9 @@ st.markdown("""
         font-size: 18px;
         transition: 0.3s;
     }
-    /* Estilo por cada botón según su columna */
-    .stColumn:nth-of-type(1) div.stButton > button { background-color: #28a745; } /* Verde - Promotores */
-    .stColumn:nth-of-type(2) div.stButton > button { background-color: #ffc107; color: #212529; } /* Amarillo - Pasivos */
-    .stColumn:nth-of-type(3) div.stButton > button { background-color: #dc3545; } /* Rojo - Detractores */
+    .stColumn:nth-of-type(1) div.stButton > button { background-color: #28a745; } 
+    .stColumn:nth-of-type(2) div.stButton > button { background-color: #ffc107; color: #212529; } 
+    .stColumn:nth-of-type(3) div.stButton > button { background-color: #dc3545; } 
     
     div.stButton > button:hover {
         opacity: 0.8;
@@ -49,7 +48,7 @@ def load_data():
 df_raw, col_fecha_nombre = load_data()
 
 if df_raw is not None:
-    # Preparación de filtros temporales
+    # Preparación de filtros
     df_raw['Año'] = df_raw[col_fecha_nombre].dt.year.astype(int)
     df_raw['Mes_Num'] = df_raw[col_fecha_nombre].dt.month.astype(int)
     meses_dict = {1:"Enero", 2:"Febrero", 3:"Marzo", 4:"Abril", 5:"Mayo", 6:"Junio", 
@@ -63,14 +62,13 @@ if df_raw is not None:
     
     df = df_raw[(df_raw['Año'] == anio_sel) & (df_raw['Mes_Num'] == mes_sel_num)].copy()
 
-    # --- MAPEADO DE COLUMNAS ESPECÍFICAS ---
-    # 1. Columna de recomendación (NPS) para cálculo interno
+    # --- IDENTIFICACIÓN DE COLUMNAS ---
     col_nps_interna = next((c for c in df.columns if "recomiendes" in c.lower()), None)
-    
-    # 2. Columnas para mostrar en la tabla según tu pedido:
     col_cliente = next((c for c in df.columns if "nombre" in c.lower() and "apellido" in c.lower()), None)
     col_asesor = next((c for c in df.columns if "asesor" in c.lower() or "recepcionista" in c.lower()), None)
-    col_experiencia = "¡Perfecto! Ya casi terminamos\nPara cerrar, ¿hay algo que te gustaría contarme sobre toda la experiencia? Puede ser algo que te gustó mucho, algo que mejorarías, o cualquier sugerencia que tengas."
+    
+    # Identificar Columna Q (Índice 16 en Python porque empieza de 0)
+    col_comentarios_q = df.columns[16] if len(df.columns) > 16 else None
 
     st.title("🚀 Dashboard de Calidad Cenoa")
 
@@ -100,18 +98,18 @@ if df_raw is not None:
             ))
             st.plotly_chart(fig_nps, use_container_width=True)
             
-            # --- BOTONES DE COLORES ---
+            # --- BOTONES CORREGIDOS ---
             st.write("### Auditoría de Comentarios:")
             if "filtro_nps" not in st.session_state: st.session_state.filtro_nps = None
             
             col_b1, col_b2, col_b3 = st.columns(3)
+            # Corregido el nombre "PROMOTORES"
             if col_b1.button(f"PROMOTORES\n({len(prom)})"): st.session_state.filtro_nps = "Promotor"
             if col_b2.button(f"PASIVOS\n({len(pas)})"): st.session_state.filtro_nps = "Pasivo"
             if col_b3.button(f"DETRACTORES\n({len(det)})"): st.session_state.filtro_nps = "Detractor"
 
         with c2:
-            # Cálculo CSI simplificado para evitar errores
-            csi_score = 0 # Valor por defecto
+            csi_score = 0
             col_csi_calidad = next((c for c in df.columns if "calidad" in c.lower()), None)
             if col_csi_calidad:
                 csi_score = pd.to_numeric(df[col_csi_calidad], errors='coerce').mean() * 10
@@ -127,24 +125,21 @@ if df_raw is not None:
             ))
             st.plotly_chart(fig_csi, use_container_width=True)
 
-        # --- TABLA DETALLADA (MODIFICADA) ---
+        # --- TABLA DETALLADA ---
         st.markdown("---")
         if st.session_state.filtro_nps:
             df_auditoria = df[df['Segmento'] == st.session_state.filtro_nps]
             
-            # Seleccionamos solo las columnas solicitadas
-            columnas_a_mostrar = []
-            if col_cliente in df.columns: columnas_a_mostrar.append(col_cliente)
-            if col_asesor in df.columns: columnas_a_mostrar.append(col_asesor)
-            if col_experiencia in df.columns: columnas_a_mostrar.append(col_experiencia)
+            # Forzamos la selección de columnas: Nombre, Asesor y la Columna Q
+            cols_finales = []
+            if col_cliente: cols_finales.append(col_cliente)
+            if col_asesor: cols_finales.append(col_asesor)
+            if col_comentarios_q: cols_finales.append(col_comentarios_q)
             
             st.subheader(f"Comentarios de {st.session_state.filtro_nps}s")
-            if columnas_a_mostrar:
-                st.dataframe(df_auditoria[columnas_a_mostrar], use_container_width=True)
-            else:
-                st.error("No se encontraron las columnas especificadas en el Excel.")
+            st.dataframe(df_auditoria[cols_finales], use_container_width=True)
         else:
-            st.info("💡 Haz clic en los botones para ver los comentarios de la experiencia de los clientes.")
+            st.info("💡 Selecciona un botón para auditar los comentarios.")
 
-    else: st.warning("Esperando datos de encuestas...")
-else: st.error("No se pudo cargar la base de datos.")
+    else: st.warning("Sin datos para este mes.")
+else: st.error("Error al cargar Google Sheets.")
