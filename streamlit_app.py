@@ -40,62 +40,96 @@ if df_raw is not None:
     
     df = df_raw[(df_raw['Año'] == anio_sel) & (df_raw['Mes_Num'] == mes_sel_num)].copy()
 
+    # --- IDENTIFICACIÓN DE COLUMNAS ---
+    col_nps_preg = next((c for c in df.columns if "recomiendes" in c.lower()), None)
+    col_calidad = next((c for c in df.columns if "chapa" in c.lower() or "calidad del trabajo" in c.lower()), None)
+    col_tiempo = next((c for c in df.columns if "acordada" in c.lower() or "tiempo de reparación" in c.lower()), None)
+    col_asesor = next((c for c in df.columns if "asesor" in c.lower() or "recepcionista" in c.lower()), None)
+    col_cliente = next((c for c in df.columns if "nombre" in c.lower() and "apellido" in c.lower()), None)
+    col_coment = next((c for c in df.columns if "porque" in c.lower() or "comentario" in c.lower() or "sugerencia" in c.lower()), None)
+
     # --- CUERPO PRINCIPAL ---
     st.title("🚀 Dashboard de Calidad Cenoa")
     st.info(f"📅 Reporte: {mes_sel_nombre} {anio_sel}")
 
-    # Identificación de columnas
-    col_nps_pregunta = next((c for c in df.columns if "recomiendes" in c.lower()), None)
-    col_comentarios = next((c for c in df.columns if "comentario" in c.lower() or "sugerencia" in c.lower() or "porque" in c.lower()), None)
-    
-    if col_nps_pregunta and len(df) > 0:
-        df[col_nps_pregunta] = pd.to_numeric(df[col_nps_pregunta], errors='coerce')
-        df = df.dropna(subset=[col_nps_pregunta])
+    if col_nps_preg and len(df) > 0:
+        df[col_nps_preg] = pd.to_numeric(df[col_nps_preg], errors='coerce')
+        df = df.dropna(subset=[col_nps_preg])
         
-        # Clasificación de Segmentos
-        df['Segmento'] = df[col_nps_pregunta].apply(lambda x: 'Promotor' if x >= 9 else ('Detractor' if x <= 6 else 'Pasivo'))
-        
+        # NPS Score
         total = len(df)
-        prom = df[df['Segmento'] == 'Promotor']
-        det = df[df['Segmento'] == 'Detractor']
-        pas = df[df['Segmento'] == 'Pasivo']
-        
-        nps_score = ((len(prom) - len(det)) / total) * 100
+        promotores = len(df[df[col_nps_preg] >= 9])
+        detractores = len(df[df[col_nps_preg] <= 6])
+        nps_score = ((promotores - detractores) / total) * 100
 
-        # --- RELOJ NPS ---
-        fig_nps = go.Figure(go.Indicator(
-            mode = "gauge+number", value = nps_score, title = {'text': "NPS Global"},
-            gauge = {'axis': {'range': [-100, 100]}, 'bar': {'color': "black"},
-                     'steps': [{'range': [-100, 0], 'color': "#FF4B4B"},
-                               {'range': 0, 70], 'color': "#FFA500"},
-                               {'range': 70, 100], 'color': "#00CC96"}]}))
-        st.plotly_chart(fig_nps, use_container_width=True)
+        # CSI Score (Promedio Calidad + Tiempo)
+        df['v_calidad'] = pd.to_numeric(df[col_calidad], errors='coerce') if col_calidad else 0
+        def conv_t(v):
+            v_s = str(v).lower()
+            return 10 if "si" in v_s or "sí" in v_s else (0 if "no" in v_s else pd.to_numeric(v, errors='coerce'))
+        df['v_tiempo'] = df[col_tiempo].apply(conv_t) if col_tiempo else 0
+        csi_score = df[['v_calidad', 'v_tiempo']].mean(axis=1).mean()
 
+        # --- FILA 1: RELOJES (GAUGES CORREGIDOS) ---
+        c1, c2 = st.columns(2)
+        with c1:
+            fig_nps = go.Figure(go.Indicator(
+                mode = "gauge+number", value = nps_score, title = {'text': "NPS Recomendación"},
+                gauge = {
+                    'axis': {'range': [-100, 100]},
+                    'bar': {'color': "black"},
+                    'steps': [
+                        {'range': [-100, 0], 'color': "#FF4B4B"},
+                        {'range': [0, 70], 'color': "#FFA500"},
+                        {'range': [70, 100], 'color': "#00CC96"}
+                    ]
+                }
+            ))
+            st.plotly_chart(fig_nps, use_container_width=True)
+            
+        with c2:
+            fig_csi = go.Figure(go.Indicator(
+                mode = "gauge+number", value = csi_score, title = {'text': "CSI (Calidad + Tiempo)"},
+                gauge = {
+                    'axis': {'range': [0, 10]},
+                    'bar': {'color': "black"},
+                    'steps': [
+                        {'range': [0, 7], 'color': "#FF4B4B"},
+                        {'range': [7, 8.5], 'color': "#FFA500"},
+                        {'range': [8.5, 10], 'color': "#00CC96"}
+                    ]
+                }
+            ))
+            st.plotly_chart(fig_csi, use_container_width=True)
+
+        # --- SECCIÓN DE SEGMENTACIÓN ---
         st.markdown("---")
-        # --- BOTONES DE SEGMENTACIÓN (TABS) ---
-        st.subheader("👥 Detalle por Segmento de Clientes")
-        tab1, tab2, tab3 = st.tabs(["✅ Promotores (9-10)", "😐 Pasivos (7-8)", "❌ Detractores (0-6)"])
+        st.subheader("👥 Detalle de Clientes por NPS")
+        
+        # Clasificar
+        df['Segmento'] = df[col_nps_preg].apply(lambda x: 'Promotor' if x >= 9 else ('Detractor' if x <= 6 else 'Pasivo'))
+        
+        tab1, tab2, tab3 = st.tabs(["✅ Promotores", "😐 Pasivos", "❌ Detractores"])
+        
+        # Columnas a mostrar en las tablas
+        cols_mostrar = [c for c in [col_cliente, col_asesor, col_nps_preg, col_coment] if c is not None]
 
         with tab1:
-            st.success(f"Se encontraron {len(prom)} Promotores")
-            if not prom.empty:
-                columnas_ver = [col_nps_pregunta, col_comentarios] if col_comentarios else [col_nps_pregunta]
-                st.dataframe(prom[columnas_ver], use_container_width=True)
-            else: st.write("No hay promotores en este periodo.")
+            df_p = df[df['Segmento'] == 'Promotor']
+            st.success(f"Total: {len(df_p)} clientes satisfechos")
+            st.dataframe(df_p[cols_mostrar], use_container_width=True)
 
         with tab2:
-            st.warning(f"Se encontraron {len(pas)} Pasivos")
-            if not pas.empty:
-                columnas_ver = [col_nps_pregunta, col_comentarios] if col_comentarios else [col_nps_pregunta]
-                st.dataframe(pas[columnas_ver], use_container_width=True)
-            else: st.write("No hay clientes pasivos en este periodo.")
+            df_pas = df[df['Segmento'] == 'Pasivo']
+            st.warning(f"Total: {len(df_pas)} clientes neutrales")
+            st.dataframe(df_pas[cols_mostrar], use_container_width=True)
 
         with tab3:
-            st.error(f"Se encontraron {len(det)} Detractores")
-            if not det.empty:
-                columnas_ver = [col_nps_pregunta, col_comentarios] if col_comentarios else [col_nps_pregunta]
-                st.dataframe(det[columnas_ver], use_container_width=True)
-            else: st.write("No hay detractores en este periodo.")
+            df_d = df[df['Segmento'] == 'Detractor']
+            st.error(f"Total: {len(df_d)} clientes insatisfechos")
+            st.dataframe(df_d[cols_mostrar], use_container_width=True)
 
     else:
-        st.warning("No hay datos suficientes para el periodo seleccionado.")
+        st.warning("Sin datos para este periodo.")
+else:
+    st.error("Error al conectar con Google Sheets.")
