@@ -4,7 +4,7 @@ import plotly.graph_objects as go
 from datetime import datetime
 
 # 1. Configuración de página y Estilo Visual
-st.set_page_config(page_title="Dashboard Calidad Cenoa", layout="wide")
+st.set_page_config(page_title="ENCUESTAS SATISFACCIÓN TALLER Cenoa", layout="wide")
 
 # CSS para botones con colores semafóricos reales y diseño de tarjetas
 st.markdown("""
@@ -54,7 +54,7 @@ if df_raw is not None:
     meses_dict = {1:"Enero", 2:"Febrero", 3:"Marzo", 4:"Abril", 5:"Mayo", 6:"Junio", 
                   7:"Julio", 8:"Agosto", 9:"Septiembre", 10:"Octubre", 11:"Noviembre", 12:"Diciembre"}
     
-    st.sidebar.header("⚙️ Control de Reporte")
+    st.sidebar.header("⚙️ SELECCIONAR AÑO Y MES:")
     anio_sel = st.sidebar.selectbox("Año", sorted(df_raw['Año'].unique(), reverse=True))
     meses_disp = sorted(df_raw[df_raw['Año'] == anio_sel]['Mes_Num'].unique())
     mes_sel_nombre = st.sidebar.selectbox("Mes", [meses_dict[m] for m in meses_disp])
@@ -70,7 +70,7 @@ if df_raw is not None:
     # AJUSTE: Seleccionamos la columna 18 (Índice 17 en Python)
     col_comentarios_exp = df.columns[17] if len(df.columns) > 17 else None
 
-    st.title("🚀 Dashboard de Calidad Cenoa")
+    st.title("ENCUESTAS SATISFACCIÓN TALLER Cenoa")
 
     if col_nps_interna and len(df) > 0:
         df[col_nps_interna] = pd.to_numeric(df[col_nps_interna], errors='coerce')
