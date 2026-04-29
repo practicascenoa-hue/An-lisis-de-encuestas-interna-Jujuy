@@ -88,7 +88,7 @@ if df_raw is not None:
         c1, c2 = st.columns(2)
         with c1:
             fig_nps = go.Figure(go.Indicator(
-                mode="gauge+number", value=nps_score, title={'text': "NPS Recomendación"},
+                mode="gauge+number", value=nps_score, title={'text': "NPS (Recomendación)"},
                 gauge={'axis': {'range': [-100, 100]}, 'bar': {'color': "black"},
                        'steps': [
                            {'range': [-100, 0], 'color': "#FF4B4B"},
@@ -99,7 +99,6 @@ if df_raw is not None:
             st.plotly_chart(fig_nps, use_container_width=True)
             
             # --- BOTONES CORRECTOS ---
-            st.write("### Auditoría de Comentarios:")
             if "filtro_nps" not in st.session_state: st.session_state.filtro_nps = None
             
             col_b1, col_b2, col_b3 = st.columns(3)
@@ -114,7 +113,7 @@ if df_raw is not None:
                 csi_score = pd.to_numeric(df[col_csi_calidad], errors='coerce').mean() * 10
 
             fig_csi = go.Figure(go.Indicator(
-                mode="gauge+number", value=csi_score if not pd.isna(csi_score) else 0, title={'text': "Índice de Calidad"},
+                mode="gauge+number", value=csi_score if not pd.isna(csi_score) else 0, title={'text': "CSI (Reparación+Tiempo)"},
                 gauge={'axis': {'range': [0, 100]}, 'bar': {'color': "black"},
                        'steps': [
                            {'range': [0, 70], 'color': "#FF4B4B"},
