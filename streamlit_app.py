@@ -6,58 +6,65 @@ from datetime import datetime
 # 1. Configuración de la página
 st.set_page_config(page_title="Dashboard Calidad Cenoa", layout="wide")
 
-# --- BARRA LATERAL (SIDEBAR) ---
-st.sidebar.header("⚙️ Filtros de Control")
-
-# Carga de Datos inicial
+# --- CARGA DE DATOS ---
 SHEET_URL = "https://docs.google.com/spreadsheets/d/1ER40wQho6sPz24oBvEUmQnsHnAxrnzmP3ppPukMy24Y/export?format=csv&gid=309618647"
 
 @st.cache_data(ttl=600)
 def load_data():
     try:
         df = pd.read_csv(SHEET_URL)
-        col_fecha = next((c for c in df.columns if "fecha" in c.lower() or "marca temporal" in c.lower()), None)
-        if col_fecha:
+        # Forzamos la búsqueda de "Marca temporal"
+        col_fecha = "Marca temporal"
+        
+        if col_fecha in df.columns:
+            # Convertimos a fecha asegurando que el formato sea el correcto
             df[col_fecha] = pd.to_datetime(df[col_fecha], dayfirst=True, errors='coerce')
-            df = df.dropna(subset=[col_fecha]) # Limpiamos filas sin fecha para el filtro
+            # Eliminamos filas donde la fecha no se pudo procesar
+            df = df.dropna(subset=[col_fecha])
+        else:
+            st.error(f"No se encontró la columna '{col_fecha}' en el archivo.")
+            return None, None
+            
         return df.dropna(how='all'), col_fecha
-    except:
+    except Exception as e:
+        st.error(f"Error al cargar datos: {e}")
         return None, None
 
 df_raw, col_fecha_nombre = load_data()
 
 if df_raw is not None:
-    # --- PROCESAMIENTO DE FECHAS PARA FILTROS ---
+    # --- PROCESAMIENTO DE FILTROS ---
     df_raw['Año'] = df_raw[col_fecha_nombre].dt.year.astype(int)
     df_raw['Mes_Num'] = df_raw[col_fecha_nombre].dt.month.astype(int)
     
     meses_dict = {1:"Enero", 2:"Febrero", 3:"Marzo", 4:"Abril", 5:"Mayo", 6:"Junio", 
                   7:"Julio", 8:"Agosto", 9:"Septiembre", 10:"Octubre", 11:"Noviembre", 12:"Diciembre"}
     
-    st.sidebar.subheader("📅 Calendario")
+    # --- BARRA LATERAL (SIDEBAR) ---
+    st.sidebar.header("⚙️ Filtros de Control")
     
     # 1. Selector de Año
     anios_disponibles = sorted(df_raw['Año'].unique().tolist(), reverse=True)
-    anio_sel = st.sidebar.selectbox("1. Seleccione Año", anios_disponibles)
+    anio_sel = st.sidebar.selectbox("Seleccione el Año", anios_disponibles)
     
-    # 2. Selector de Mes (Filtrado por el año seleccionado)
+    # 2. Selector de Mes (Dependiente del año)
     df_anio = df_raw[df_raw['Año'] == anio_sel]
     meses_disponibles_num = sorted(df_anio['Mes_Num'].unique().tolist())
     meses_nombres = [meses_dict[m] for m in meses_disponibles_num]
     
-    mes_sel_nombre = st.sidebar.selectbox("2. Seleccione Mes", meses_nombres)
+    mes_sel_nombre = st.sidebar.selectbox("Seleccione el Mes", meses_nombres)
     
     # Obtener el número del mes seleccionado
     mes_sel_num = [k for k, v in meses_dict.items() if v == mes_sel_nombre][0]
     
-    # Aplicar el filtro final al DataFrame de trabajo
+    # Filtrar el DataFrame final para los cálculos
     df = df_raw[(df_raw['Año'] == anio_sel) & (df_raw['Mes_Num'] == mes_sel_num)].copy()
 
     # --- CUERPO PRINCIPAL ---
     st.title("🚀 Dashboard de Calidad Cenoa")
-    st.info(f"📅 Reporte de {mes_sel_nombre} {anio_sel}")
+    st.info(f"📅 Datos de {mes_sel_nombre} {anio_sel} (Fuente: {col_fecha_nombre})")
 
-    # Identificar columna NPS
+    # Identificar columna NPS (Pregunta principal de recomendación)
     col_nps = next((c for c in df.columns if "escala" in c.lower() or "satisfecho" in c.lower()), None)
     
     if col_nps and len(df) > 0:
@@ -95,43 +102,41 @@ if df_raw is not None:
             st.header("🔍 Análisis por Pilares de Calidad")
             cp1, cp2, cp3 = st.columns(3)
 
-            # Búsqueda ultra-flexible de columnas
-            col_reparacion = next((c for c in df.columns if any(x in c.lower() for x in ["chapa", "pintura", "calidad del trabajo"])), None)
-            col_tiempo = next((c for c in df.columns if any(x in c.lower() for x in ["acordada", "fecha y hora"])), None)
-            col_atencion = next((c for c in df.columns if any(x in c.lower() for x in ["explicaron", "detalle", "factura"])), None)
+            # Mapeo de columnas por palabras clave
+            col_rep = next((c for c in df.columns if any(x in c.lower() for x in ["chapa", "pintura", "calidad del trabajo"])), None)
+            col_tie = next((c for c in df.columns if any(x in c.lower() for x in ["acordada", "fecha", "entrega"])), None)
+            col_ate = next((c for c in df.columns if any(x in c.lower() for x in ["explicaron", "factura", "atención"])), None)
 
             with cp1:
                 st.subheader("🛠️ Calidad Reparación")
-                if col_reparacion:
-                    df[col_reparacion] = pd.to_numeric(df[col_reparacion], errors='coerce')
-                    exitos = len(df[df[col_reparacion] >= 9])
-                    pct_rep = (exitos / total) * 100
-                    st.metric("Indice Chapa y Pintura", f"{int(pct_rep)}%")
-                    st.progress(pct_rep/100)
-                else: st.error("No se encontró columna 'Chapa'")
+                if col_rep:
+                    # Calculamos notas 9 y 10 para reparación de chapa
+                    exitos = len(df[pd.to_numeric(df[col_rep], errors='coerce') >= 9])
+                    pct = (exitos / total) * 100
+                    st.metric("Indice Chapa y Pintura", f"{int(pct)}%")
+                    st.progress(pct/100)
+                else: st.warning("Columna Chapa/Pintura no hallada")
 
             with cp2:
                 st.subheader("⏰ Tiempo")
-                if col_tiempo:
-                    si_t = len(df[df[col_tiempo].astype(str).str.lower().str.contains("sí|si")])
+                if col_tie:
+                    si_t = len(df[df[col_tie].astype(str).str.lower().str.contains("si|sí")])
                     pct_t = (si_t / total) * 100
-                    st.metric("Entrega a Tiempo", f"{int(pct_t)}%")
+                    st.metric("Cumplimiento Entrega", f"{int(pct_t)}%")
                     st.progress(pct_t/100)
-                else: st.error("No se encontró columna 'Tiempo'")
+                else: st.warning("Columna Tiempo no hallada")
 
             with cp3:
                 st.subheader("📞 Atención")
-                if col_atencion:
-                    si_a = len(df[df[col_atencion].astype(str).str.lower().str.contains("sí|si")])
+                if col_ate:
+                    si_a = len(df[df[col_ate].astype(str).str.lower().str.contains("si|sí")])
                     pct_a = (si_a / total) * 100
                     st.metric("Claridad Factura", f"{int(pct_a)}%")
                     st.progress(pct_a/100)
-                else: st.error("No se encontró columna 'Atención'")
+                else: st.warning("Columna Atención no hallada")
         else:
-            st.warning(f"No hay respuestas válidas para {mes_sel_nombre} {anio_sel}")
-
+            st.warning(f"No hay suficientes respuestas numéricas en {mes_sel_nombre}.")
     else:
-        st.warning(f"No hay registros cargados para {mes_sel_nombre} {anio_sel}")
+        st.warning(f"No hay datos registrados en {mes_sel_nombre} {anio_sel}.")
 else:
-    st.error("Error crítico: No se pudo conectar con el Google Sheet.")
-     
+    st.error("No se pudo cargar el archivo desde Google Sheets.")
