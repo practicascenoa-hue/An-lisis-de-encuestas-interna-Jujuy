@@ -54,7 +54,7 @@ if df_raw is not None:
     meses_dict = {1:"Enero", 2:"Febrero", 3:"Marzo", 4:"Abril", 5:"Mayo", 6:"Junio", 
                   7:"Julio", 8:"Agosto", 9:"Septiembre", 10:"Octubre", 11:"Noviembre", 12:"Diciembre"}
     
-    st.sidebar.header("⚙️ SELECCIONAR AÑO Y MES:")
+    st.sidebar.header("SELECCIONAR AÑO Y MES:")
     anio_sel = st.sidebar.selectbox("Año", sorted(df_raw['Año'].unique(), reverse=True))
     meses_disp = sorted(df_raw[df_raw['Año'] == anio_sel]['Mes_Num'].unique())
     mes_sel_nombre = st.sidebar.selectbox("Mes", [meses_dict[m] for m in meses_disp])
