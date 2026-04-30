@@ -9,10 +9,10 @@ st.set_page_config(page_title="ENCUESTAS DE SATISFACCIÓN TALLER Cenoa", layout=
 if "f_tipo" not in st.session_state: st.session_state.f_tipo = None
 if "f_val" not in st.session_state: st.session_state.f_val = None
 
-# --- CSS DEFINITIVO: SELECCIÓN POR TEXTO (NO FALLA) ---
+# --- CSS RADICAL: COLORES POR COLUMNA (SIN FALLOS) ---
 st.markdown("""
     <style>
-    /* Estilo base para que se vean siempre */
+    /* Estilo general para asegurar visibilidad */
     div.stButton > button {
         width: 100%;
         height: 35px;
@@ -20,36 +20,35 @@ st.markdown("""
         border: none;
         color: white !important;
         font-weight: bold;
-        font-size: 11px;
         text-transform: uppercase;
-        opacity: 1 !important;
         display: block !important;
+        opacity: 1 !important;
     }
 
-    /* COLORES POR CONTENIDO DE TEXTO */
-    /* VERDE para Promotores y Excelente */
-    div.stButton > button:has(div:contains("PROMOTORES")), 
-    div.stButton > button:has(div:contains("EXCELENTE")) {
+    /* Columna 1 de cada grupo (Promotores / Excelente) -> VERDE */
+    [data-testid="column"]:nth-of-type(1) [data-testid="stVerticalBlock"] [data-testid="column"]:nth-of-type(1) button {
         background-color: #2E7D32 !important;
     }
-
-    /* AMARILLO para Pasivos y Regular */
-    div.stButton > button:has(div:contains("PASIVOS")), 
-    div.stButton > button:has(div:contains("REGULAR")) {
+    
+    /* Columna 2 de cada grupo (Pasivos / Regular) -> AMARILLO */
+    [data-testid="column"]:nth-of-type(1) [data-testid="stVerticalBlock"] [data-testid="column"]:nth-of-type(2) button,
+    [data-testid="column"]:nth-of-type(2) [data-testid="stVerticalBlock"] [data-testid="column"]:nth-of-type(2) button {
         background-color: #FBC02D !important;
         color: #212529 !important;
     }
 
-    /* ROJO para Detractores y Malo */
-    div.stButton > button:has(div:contains("DETRACTORES")), 
-    div.stButton > button:has(div:contains("MALO")) {
+    /* Columna 3 de cada grupo (Detractores / Malo) -> ROJO */
+    [data-testid="column"]:nth-of-type(1) [data-testid="stVerticalBlock"] [data-testid="column"]:nth-of-type(3) button,
+    [data-testid="column"]:nth-of-type(2) [data-testid="stVerticalBlock"] [data-testid="column"]:nth-of-type(3) button {
         background-color: #D32F2F !important;
     }
-    
-    /* Alineación de las columnas de botones */
-    [data-testid="stHorizontalBlock"] {
-        gap: 0.5rem;
-    }
+
+    /* Selector de respaldo por ID de columna de Streamlit */
+    div[data-testid="stHorizontalBlock"] div:nth-child(1) button { background-color: #2E7D32 !important; }
+    div[data-testid="stHorizontalBlock"] div:nth-child(2) button { background-color: #FBC02D !important; color: #212529 !important; }
+    div[data-testid="stHorizontalBlock"] div:nth-child(3) button { background-color: #D32F2F !important; }
+
+    .stPlotlyChart { margin-top: -10px; }
     </style>
     """, unsafe_allow_html=True)
 
@@ -82,7 +81,7 @@ if df_raw is not None:
     
     df = df_raw[(df_raw['Año'] == anio_sel) & (df_raw['Mes_Num'] == mes_sel_num)].copy()
 
-    # Mapeo de Columnas
+    # Mapeado de Columnas
     col_nps = next((c for c in df.columns if "recomiendes" in c.lower()), None)
     col_csi = df.columns[19] 
 
@@ -111,29 +110,28 @@ if df_raw is not None:
                        'steps': [{'range': [0, 59], 'color': "#EF9A9A"}, {'range': [60, 89], 'color': "#FFF59D"}, {'range': [90, 100], 'color': "#A5D6A7"}]}
             )).update_layout(height=230, margin=dict(l=50, r=50, t=60, b=0))
 
-        # --- ESTRUCTURA DE INDICADORES ---
-        col_reloj_1, col_reloj_2 = st.columns(2)
+        # --- INDICADORES ---
+        col_main_1, col_main_2 = st.columns(2)
         
-        with col_reloj_1:
+        with col_main_1:
             st.plotly_chart(crear_gauge(nps_val, "NPS (Recomendación)"), use_container_width=True)
             st.caption("Filtrar auditoría NPS:")
-            b_n1, b_n2, b_n3 = st.columns(3)
-            with b_n1: st.button(f"PROMOTORES ({p_c})", key="n1", on_click=lambda: st.session_state.update({"f_tipo":"NPS","f_val":"Promotor"}))
-            with b_n2: st.button(f"PASIVOS ({pas_c})", key="n2", on_click=lambda: st.session_state.update({"f_tipo":"NPS","f_val":"Pasivo"}))
-            with b_n3: st.button(f"DETRACTORES ({d_c})", key="n3", on_click=lambda: st.session_state.update({"f_tipo":"NPS","f_val":"Detractor"}))
+            b1, b2, b3 = st.columns(3)
+            with b1: st.button(f"PROMOTORES ({p_c})", key="btn_n1", on_click=lambda: st.session_state.update({"f_tipo":"NPS","f_val":"Promotor"}))
+            with b2: st.button(f"PASIVOS ({pas_c})", key="btn_n2", on_click=lambda: st.session_state.update({"f_tipo":"NPS","f_val":"Pasivo"}))
+            with b3: st.button(f"DETRACTORES ({d_c})", key="btn_n3", on_click=lambda: st.session_state.update({"f_tipo":"NPS","f_val":"Detractor"}))
 
-        with col_reloj_2:
+        with col_main_2:
             st.plotly_chart(crear_gauge(csi_val, "CSI (Satisfacción)"), use_container_width=True)
             st.caption("Filtrar auditoría CSI:")
-            b_c1, b_c2, b_c3 = st.columns(3)
-            with b_c1: st.button(f"EXCELENTE ({exc_c})", key="c1", on_click=lambda: st.session_state.update({"f_tipo":"CSI","f_val":"Excelente"}))
-            with b_c2: st.button(f"REGULAR ({reg_c})", key="c2", on_click=lambda: st.session_state.update({"f_tipo":"CSI","f_val":"Regular"}))
-            with b_c3: st.button(f"MALO ({mal_c})", key="c3", on_click=lambda: st.session_state.update({"f_tipo":"CSI","f_val":"Malo"}))
+            bc1, bc2, bc3 = st.columns(3)
+            with bc1: st.button(f"EXCELENTE ({exc_c})", key="btn_c1", on_click=lambda: st.session_state.update({"f_tipo":"CSI","f_val":"Excelente"}))
+            with bc2: st.button(f"REGULAR ({reg_c})", key="btn_c2", on_click=lambda: st.session_state.update({"f_tipo":"CSI","f_val":"Regular"}))
+            with bc3: st.button(f"MALO ({mal_c})", key="btn_c3", on_click=lambda: st.session_state.update({"f_tipo":"CSI","f_val":"Malo"}))
 
         # --- TABLA ---
         if st.session_state.f_tipo:
             st.markdown("---")
-            # Filtrado de tabla (Mismo que antes)
             if st.session_state.f_tipo == "NPS":
                 if st.session_state.f_val == "Promotor": df_f = df[df[col_nps] >= 9]
                 elif st.session_state.f_val == "Detractor": df_f = df[df[col_nps] <= 6]
