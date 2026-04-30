@@ -3,7 +3,7 @@ import pandas as pd
 import plotly.graph_objects as go
 
 # 1. Configuración de página
-st.set_page_config(page_title="Dashboard Calidad Cenoa", layout="wide")
+st.set_page_config(page_title="ENCUESTAS DE SATISFACCIÓN TALLER Cenoa", layout="wide")
 
 # Inicializar estados de filtro
 if "f_tipo" not in st.session_state: st.session_state.f_tipo = None
@@ -55,7 +55,7 @@ if df_raw is not None:
     df_raw['Mes_Num'] = df_raw[col_fecha_nombre].dt.month
     meses_dict = {1:"Enero", 2:"Febrero", 3:"Marzo", 4:"Abril", 5:"Mayo", 6:"Junio", 7:"Julio", 8:"Agosto", 9:"Septiembre", 10:"Octubre", 11:"Noviembre", 12:"Diciembre"}
     
-    st.sidebar.header("⚙️ Control")
+    st.sidebar.header("FILTROS PERIODO")
     anios_disp = sorted(df_raw['Año'].dropna().unique().astype(int), reverse=True)
     anio_sel = st.sidebar.selectbox("Año", anios_disp)
     meses_nros = sorted(df_raw[df_raw['Año'] == anio_sel]['Mes_Num'].dropna().unique().astype(int))
@@ -72,7 +72,7 @@ if df_raw is not None:
     col_cliente = next((c for c in df.columns if "nombre" in c.lower() and "apellido" in c.lower()), None)
     col_asesor = next((c for c in df.columns if "asesor" in c.lower() or "recepcionista" in c.lower()), None)
 
-    st.title("🚀 Dashboard de Calidad Cenoa")
+    st.title("INDICADORES ENCUESTAS DE SATISFACCIÓN")
 
     if len(df) > 0:
         df[col_nps] = pd.to_numeric(df[col_nps], errors='coerce')
