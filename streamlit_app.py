@@ -24,11 +24,11 @@ st.markdown("""
     }
     
     /* Forzado de colores por posición de columna */
-    /* Columna 1: Promotores / Excelente -> VERDE */
+    /* Botón EXCELENTE / PROMOTORES -> VERDE */
     [data-testid="stHorizontalBlock"] div:nth-child(1) button { background-color: #2E7D32 !important; }
-    /* Columna 2: Pasivos / Regular -> AMARILLO */
+    /* Botón REGULAR / PASIVOS -> AMARILLO */
     [data-testid="stHorizontalBlock"] div:nth-child(2) button { background-color: #FBC02D !important; color: #212529 !important; }
-    /* Columna 3: Detractores / Malo -> ROJO */
+    /* Botón MALO / DETRACTORES -> ROJO */
     [data-testid="stHorizontalBlock"] div:nth-child(3) button { background-color: #D32F2F !important; }
 
     .stPlotlyChart { margin-top: -30px; }
@@ -52,6 +52,7 @@ def load_data():
 df_raw, col_fecha_nombre = load_data()
 
 if df_raw is not None:
+    # Preparación de fechas
     df_raw['Año'] = df_raw[col_fecha_nombre].dt.year
     df_raw['Mes_Num'] = df_raw[col_fecha_nombre].dt.month
     meses_dict = {1:"Enero", 2:"Febrero", 3:"Marzo", 4:"Abril", 5:"Mayo", 6:"Junio", 7:"Julio", 8:"Agosto", 9:"Septiembre", 10:"Octubre", 11:"Noviembre", 12:"Diciembre"}
@@ -64,56 +65,56 @@ if df_raw is not None:
     
     df = df_raw[(df_raw['Año'] == anio_sel) & (df_raw['Mes_Num'] == mes_sel_num)].copy()
 
-    # Mapeado de Columnas
+    # Mapeado de columnas
     col_nps = next((c for c in df.columns if "recomiendes" in c.lower()), None)
-    col_csi = df.columns[19] 
+    col_csi = df.columns[19] # Columna T
     col_c_atencion = df.columns[8]; col_c_calidad = df.columns[12]; col_c_tiempo = df.columns[14]
-    col_c_final = df.columns[17] 
+    col_c_final = df.columns[17] # Columna R
     col_cliente = next((c for c in df.columns if "nombre" in c.lower() and "apellido" in c.lower()), None)
     col_asesor = next((c for c in df.columns if "asesor" in c.lower() or "recepcionista" in c.lower()), None)
 
     st.title("🚀 Dashboard de Calidad Cenoa")
 
     if len(df) > 0:
-        # Limpieza de datos
+        # Limpieza de datos (Evitar errores de tipo)
         df[col_nps] = pd.to_numeric(df[col_nps], errors='coerce')
         df[col_csi] = df[col_csi].astype(str).str.replace('%', '').str.replace(',', '.')
         df[col_csi] = pd.to_numeric(df[col_csi], errors='coerce')
 
-        # Cálculos seguros (evitando NaN)
+        # Valores para los relojes (Convertidos a float puro para Plotly)
         nps_val = float(df[col_nps].mean() * 10) if not df[col_nps].isna().all() else 0.0
         csi_val = float(df[col_csi].mean() * 100 if df[col_csi].max() <= 1.1 else df[col_csi].mean()) if not df[col_csi].isna().all() else 0.0
         
+        # Conteos para los botones
         p_c = len(df[df[col_nps] >= 9]); d_c = len(df[df[col_nps] <= 6]); pas_c = len(df[(df[col_nps] > 6) & (df[col_nps] < 9)])
-        lim_e = 9 if csi_val < 15 else 90
-        lim_m = 6 if csi_val < 15 else 60
+        lim_e = 90 if csi_val > 11 else 9
+        lim_m = 60 if csi_val > 11 else 6
         exc_c = len(df[df[col_csi] >= lim_e]); mal_c = len(df[df[col_csi] <= lim_m]); reg_c = len(df) - exc_c - mal_c
 
-        # --- FUNCIÓN GAUGE ULTRA-ESTABLE ---
-        def crear_gauge_final(valor, titulo):
-            # Formateamos el valor para evitar errores de decimales infinitos
-            val = round(valor, 1)
+        # --- RELOJES (ESTRUCTURA SIMPLIFICADA ANTI-ERROR) ---
+        def crear_gauge(valor, titulo):
             fig = go.Figure(go.Indicator(
                 mode="gauge+number",
-                value=val,
+                value=round(valor, 1),
                 title={'text': f"<b>{titulo}</b>", 'font': {'size': 20}},
                 gauge={
-                    'axis': {'range': [0, 100], 'tickwidth': 1, 'tickcolor': "gray"},
-                    'bar': {'color': "#1a1a1a", 'thickness': 0.15},
+                    'axis': {'range': [0, 100]},
+                    'bar': {'color': "#262626"},
                     'steps': [
                         {'range': [0, 59], 'color': "#EF5350"},   # Rojo
                         {'range': [60, 89], 'color': "#FFEE58"},  # Amarillo
                         {'range': [90, 100], 'color': "#66BB6A"}  # Verde
                     ],
-                    'thickness': 0.25 # Grosor del arco
+                    'thickness': 0.3
                 }
             ))
-            fig.update_layout(height=300, margin=dict(l=40, r=40, t=100, b=0))
+            fig.update_layout(height=280, margin=dict(l=50, r=50, t=100, b=0))
             return fig
 
+        # --- GRID INDICADORES ---
         c1, c2 = st.columns(2)
         with c1:
-            st.plotly_chart(crear_gauge_final(nps_val, "NPS (Recomendación)"), use_container_width=True)
+            st.plotly_chart(crear_gauge(nps_val, "NPS (Recomendación)"), use_container_width=True)
             st.caption("Filtrar auditoría NPS:")
             cn1, cn2, cn3 = st.columns(3)
             if cn1.button(f"PROMOTORES ({p_c})"): st.session_state.f_tipo = "NPS"; st.session_state.f_val = "Promotor"
@@ -121,14 +122,14 @@ if df_raw is not None:
             if cn3.button(f"DETRACTORES ({d_c})"): st.session_state.f_tipo = "NPS"; st.session_state.f_val = "Detractor"
 
         with c2:
-            st.plotly_chart(crear_gauge_final(csi_val, "CSI (Satisfacción)"), use_container_width=True)
+            st.plotly_chart(crear_gauge(csi_val, "CSI (Satisfacción)"), use_container_width=True)
             st.caption("Filtrar auditoría CSI:")
             cc1, cc2, cc3 = st.columns(3)
             if cc1.button(f"EXCELENTE ({exc_c})"): st.session_state.f_tipo = "CSI"; st.session_state.f_val = "Excelente"
             if cc2.button(f"REGULAR ({reg_c})"): st.session_state.f_tipo = "CSI"; st.session_state.f_val = "Regular"
             if cc3.button(f"MALO ({mal_c})"): st.session_state.f_tipo = "CSI"; st.session_state.f_val = "Malo"
 
-        # --- TABLA DE AUDITORÍA ---
+        # --- TABLA AUDITORÍA ---
         if st.session_state.f_tipo:
             st.markdown("---")
             if st.session_state.f_tipo == "NPS":
@@ -144,4 +145,5 @@ if df_raw is not None:
             st.subheader(f"Auditoría {st.session_state.f_tipo}: {st.session_state.f_val}")
             st.dataframe(df_f.sort_values(by=col_csi, ascending=True)[cols_show], use_container_width=True)
 
-    else: st.warning("Sin datos para este periodo.")
+    else:
+        st.warning("No hay encuestas para mostrar en este periodo.")
