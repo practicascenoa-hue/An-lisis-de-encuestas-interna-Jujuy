@@ -9,7 +9,7 @@ st.set_page_config(page_title="ENCUESTAS DE SATISFACCIÓN TALLER Cenoa", layout=
 if "f_tipo" not in st.session_state: st.session_state.f_tipo = None
 if "f_val" not in st.session_state: st.session_state.f_val = None
 
-# --- CSS: BOTONES SLIM Y COLORES CORREGIDOS ---
+# --- CSS: BOTONES SLIM Y COLORES VIBRANTES (CORREGIDO) ---
 st.markdown("""
     <style>
     div.stButton > button {
@@ -17,20 +17,21 @@ st.markdown("""
         height: 35px;
         border-radius: 6px;
         border: none;
-        color: white;
+        color: white !important;
         font-weight: bold;
         font-size: 11px;
         text-transform: uppercase;
         margin-top: 0px;
     }
-    /* Columna 1 (Promotores/Excelente) -> VERDE */
-    div[data-testid="stHorizontalBlock"] > div:nth-child(1) button { background-color: #81C784 !important; } 
-    /* Columna 2 (Pasivos/Regular) -> AMARILLO */
-    div[data-testid="stHorizontalBlock"] > div:nth-child(2) button { background-color: #FFF176 !important; color: #212529 !important; } 
-    /* Columna 3 (Detractores/Malo) -> ROJO */
-    div[data-testid="stHorizontalBlock"] > div:nth-child(3) button { background-color: #E57373 !important; } 
+    /* Columna 1 (Promotores/Excelente) -> VERDE FUERTE */
+    [data-testid="stHorizontalBlock"] > div:nth-child(1) button { background-color: #2E7D32 !important; } 
+    /* Columna 2 (Pasivos/Regular) -> AMARILLO FUERTE */
+    [data-testid="stHorizontalBlock"] > div:nth-child(2) button { background-color: #FBC02D !important; color: #212529 !important; } 
+    /* Columna 3 (Detractores/Malo) -> ROJO FUERTE */
+    [data-testid="stHorizontalBlock"] > div:nth-child(3) button { background-color: #D32F2F !important; } 
     
     .stCaption { margin-bottom: -15px; }
+    .stPlotlyChart { margin-top: -10px; }
     </style>
     """, unsafe_allow_html=True)
 
@@ -96,18 +97,18 @@ if df_raw is not None:
             return go.Figure(go.Indicator(
                 mode="gauge+number",
                 value=round(valor, 1),
-                title={'text': titulo, 'font': {'size': 18, 'color': '#333'}},
+                title={'text': f"<b>{titulo}</b>", 'font': {'size': 18, 'color': '#333'}},
                 gauge={
                     'axis': {'range': [0, 100], 'tickwidth': 1, 'tickcolor': "lightgray"},
                     'bar': {'color': "#2c3e50", 'thickness': 0.15},
                     'bgcolor': "white",
                     'steps': [
-                        {'range': [0, 59], 'color': "#FFCDD2"}, 
-                        {'range': [60, 89], 'color': "#FFF9C4"}, 
-                        {'range': [90, 100], 'color': "#C8E6C9"} 
+                        {'range': [0, 59], 'color': "#EF9A9A"}, # Rojo vibrante
+                        {'range': [60, 89], 'color': "#FFF59D"}, # Amarillo vibrante
+                        {'range': [90, 100], 'color': "#A5D6A7"} # Verde vibrante
                     ]
                 }
-            )).update_layout(height=230, margin=dict(l=50, r=50, t=50, b=0))
+            )).update_layout(height=230, margin=dict(l=50, r=50, t=60, b=0))
 
         # --- LAYOUT PRINCIPAL ---
         col_reloj_1, col_reloj_2 = st.columns(2)
