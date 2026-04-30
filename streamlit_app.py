@@ -9,7 +9,7 @@ st.set_page_config(page_title="Dashboard Calidad Cenoa", layout="wide")
 if "f_tipo" not in st.session_state: st.session_state.f_tipo = None
 if "f_val" not in st.session_state: st.session_state.f_val = None
 
-# --- CSS: COLORES VIBRANTES Y BOTONES SLIM ---
+# --- CSS: COLORES FUERTES Y BOTONES SLIM ---
 st.markdown("""
     <style>
     div.stButton > button {
@@ -23,16 +23,15 @@ st.markdown("""
         text-transform: uppercase;
     }
     
-    /* Selectores específicos para garantizar colores correctos */
-    /* Botón 1 de cada fila (Promotores/Excelente) -> VERDE */
-    div[data-testid="stHorizontalBlock"] div:nth-child(1) button { background-color: #2E7D32 !important; }
-    /* Botón 2 de cada fila (Pasivos/Regular) -> AMARILLO */
-    div[data-testid="stHorizontalBlock"] div:nth-child(2) button { background-color: #FBC02D !important; color: #212529 !important; }
-    /* Botón 3 de cada fila (Detractores/Malo) -> ROJO */
-    div[data-testid="stHorizontalBlock"] div:nth-child(3) button { background-color: #D32F2F !important; }
+    /* Forzado de colores por posición de columna */
+    /* Columna 1: Promotores / Excelente -> VERDE */
+    [data-testid="stHorizontalBlock"] div:nth-child(1) button { background-color: #2E7D32 !important; }
+    /* Columna 2: Pasivos / Regular -> AMARILLO */
+    [data-testid="stHorizontalBlock"] div:nth-child(2) button { background-color: #FBC02D !important; color: #212529 !important; }
+    /* Columna 3: Detractores / Malo -> ROJO */
+    [data-testid="stHorizontalBlock"] div:nth-child(3) button { background-color: #D32F2F !important; }
 
-    /* Ajuste de margen para títulos de gráficos */
-    .stPlotlyChart { margin-top: -40px; }
+    .stPlotlyChart { margin-top: -30px; }
     </style>
     """, unsafe_allow_html=True)
 
@@ -81,6 +80,7 @@ if df_raw is not None:
         df[col_csi] = df[col_csi].astype(str).str.replace('%', '').str.replace(',', '.')
         df[col_csi] = pd.to_numeric(df[col_csi], errors='coerce')
 
+        # Cálculos seguros (evitando NaN)
         nps_val = float(df[col_nps].mean() * 10) if not df[col_nps].isna().all() else 0.0
         csi_val = float(df[col_csi].mean() * 100 if df[col_csi].max() <= 1.1 else df[col_csi].mean()) if not df[col_csi].isna().all() else 0.0
         
@@ -89,27 +89,28 @@ if df_raw is not None:
         lim_m = 6 if csi_val < 15 else 60
         exc_c = len(df[df[col_csi] >= lim_e]); mal_c = len(df[df[col_csi] <= lim_m]); reg_c = len(df) - exc_c - mal_c
 
-        # --- FUNCIÓN GAUGE BLINDADA ---
+        # --- FUNCIÓN GAUGE ULTRA-ESTABLE ---
         def crear_gauge_final(valor, titulo):
+            # Formateamos el valor para evitar errores de decimales infinitos
+            val = round(valor, 1)
             fig = go.Figure(go.Indicator(
                 mode="gauge+number",
-                value=valor,
-                title={'text': titulo, 'font': {'size': 22, 'color': '#1f1f1f'}},
+                value=val,
+                title={'text': f"<b>{titulo}</b>", 'font': {'size': 20}},
                 gauge={
-                    'axis': {'range': [0, 100], 'tickwidth': 1},
-                    'bar': {'color': "#262626", 'thickness': 0.1},
+                    'axis': {'range': [0, 100], 'tickwidth': 1, 'tickcolor': "gray"},
+                    'bar': {'color': "#1a1a1a", 'thickness': 0.15},
                     'steps': [
-                        {'range': [0, 59], 'color': "#EF5350"},   # Rojo Sólido
-                        {'range': [60, 89], 'color': "#FFEE58"},  # Amarillo Sólido
-                        {'range': [90, 100], 'color': "#66BB6A"}  # Verde Sólido
+                        {'range': [0, 59], 'color': "#EF5350"},   # Rojo
+                        {'range': [60, 89], 'color': "#FFEE58"},  # Amarillo
+                        {'range': [90, 100], 'color': "#66BB6A"}  # Verde
                     ],
-                    'thickness': 0.2
+                    'thickness': 0.25 # Grosor del arco
                 }
             ))
-            fig.update_layout(height=300, margin=dict(l=50, r=50, t=120, b=0))
+            fig.update_layout(height=300, margin=dict(l=40, r=40, t=100, b=0))
             return fig
 
-        # --- LAYOUT DE INDICADORES ---
         c1, c2 = st.columns(2)
         with c1:
             st.plotly_chart(crear_gauge_final(nps_val, "NPS (Recomendación)"), use_container_width=True)
@@ -143,5 +144,4 @@ if df_raw is not None:
             st.subheader(f"Auditoría {st.session_state.f_tipo}: {st.session_state.f_val}")
             st.dataframe(df_f.sort_values(by=col_csi, ascending=True)[cols_show], use_container_width=True)
 
-    else:
-        st.warning("No hay encuestas registradas para este mes.")
+    else: st.warning("Sin datos para este periodo.")
