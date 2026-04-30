@@ -9,31 +9,22 @@ st.set_page_config(page_title="Dashboard Calidad Cenoa", layout="wide")
 if "f_tipo" not in st.session_state: st.session_state.f_tipo = None
 if "f_val" not in st.session_state: st.session_state.f_val = None
 
-# --- CSS MEJORADO: BOTONES MÁS PEQUEÑOS Y ELEGANTES ---
+# --- CSS: BOTONES COMPACTOS ---
 st.markdown("""
     <style>
     div.stButton > button {
         width: 100%;
-        height: 50px; /* Altura reducida */
+        height: 45px;
         border-radius: 8px;
         border: none;
         color: white;
         font-weight: bold;
-        font-size: 14px;
+        font-size: 13px;
         text-transform: uppercase;
-        transition: 0.2s;
-        box-shadow: 0 2px 4px rgba(0,0,0,0.1);
     }
-    /* Colores por columna de la rejilla */
-    .stColumn:nth-of-type(1) div.stButton > button { background-color: #2E7D32; } /* Verde */
-    .stColumn:nth-of-type(2) div.stButton > button { background-color: #FBC02D; color: #212529; } /* Amarillo */
-    .stColumn:nth-of-type(3) div.stButton > button { background-color: #C62828; } /* Rojo */
-    
-    div.stButton > button:hover {
-        opacity: 0.9;
-        transform: translateY(-1px);
-        box-shadow: 0 4px 8px rgba(0,0,0,0.2);
-    }
+    .stColumn:nth-of-type(1) div.stButton > button { background-color: #81C784; } /* Verde Suave */
+    .stColumn:nth-of-type(2) div.stButton > button { background-color: #FFF176; color: #212529; } /* Amarillo Suave */
+    .stColumn:nth-of-type(3) div.stButton > button { background-color: #E57373; } /* Rojo Suave */
     </style>
     """, unsafe_allow_html=True)
 
@@ -71,39 +62,57 @@ if df_raw is not None:
     col_nps = next((c for c in df.columns if "recomiendes" in c.lower()), None)
     col_csi = df.columns[19] # Columna T
     col_c_atencion = df.columns[8]; col_c_calidad = df.columns[12]; col_c_tiempo = df.columns[14]
-    col_c_final = df.columns[17] # Columna R
+    col_c_final = df.columns[17] 
     col_cliente = next((c for c in df.columns if "nombre" in c.lower() and "apellido" in c.lower()), None)
     col_asesor = next((c for c in df.columns if "asesor" in c.lower() or "recepcionista" in c.lower()), None)
 
     st.title("🚀 Dashboard de Calidad Cenoa")
 
     if len(df) > 0:
-        # Limpieza de datos
         df[col_nps] = pd.to_numeric(df[col_nps], errors='coerce')
         df[col_csi] = df[col_csi].astype(str).str.replace('%', '').str.replace(',', '.')
         df[col_csi] = pd.to_numeric(df[col_csi], errors='coerce')
 
-        # NPS Logic
+        # NPS Logic (Mapeo a escala 0-100 para el reloj según tu criterio)
         df_nps = df.dropna(subset=[col_nps])
-        nps_val = 0; p_c = 0; pas_c = 0; d_c = 0
-        if not df_nps.empty:
-            df['Seg_NPS'] = df[col_nps].apply(lambda x: 'Promotor' if x >= 9 else ('Detractor' if x <= 6 else 'Pasivo' if pd.notna(x) else None))
-            p_c = len(df[df['Seg_NPS']=='Promotor']); pas_c = len(df[df['Seg_NPS']=='Pasivo']); d_c = len(df[df['Seg_NPS']=='Detractor'])
-            nps_val = ((p_c - d_c) / len(df_nps)) * 100
+        # Nota: NPS tradicional es (P-D), pero para el reloj 0-100 usamos el promedio de recomendación
+        score_nps_reloj = df_nps[col_nps].mean() * 10 
+        
+        p_c = len(df[df[col_nps] >= 9])
+        d_c = len(df[df[col_nps] <= 6])
+        pas_c = len(df[(df[col_nps] > 6) & (df[col_nps] < 9)])
 
         # CSI Logic
         df_csi_v = df.dropna(subset=[col_csi])
-        csi_val = 0; exc_c = 0; reg_c = 0; mal_c = 0
-        if not df_csi_v.empty:
-            csi_val = df_csi_v[col_csi].mean() * 100 if df_csi_v[col_csi].max() <= 1.1 else df_csi_v[col_csi].mean()
-            # Clasificación robusta
-            df['Seg_CSI'] = df[col_csi].apply(lambda x: 'Excelente' if (x*10 if x<=1.1 else x) >= 90 else ('Malo' if (x*10 if x<=1.1 else x) <= 60 else 'Regular'))
-            exc_c = len(df[df['Seg_CSI']=='Excelente']); reg_c = len(df[df['Seg_CSI']=='Regular']); mal_c = len(df[df['Seg_CSI']=='Malo'])
+        csi_reloj = df_csi_v[col_csi].mean() * 100 if df_csi_v[col_csi].max() <= 1.1 else df_csi_v[col_csi].mean()
+        
+        exc_c = len(df[df[col_csi] >= 90]) if csi_reloj > 10 else len(df[df[col_csi] >= 9])
+        mal_c = len(df[df[col_csi] <= 60]) if csi_reloj > 10 else len(df[df[col_csi] <= 6])
+        reg_c = len(df) - exc_c - mal_c
 
-        # --- GRID DE INDICADORES ---
+        # --- RELOJES ESTILIZADOS ---
+        def crear_gauge(valor, titulo):
+            return go.Figure(go.Indicator(
+                mode="gauge+number",
+                value=valor,
+                title={'text': titulo, 'font': {'size': 18}},
+                gauge={
+                    'axis': {'range': [0, 100], 'tickwidth': 1, 'tickcolor': "gray"},
+                    'bar': {'color': "#2c3e50", 'thickness': 0.5}, # Barra indicadora fina
+                    'bgcolor': "white",
+                    'borderwidth': 0,
+                    'shape': "angular",
+                    'steps': [
+                        {'range': [0, 59], 'color': "#FFCDD2"}, # Rojo suave
+                        {'range': [60, 89], 'color': "#FFF9C4"}, # Amarillo suave
+                        {'range': [90, 100], 'color': "#C8E6C9"} # Verde suave
+                    ],
+                }
+            )).update_layout(height=280, margin=dict(l=30, r=30, t=50, b=20))
+
         c1, c2 = st.columns(2)
         with c1:
-            st.plotly_chart(go.Figure(go.Indicator(mode="gauge+number", value=nps_val, title={'text': "NPS Recomendación"}, gauge={'axis': {'range': [-100, 100]}, 'bar': {'color': "#333"}, 'steps': [{'range': [-100, 0], 'color': "#FF4B4B"}, {'range': [0, 70], 'color': "#FFA500"}, {'range': [70, 100], 'color': "#00CC96"}]})), use_container_width=True)
+            st.plotly_chart(crear_gauge(score_nps_reloj, "NPS (Recomendación)"), use_container_width=True)
             st.caption("Filtrar auditoría NPS:")
             b1, b2, b3 = st.columns(3)
             if b1.button(f"Promotores ({p_c})"): st.session_state.f_tipo = "NPS"; st.session_state.f_val = "Promotor"
@@ -111,27 +120,31 @@ if df_raw is not None:
             if b3.button(f"Detractores ({d_c})"): st.session_state.f_tipo = "NPS"; st.session_state.f_val = "Detractor"
 
         with c2:
-            st.plotly_chart(go.Figure(go.Indicator(mode="gauge+number", value=csi_val, title={'text': "CSI Unificado"}, gauge={'axis': {'range': [0, 100]}, 'bar': {'color': "#333"}, 'steps': [{'range': [0, 70], 'color': "#FF4B4B"}, {'range': [70, 85], 'color': "#FFA500"}, {'range': [85, 100], 'color': "#00CC96"}]})), use_container_width=True)
+            st.plotly_chart(crear_gauge(csi_reloj, "CSI (Satisfacción)"), use_container_width=True)
             st.caption("Filtrar auditoría CSI:")
             bc1, bc2, bc3 = st.columns(3)
             if bc1.button(f"Excelente ({exc_c})"): st.session_state.f_tipo = "CSI"; st.session_state.f_val = "Excelente"
             if bc2.button(f"Regular ({reg_c})"): st.session_state.f_tipo = "CSI"; st.session_state.f_val = "Regular"
             if bc3.button(f"Malo ({mal_c})"): st.session_state.f_tipo = "CSI"; st.session_state.f_val = "Malo"
 
-        # --- TABLA DE AUDITORÍA ---
+        # --- TABLA ---
         st.markdown("---")
-        if st.session_state.f_tipo and st.session_state.f_val:
-            col_target = 'Seg_NPS' if st.session_state.f_tipo == "NPS" else 'Seg_CSI'
-            df_final = df[df[col_target] == st.session_state.f_val].copy()
-            
-            # Columnas pedidas (incluyendo el valor real de CSI)
+        if st.session_state.f_tipo:
+            # Lógica de filtrado para la tabla
+            if st.session_state.f_tipo == "NPS":
+                if st.session_state.f_val == "Promotor": df_f = df[df[col_nps] >= 9]
+                elif st.session_state.f_val == "Detractor": df_f = df[df[col_nps] <= 6]
+                else: df_f = df[(df[col_nps] > 6) & (df[col_nps] < 9)]
+            else:
+                lim = 9 if csi_reloj < 15 else 90
+                lim_m = 6 if csi_reloj < 15 else 60
+                if st.session_state.f_val == "Excelente": df_f = df[df[col_csi] >= lim]
+                elif st.session_state.f_val == "Malo": df_f = df[df[col_csi] <= lim_m]
+                else: df_f = df[(df[col_csi] > lim_m) & (df[col_csi] < lim)]
+
             cols_v = [col_cliente, col_asesor, col_csi, col_c_atencion, col_c_calidad, col_c_tiempo, col_c_final]
             cols_v = [c for c in cols_v if c in df.columns]
-            
             st.subheader(f"Auditoría {st.session_state.f_tipo}: {st.session_state.f_val}")
-            # Ordenar de menor a mayor CSI para detectar casos rojos rápido
-            df_final = df_final.sort_values(by=col_csi, ascending=True)
-            st.dataframe(df_final[cols_v], use_container_width=True)
+            st.dataframe(df_f.sort_values(by=col_csi, ascending=True)[cols_v], use_container_width=True)
 
-    else:
-        st.warning("No hay datos para este periodo.")
+    else: st.warning("No hay datos para este periodo.")
