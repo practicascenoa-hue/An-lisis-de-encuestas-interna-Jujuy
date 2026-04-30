@@ -44,7 +44,7 @@ def load_data():
 df_raw, col_fecha_nombre = load_data()
 
 if df_raw is not None:
-    # Preparación de filtros temporales
+    # Preparación de filtros
     df_raw['Año'] = df_raw[col_fecha_nombre].dt.year.astype(int)
     df_raw['Mes_Num'] = df_raw[col_fecha_nombre].dt.month.astype(int)
     meses_dict = {1:"Enero", 2:"Febrero", 3:"Marzo", 4:"Abril", 5:"Mayo", 6:"Junio", 
@@ -60,11 +60,8 @@ if df_raw is not None:
 
     # --- IDENTIFICACIÓN DE COLUMNAS ---
     col_nps_interna = next((c for c in df.columns if "recomiendes" in c.lower()), None)
+    col_csi_t = df.columns[19] if len(df.columns) > 19 else None # Columna T
     
-    # NUEVO: Referencia directa a la columna T (índice 19 en Python) para el CSI
-    col_csi_t = df.columns[19] if len(df.columns) > 19 else None
-    
-    # Atributos individuales (H, L, N)
     col_atencion_h = df.columns[7] 
     col_calidad_l = df.columns[11]  
     col_tiempo_n = df.columns[13]   
@@ -75,70 +72,78 @@ if df_raw is not None:
 
     st.title("🚀 Dashboard de Calidad Cenoa")
 
+    # --- VALIDACIÓN DE DATOS ANTES DE CÁLCULOS ---
     if col_nps_interna and col_csi_t and len(df) > 0:
-        # Limpieza de datos
+        # Limpieza
         df[col_nps_interna] = pd.to_numeric(df[col_nps_interna], errors='coerce')
         df[col_csi_t] = pd.to_numeric(df[col_csi_t], errors='coerce')
         df = df.dropna(subset=[col_nps_interna, col_csi_t])
         
-        # Lógica NPS
-        df['Seg_NPS'] = df[col_nps_interna].apply(lambda x: 'Promotor' if x >= 9 else ('Detractor' if x <= 6 else 'Pasivo'))
-        nps_score = ((len(df[df['Seg_NPS']=='Promotor']) - len(df[df['Seg_NPS']=='Detractor'])) / len(df)) * 100
+        # Volvemos a verificar si quedó algo después de la limpieza
+        if len(df) > 0:
+            # Segmentación NPS
+            df['Seg_NPS'] = df[col_nps_interna].apply(lambda x: 'Promotor' if x >= 9 else ('Detractor' if x <= 6 else 'Pasivo'))
+            prom_cnt = len(df[df['Seg_NPS']=='Promotor'])
+            det_cnt = len(df[df['Seg_NPS']=='Detractor'])
+            nps_score = ((prom_cnt - det_cnt) / len(df)) * 100
 
-        # Lógica CSI Directa de Columna T
-        csi_global = df[col_csi_t].mean() * 100 if df[col_csi_t].max() <= 1 else df[col_csi_t].mean()
-        df['Seg_CSI'] = df[col_csi_t].apply(lambda x: 'Excelente' if x >= 9 else ('Malo' if x <= 6 else 'Regular'))
+            # Lógica CSI Directa de Columna T
+            csi_global = df[col_csi_t].mean() * 100 if df[col_csi_t].max() <= 1 else df[col_csi_t].mean()
+            df['Seg_CSI'] = df[col_csi_t].apply(lambda x: 'Excelente' if x >= 9 else ('Malo' if x <= 6 else 'Regular'))
 
-        # --- VISUALIZACIÓN ---
-        if "f_tipo" not in st.session_state: st.session_state.f_tipo = None
-        if "f_val" not in st.session_state: st.session_state.f_val = None
+            # --- VISUALIZACIÓN ---
+            if "f_tipo" not in st.session_state: st.session_state.f_tipo = None
+            if "f_val" not in st.session_state: st.session_state.f_val = None
 
-        c1, c2 = st.columns(2)
-        with c1:
-            st.plotly_chart(go.Figure(go.Indicator(
-                mode="gauge+number", value=nps_score, title={'text': "NPS Recomendación"},
-                gauge={'axis': {'range': [-100, 100]}, 'bar': {'color': "black"},
-                       'steps': [{'range': [-100, 0], 'color': "#FF4B4B"},
-                                 {'range': [0, 70], 'color': "#FFA500"},
-                                 {'range': [70, 100], 'color': "#00CC96"}]})), use_container_width=True)
-            
-            st.write("🔍 **Auditar por Recomendación:**")
-            b1, b2, b3 = st.columns(3)
-            if b1.button(f"PROMOTORES\n({len(df[df['Seg_NPS']=='Promotor'])})"): 
-                st.session_state.f_tipo = "NPS"; st.session_state.f_val = "Promotor"
-            if b2.button(f"PASIVOS\n({len(df[df['Seg_NPS']=='Pasivo'])})"): 
-                st.session_state.f_tipo = "NPS"; st.session_state.f_val = "Pasivo"
-            if b3.button(f"DETRACTORES\n({len(df[df['Seg_NPS']=='Detractor'])})"): 
-                st.session_state.f_tipo = "NPS"; st.session_state.f_val = "Detractor"
+            c1, c2 = st.columns(2)
+            with c1:
+                st.plotly_chart(go.Figure(go.Indicator(
+                    mode="gauge+number", value=nps_score, title={'text': "NPS Recomendación"},
+                    gauge={'axis': {'range': [-100, 100]}, 'bar': {'color': "black"},
+                           'steps': [{'range': [-100, 0], 'color': "#FF4B4B"},
+                                     {'range': [0, 70], 'color': "#FFA500"},
+                                     {'range': [70, 100], 'color': "#00CC96"}]})), use_container_width=True)
+                
+                st.write("🔍 **Auditar por Recomendación:**")
+                b1, b2, b3 = st.columns(3)
+                if b1.button(f"PROMOTORES\n({prom_cnt})"): 
+                    st.session_state.f_tipo = "NPS"; st.session_state.f_val = "Promotor"
+                if b2.button(f"PASIVOS\n({len(df[df['Seg_NPS']=='Pasivo'])})"): 
+                    st.session_state.f_tipo = "NPS"; st.session_state.f_val = "Pasivo"
+                if b3.button(f"DETRACTORES\n({det_cnt})"): 
+                    st.session_state.f_tipo = "NPS"; st.session_state.f_val = "Detractor"
 
-        with c2:
-            st.plotly_chart(go.Figure(go.Indicator(
-                mode="gauge+number", value=csi_global, title={'text': "CSI Unificado (Columna T)"},
-                gauge={'axis': {'range': [0, 100]}, 'bar': {'color': "black"},
-                       'steps': [{'range': [0, 70], 'color': "#FF4B4B"},
-                                 {'range': [70, 85], 'color': "#FFA500"},
-                                 {'range': [85, 100], 'color': "#00CC96"}]})), use_container_width=True)
-            
-            st.write("🔍 **Auditar por CSI (Satisfacción de Servicio):**")
-            bc1, bc2, bc3 = st.columns(3)
-            if bc1.button(f"EXCELENTE\n({len(df[df['Seg_CSI']=='Excelente'])})"): 
-                st.session_state.f_tipo = "CSI"; st.session_state.f_val = "Excelente"
-            if bc2.button(f"REGULAR\n({len(df[df['Seg_CSI']=='Regular'])})"): 
-                st.session_state.f_tipo = "CSI"; st.session_state.f_val = "Regular"
-            if bc3.button(f"MALO\n({len(df[df['Seg_CSI']=='Malo'])})"): 
-                st.session_state.f_tipo = "CSI"; st.session_state.f_val = "Malo"
+            with c2:
+                st.plotly_chart(go.Figure(go.Indicator(
+                    mode="gauge+number", value=csi_global, title={'text': "CSI Unificado (Columna T)"},
+                    gauge={'axis': {'range': [0, 100]}, 'bar': {'color': "black"},
+                           'steps': [{'range': [0, 70], 'color': "#FF4B4B"},
+                                     {'range': [70, 85], 'color': "#FFA500"},
+                                     {'range': [85, 100], 'color': "#00CC96"}]})), use_container_width=True)
+                
+                st.write("🔍 **Auditar por CSI (Satisfacción):**")
+                bc1, bc2, bc3 = st.columns(3)
+                if bc1.button(f"EXCELENTE\n({len(df[df['Seg_CSI']=='Excelente'])})"): 
+                    st.session_state.f_tipo = "CSI"; st.session_state.f_val = "Excelente"
+                if bc2.button(f"REGULAR\n({len(df[df['Seg_CSI']=='Regular'])})"): 
+                    st.session_state.f_tipo = "CSI"; st.session_state.f_val = "Regular"
+                if bc3.button(f"MALO\n({len(df[df['Seg_CSI']=='Malo'])})"): 
+                    st.session_state.f_tipo = "CSI"; st.session_state.f_val = "Malo"
 
-        # --- TABLA DE AUDITORÍA ---
-        st.markdown("---")
-        if st.session_state.f_tipo:
-            st.subheader(f"Auditoría {st.session_state.f_tipo}: {st.session_state.f_val}")
-            col_target = 'Seg_NPS' if st.session_state.f_tipo == "NPS" else 'Seg_CSI'
-            df_final = df[df[col_target] == st.session_state.f_val].copy()
-            
-            cols_show = [c for c in [col_cliente, col_asesor, col_atencion_h, col_calidad_l, col_tiempo_n, col_comentarios_exp] if c]
-            st.dataframe(df_final[cols_show], use_container_width=True)
+            # --- TABLA DE AUDITORÍA ---
+            st.markdown("---")
+            if st.session_state.f_tipo:
+                st.subheader(f"Auditoría {st.session_state.f_tipo}: {st.session_state.f_val}")
+                col_target = 'Seg_NPS' if st.session_state.f_tipo == "NPS" else 'Seg_CSI'
+                df_final = df[df[col_target] == st.session_state.f_val].copy()
+                
+                cols_show = [c for c in [col_cliente, col_asesor, col_atencion_h, col_calidad_l, col_tiempo_n, col_comentarios_exp] if c]
+                st.dataframe(df_final[cols_show], use_container_width=True)
+            else:
+                st.info("💡 Selecciona un botón arriba para analizar los comentarios.")
         else:
-            st.info("💡 Selecciona un botón arriba para analizar los comentarios de los clientes.")
-
-    else: st.warning("Sin datos para este periodo o falta columna T en el sheet.")
-else: st.error("No se pudo conectar con la base de datos.")
+            st.warning("⚠️ No se encontraron encuestas válidas para el mes de Enero 2026.")
+    else:
+        st.warning("⚠️ No hay datos cargados para el periodo seleccionado.")
+else:
+    st.error("Error al conectar con la base de datos.")
