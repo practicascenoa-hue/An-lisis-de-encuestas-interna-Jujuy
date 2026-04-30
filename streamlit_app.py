@@ -12,7 +12,7 @@ if "f_val" not in st.session_state: st.session_state.f_val = None
 # --- CSS RADICAL: SIN SELECTORES DINÁMICOS ---
 st.markdown("""
     <style>
-    /* Forzamos que todos los botones de la app tengan texto blanco y sean visibles */
+    /* Estilo base para todos los botones */
     .stButton > button {
         width: 100%;
         height: 40px;
@@ -23,6 +23,7 @@ st.markdown("""
         opacity: 1 !important;
     }
     
+    /* COLORES POR ID (KEY) - Esto no falla nunca */
     /* VERDE: Promotores (n1) y Excelente (c1) */
     button[key="n1"], button[key="c1"] { background-color: #2E7D32 !important; }
     
@@ -32,7 +33,7 @@ st.markdown("""
     /* ROJO: Detractores (n3) y Malo (c3) */
     button[key="n3"], button[key="c3"] { background-color: #D32F2F !important; }
 
-    /* Ajuste de alineación para columnas de botones */
+    /* Forzar alineación de columnas */
     [data-testid="column"] [data-testid="column"] {
         padding: 0px 5px !important;
     }
@@ -42,7 +43,7 @@ st.markdown("""
 # --- CARGA DE DATOS ---
 SHEET_URL = "https://docs.google.com/spreadsheets/d/1ER40wQho6sPz24oBvEUmQnsHnAxrnzmP3ppPukMy24Y/export?format=csv&gid=309618647"
 
-@st.cache_data(ttl=30) # Reducido a 30s para refrescar más rápido
+@st.cache_data(ttl=30)
 def load_data():
     try:
         df = pd.read_csv(SHEET_URL)
@@ -55,7 +56,7 @@ def load_data():
 df_raw, col_fecha_nombre = load_data()
 
 if df_raw is not None:
-    # Sidebar
+    # Filtros de Periodo
     df_raw['Año'] = df_raw[col_fecha_nombre].dt.year
     df_raw['Mes_Num'] = df_raw[col_fecha_nombre].dt.month
     meses_dict = {1:"Enero", 2:"Febrero", 3:"Marzo", 4:"Abril", 5:"Mayo", 6:"Junio", 7:"Julio", 8:"Agosto", 9:"Septiembre", 10:"Octubre", 11:"Noviembre", 12:"Diciembre"}
@@ -68,12 +69,12 @@ if df_raw is not None:
     
     df = df_raw[(df_raw['Año'] == anio_sel) & (df_raw['Mes_Num'] == mes_sel_num)].copy()
     col_nps = next((c for c in df.columns if "recomiendes" in c.lower()), None)
-    col_csi = df.columns[19] 
+    col_csi = df.columns[19]
 
     st.title("INDICADORES ENCUESTAS DE SATISFACCIÓN")
 
     if len(df) > 0:
-        # Limpieza rápida
+        # Limpieza de indicadores
         df[col_nps] = pd.to_numeric(df[col_nps], errors='coerce')
         df[col_csi] = df[col_csi].astype(str).str.replace('%', '').str.replace(',', '.')
         df[col_csi] = pd.to_numeric(df[col_csi], errors='coerce')
@@ -81,12 +82,11 @@ if df_raw is not None:
         nps_val = df[col_nps].mean() * 10 if not df.dropna(subset=[col_nps]).empty else 0
         csi_val = (df[col_csi].mean() * 100 if df[col_csi].max() <= 1.1 else df[col_csi].mean()) if not df.dropna(subset=[col_csi]).empty else 0
         
+        # Conteos para botones
         p_c = len(df[df[col_nps] >= 9]); d_c = len(df[df[col_nps] <= 6]); pas_c = len(df[(df[col_nps] > 6) & (df[col_nps] < 9)])
-        exc_c = len(df[df[col_csi] >= (9 if csi_val < 15 else 90)])
-        mal_c = len(df[df[col_csi] <= (6 if csi_val < 15 else 60)])
-        reg_c = len(df) - exc_c - mal_c
+        l_e = 9 if csi_val < 15 else 90; l_m = 6 if csi_val < 15 else 60
+        exc_c = len(df[df[col_csi] >= l_e]); mal_c = len(df[df[col_csi] <= l_m]); reg_c = len(df) - exc_c - mal_c
 
-        # Función de Reloj
         def crear_gauge(valor, titulo):
             return go.Figure(go.Indicator(
                 mode="gauge+number", value=round(valor, 1),
@@ -117,8 +117,6 @@ if df_raw is not None:
         # --- TABLA ---
         if st.session_state.f_tipo:
             st.markdown("---")
-            l_e = 9 if csi_val < 15 else 90
-            l_m = 6 if csi_val < 15 else 60
             if st.session_state.f_tipo == "NPS":
                 if st.session_state.f_val == "Promotor": df_f = df[df[col_nps] >= 9]
                 elif st.session_state.f_val == "Detractor": df_f = df[df[col_nps] <= 6]
