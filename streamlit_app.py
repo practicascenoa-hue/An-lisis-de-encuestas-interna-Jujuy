@@ -9,10 +9,10 @@ st.set_page_config(page_title="ENCUESTAS DE SATISFACCIÓN TALLER Cenoa", layout=
 if "f_tipo" not in st.session_state: st.session_state.f_tipo = None
 if "f_val" not in st.session_state: st.session_state.f_val = None
 
-# --- CSS: COLORES FIJOS POR POSICIÓN (ANTI-TRANSPARENCIA) ---
+# --- CSS: COLORES ASIGNADOS POR KEY (INMUNE A CAMBIOS DE ESTRUCTURA) ---
 st.markdown("""
     <style>
-    /* Estilo base obligatorio */
+    /* Estilo base para todos los botones */
     div.stButton > button {
         width: 100%;
         height: 35px;
@@ -22,27 +22,27 @@ st.markdown("""
         font-weight: bold;
         font-size: 11px;
         text-transform: uppercase;
-        display: inline-block;
-        opacity: 1 !important; /* Evita que sean invisibles */
     }
 
-    /* COLUMNA 1 (Promotores y Excelente) -> VERDE */
-    [data-testid="stHorizontalBlock"] [data-testid="column"]:nth-of-type(1) button {
+    /* COLORES POR CLAVE UNICA */
+    /* Verdes */
+    button[kind="secondary"]:has(div:contains("(8)")), 
+    button[data-testid="baseButton-secondary"]:has(div:contains("PROMOTORES")),
+    button[data-testid="baseButton-secondary"]:has(div:contains("EXCELENTE")) {
         background-color: #2E7D32 !important;
     }
+
+    /* Forzado por ID de Streamlit (Keys) */
+    div[data-testid="stButton"] button:has(div:contains("PROMOTORES")), 
+    div[data-testid="stButton"] button:has(div:contains("EXCELENTE")) { background-color: #2E7D32 !important; }
     
-    /* COLUMNA 2 (Pasivos y Regular) -> AMARILLO */
-    [data-testid="stHorizontalBlock"] [data-testid="column"]:nth-of-type(2) button {
-        background-color: #FBC02D !important;
-        color: #212529 !important;
-    }
+    div[data-testid="stButton"] button:has(div:contains("PASIVOS")), 
+    div[data-testid="stButton"] button:has(div:contains("REGULAR")) { background-color: #FBC02D !important; color: #212529 !important; }
     
-    /* COLUMNA 3 (Detractores y Malo) -> ROJO */
-    [data-testid="stHorizontalBlock"] [data-testid="column"]:nth-of-type(3) button {
-        background-color: #D32F2F !important;
-    }
-    
-    .stPlotlyChart { margin-top: -10px; }
+    div[data-testid="stButton"] button:has(div:contains("DETRACTORES")), 
+    div[data-testid="stButton"] button:has(div:contains("MALO")) { background-color: #D32F2F !important; }
+
+    .stPlotlyChart { margin-top: -15px; }
     </style>
     """, unsafe_allow_html=True)
 
@@ -75,11 +75,9 @@ if df_raw is not None:
     
     df = df_raw[(df_raw['Año'] == anio_sel) & (df_raw['Mes_Num'] == mes_sel_num)].copy()
 
-    # Mapeado de Columnas
+    # Mapeo de Columnas
     col_nps = next((c for c in df.columns if "recomiendes" in c.lower()), None)
     col_csi = df.columns[19] 
-    col_c_atencion = df.columns[8]; col_c_calidad = df.columns[12]; col_c_tiempo = df.columns[14]
-    col_c_final = df.columns[17] 
     col_cliente = next((c for c in df.columns if "nombre" in c.lower() and "apellido" in c.lower()), None)
     col_asesor = next((c for c in df.columns if "asesor" in c.lower() or "recepcionista" in c.lower()), None)
 
@@ -90,12 +88,12 @@ if df_raw is not None:
         df[col_csi] = df[col_csi].astype(str).str.replace('%', '').str.replace(',', '.')
         df[col_csi] = pd.to_numeric(df[col_csi], errors='coerce')
 
-        nps_reloj = df[col_nps].mean() * 10 if not df.dropna(subset=[col_nps]).empty else 0
-        csi_reloj = (df[col_csi].mean() * 100 if df[col_csi].max() <= 1.1 else df[col_csi].mean()) if not df.dropna(subset=[col_csi]).empty else 0
+        nps_val = df[col_nps].mean() * 10 if not df.dropna(subset=[col_nps]).empty else 0
+        csi_val = (df[col_csi].mean() * 100 if df[col_csi].max() <= 1.1 else df[col_csi].mean()) if not df.dropna(subset=[col_csi]).empty else 0
         
         p_c = len(df[df[col_nps] >= 9]); d_c = len(df[df[col_nps] <= 6]); pas_c = len(df[(df[col_nps] > 6) & (df[col_nps] < 9)])
-        exc_c = len(df[df[col_csi] >= (9 if csi_reloj < 15 else 90)])
-        mal_c = len(df[df[col_csi] <= (6 if csi_reloj < 15 else 60)])
+        exc_c = len(df[df[col_csi] >= (9 if csi_val < 15 else 90)])
+        mal_c = len(df[df[col_csi] <= (6 if csi_val < 15 else 60)])
         reg_c = len(df) - exc_c - mal_c
 
         # --- RELOJES ---
@@ -115,44 +113,36 @@ if df_raw is not None:
                 }
             )).update_layout(height=230, margin=dict(l=50, r=50, t=60, b=0))
 
-        # --- LAYOUT DE BOTONES ---
-        col_main_1, col_main_2 = st.columns(2)
-        
-        with col_main_1:
-            st.plotly_chart(crear_gauge(nps_reloj, "NPS (Recomendación)"), use_container_width=True)
+        c1, c2 = st.columns(2)
+        with c1:
+            st.plotly_chart(crear_gauge(nps_val, "NPS (Recomendación)"), use_container_width=True)
             st.caption("Filtrar auditoría NPS:")
-            # Aquí está el truco: 3 columnas dentro de la columna principal
-            b_n1, b_n2, b_n3 = st.columns(3)
-            with b_n1: st.button(f"PROMOTORES ({p_c})", key="btn_p", on_click=lambda: st.session_state.update({"f_tipo":"NPS","f_val":"Promotor"}))
-            with b_n2: st.button(f"PASIVOS ({pas_c})", key="btn_pas", on_click=lambda: st.session_state.update({"f_tipo":"NPS","f_val":"Pasivo"}))
-            with b_n3: st.button(f"DETRACTORES ({d_c})", key="btn_d", on_click=lambda: st.session_state.update({"f_tipo":"NPS","f_val":"Detractor"}))
+            b1, b2, b3 = st.columns(3)
+            with b1: st.button(f"PROMOTORES ({p_c})", key="np1", on_click=lambda: st.session_state.update({"f_tipo":"NPS","f_val":"Promotor"}))
+            with b2: st.button(f"PASIVOS ({pas_c})", key="np2", on_click=lambda: st.session_state.update({"f_tipo":"NPS","f_val":"Pasivo"}))
+            with b3: st.button(f"DETRACTORES ({d_c})", key="np3", on_click=lambda: st.session_state.update({"f_tipo":"NPS","f_val":"Detractor"}))
 
-        with col_main_2:
-            st.plotly_chart(crear_gauge(csi_reloj, "CSI (Satisfacción)"), use_container_width=True)
+        with c2:
+            st.plotly_chart(crear_gauge(csi_val, "CSI (Satisfacción)"), use_container_width=True)
             st.caption("Filtrar auditoría CSI:")
-            # Se repite la estructura de 3 columnas para que el CSS las agarre igual
-            b_c1, b_c2, b_c3 = st.columns(3)
-            with b_c1: st.button(f"EXCELENTE ({exc_c})", key="btn_e", on_click=lambda: st.session_state.update({"f_tipo":"CSI","f_val":"Excelente"}))
-            with b_c2: st.button(f"REGULAR ({reg_c})", key="btn_r", on_click=lambda: st.session_state.update({"f_tipo":"CSI","f_val":"Regular"}))
-            with b_c3: st.button(f"MALO ({mal_c})", key="btn_m", on_click=lambda: st.session_state.update({"f_tipo":"CSI","f_val":"Malo"}))
+            bc1, bc2, bc3 = st.columns(3)
+            with bc1: st.button(f"EXCELENTE ({exc_c})", key="cs1", on_click=lambda: st.session_state.update({"f_tipo":"CSI","f_val":"Excelente"}))
+            with bc2: st.button(f"REGULAR ({reg_c})", key="cs2", on_click=lambda: st.session_state.update({"f_tipo":"CSI","f_val":"Regular"}))
+            with bc3: st.button(f"MALO ({mal_c})", key="cs3", on_click=lambda: st.session_state.update({"f_tipo":"CSI","f_val":"Malo"}))
 
         # --- TABLA ---
         if st.session_state.f_tipo:
             st.markdown("---")
-            # (Lógica de filtrado igual a la anterior...)
             if st.session_state.f_tipo == "NPS":
                 if st.session_state.f_val == "Promotor": df_f = df[df[col_nps] >= 9]
                 elif st.session_state.f_val == "Detractor": df_f = df[df[col_nps] <= 6]
                 else: df_f = df[(df[col_nps] > 6) & (df[col_nps] < 9)]
             else:
-                l_e = 9 if csi_reloj < 15 else 90
-                l_m = 6 if csi_reloj < 15 else 60
+                l_e = 9 if csi_val < 15 else 90
+                l_m = 6 if csi_val < 15 else 60
                 if st.session_state.f_val == "Excelente": df_f = df[df[col_csi] >= l_e]
                 elif st.session_state.f_val == "Malo": df_f = df[df[col_csi] <= l_m]
                 else: df_f = df[(df[col_csi] > l_m) & (df[col_csi] < l_e)]
 
-            cols_v = [col_cliente, col_asesor, col_csi, col_c_atencion, col_c_calidad, col_c_tiempo, col_c_final]
             st.subheader(f"Auditoría {st.session_state.f_tipo}: {st.session_state.f_val}")
-            st.dataframe(df_f.sort_values(by=col_csi, ascending=True)[[c for c in cols_v if c in df.columns]], use_container_width=True)
-
-    else: st.warning("Sin datos para este periodo.")
+            st.dataframe(df_f.sort_values(by=col_csi, ascending=True), use_container_width=True)
