@@ -9,45 +9,50 @@ st.set_page_config(page_title="ENCUESTAS DE SATISFACCIÓN TALLER Cenoa", layout=
 if "f_tipo" not in st.session_state: st.session_state.f_tipo = None
 if "f_val" not in st.session_state: st.session_state.f_val = None
 
-# --- CSS RADICAL: COLORES POR COLUMNA (SIN FALLOS) ---
+# --- CSS DEFINITIVO: COLORES VIBRANTES Y TEXTO CLARO ---
 st.markdown("""
     <style>
-    /* Estilo general para asegurar visibilidad */
+    /* Estilo base para botones: Texto blanco y visible */
     div.stButton > button {
         width: 100%;
-        height: 35px;
+        height: 38px;
         border-radius: 6px;
         border: none;
         color: white !important;
-        font-weight: bold;
+        font-weight: bold !important;
+        font-size: 12px !important;
         text-transform: uppercase;
-        display: block !important;
-        opacity: 1 !important;
     }
 
-    /* Columna 1 de cada grupo (Promotores / Excelente) -> VERDE */
-    [data-testid="column"]:nth-of-type(1) [data-testid="stVerticalBlock"] [data-testid="column"]:nth-of-type(1) button {
+    /* VERDE: Promotores y Excelente */
+    div.stButton > button p:contains("PROMOTORES"), 
+    div.stButton > button p:contains("EXCELENTE"),
+    div.stButton > button:has(p:contains("PROMOTORES")),
+    div.stButton > button:has(p:contains("EXCELENTE")) {
         background-color: #2E7D32 !important;
     }
-    
-    /* Columna 2 de cada grupo (Pasivos / Regular) -> AMARILLO */
-    [data-testid="column"]:nth-of-type(1) [data-testid="stVerticalBlock"] [data-testid="column"]:nth-of-type(2) button,
-    [data-testid="column"]:nth-of-type(2) [data-testid="stVerticalBlock"] [data-testid="column"]:nth-of-type(2) button {
+
+    /* AMARILLO: Pasivos y Regular */
+    div.stButton > button p:contains("PASIVOS"), 
+    div.stButton > button p:contains("REGULAR"),
+    div.stButton > button:has(p:contains("PASIVOS")),
+    div.stButton > button:has(p:contains("REGULAR")) {
         background-color: #FBC02D !important;
         color: #212529 !important;
     }
+    
+    div.stButton > button p:contains("PASIVOS"), div.stButton > button p:contains("REGULAR") { color: #212529 !important; }
 
-    /* Columna 3 de cada grupo (Detractores / Malo) -> ROJO */
-    [data-testid="column"]:nth-of-type(1) [data-testid="stVerticalBlock"] [data-testid="column"]:nth-of-type(3) button,
-    [data-testid="column"]:nth-of-type(2) [data-testid="stVerticalBlock"] [data-testid="column"]:nth-of-type(3) button {
+    /* ROJO: Detractores y Malo */
+    div.stButton > button p:contains("DETRACTORES"), 
+    div.stButton > button p:contains("MALO"),
+    div.stButton > button:has(p:contains("DETRACTORES")),
+    div.stButton > button:has(p:contains("MALO")) {
         background-color: #D32F2F !important;
     }
 
-    /* Selector de respaldo por ID de columna de Streamlit */
-    div[data-testid="stHorizontalBlock"] div:nth-child(1) button { background-color: #2E7D32 !important; }
-    div[data-testid="stHorizontalBlock"] div:nth-child(2) button { background-color: #FBC02D !important; color: #212529 !important; }
-    div[data-testid="stHorizontalBlock"] div:nth-child(3) button { background-color: #D32F2F !important; }
-
+    /* Alineación de columnas de botones */
+    [data-testid="stHorizontalBlock"] { align-items: center; }
     .stPlotlyChart { margin-top: -10px; }
     </style>
     """, unsafe_allow_html=True)
@@ -110,24 +115,24 @@ if df_raw is not None:
                        'steps': [{'range': [0, 59], 'color': "#EF9A9A"}, {'range': [60, 89], 'color': "#FFF59D"}, {'range': [90, 100], 'color': "#A5D6A7"}]}
             )).update_layout(height=230, margin=dict(l=50, r=50, t=60, b=0))
 
-        # --- INDICADORES ---
+        # --- LAYOUT INDICADORES ---
         col_main_1, col_main_2 = st.columns(2)
         
         with col_main_1:
             st.plotly_chart(crear_gauge(nps_val, "NPS (Recomendación)"), use_container_width=True)
-            st.caption("Filtrar auditoría NPS:")
-            b1, b2, b3 = st.columns(3)
-            with b1: st.button(f"PROMOTORES ({p_c})", key="btn_n1", on_click=lambda: st.session_state.update({"f_tipo":"NPS","f_val":"Promotor"}))
-            with b2: st.button(f"PASIVOS ({pas_c})", key="btn_n2", on_click=lambda: st.session_state.update({"f_tipo":"NPS","f_val":"Pasivo"}))
-            with b3: st.button(f"DETRACTORES ({d_c})", key="btn_n3", on_click=lambda: st.session_state.update({"f_tipo":"NPS","f_val":"Detractor"}))
+            st.write("<p style='font-size:12px; margin-bottom:5px;'>Filtrar auditoría NPS:</p>", unsafe_allow_html=True)
+            bn1, bn2, bn3 = st.columns(3)
+            with bn1: st.button(f"PROMOTORES ({p_c})", key="n1", on_click=lambda: st.session_state.update({"f_tipo":"NPS","f_val":"Promotor"}))
+            with bn2: st.button(f"PASIVOS ({pas_c})", key="n2", on_click=lambda: st.session_state.update({"f_tipo":"NPS","f_val":"Pasivo"}))
+            with bn3: st.button(f"DETRACTORES ({d_c})", key="n3", on_click=lambda: st.session_state.update({"f_tipo":"NPS","f_val":"Detractor"}))
 
         with col_main_2:
             st.plotly_chart(crear_gauge(csi_val, "CSI (Satisfacción)"), use_container_width=True)
-            st.caption("Filtrar auditoría CSI:")
+            st.write("<p style='font-size:12px; margin-bottom:5px;'>Filtrar auditoría CSI:</p>", unsafe_allow_html=True)
             bc1, bc2, bc3 = st.columns(3)
-            with bc1: st.button(f"EXCELENTE ({exc_c})", key="btn_c1", on_click=lambda: st.session_state.update({"f_tipo":"CSI","f_val":"Excelente"}))
-            with bc2: st.button(f"REGULAR ({reg_c})", key="btn_c2", on_click=lambda: st.session_state.update({"f_tipo":"CSI","f_val":"Regular"}))
-            with bc3: st.button(f"MALO ({mal_c})", key="btn_c3", on_click=lambda: st.session_state.update({"f_tipo":"CSI","f_val":"Malo"}))
+            with bc1: st.button(f"EXCELENTE ({exc_c})", key="c1", on_click=lambda: st.session_state.update({"f_tipo":"CSI","f_val":"Excelente"}))
+            with bc2: st.button(f"REGULAR ({reg_c})", key="c2", on_click=lambda: st.session_state.update({"f_tipo":"CSI","f_val":"Regular"}))
+            with bc3: st.button(f"MALO ({mal_c})", key="c3", on_click=lambda: st.session_state.update({"f_tipo":"CSI","f_val":"Malo"}))
 
         # --- TABLA ---
         if st.session_state.f_tipo:
