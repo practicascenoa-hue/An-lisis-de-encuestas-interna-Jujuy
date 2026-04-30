@@ -9,9 +9,10 @@ st.set_page_config(page_title="ENCUESTAS DE SATISFACCIÓN TALLER Cenoa", layout=
 if "f_tipo" not in st.session_state: st.session_state.f_tipo = None
 if "f_val" not in st.session_state: st.session_state.f_val = None
 
-# --- CSS: BOTONES SLIM Y COLORES VIBRANTES (CORREGIDO) ---
+# --- CSS: CORRECCIÓN DE ALINEACIÓN Y COLORES POR TEXTO ---
 st.markdown("""
     <style>
+    /* Estilo base para todos los botones */
     div.stButton > button {
         width: 100%;
         height: 35px;
@@ -21,16 +22,33 @@ st.markdown("""
         font-weight: bold;
         font-size: 11px;
         text-transform: uppercase;
-        margin-top: 0px;
     }
-    /* Columna 1 (Promotores/Excelente) -> VERDE FUERTE */
-    [data-testid="stHorizontalBlock"] > div:nth-child(1) button { background-color: #2E7D32 !important; } 
-    /* Columna 2 (Pasivos/Regular) -> AMARILLO FUERTE */
-    [data-testid="stHorizontalBlock"] > div:nth-child(2) button { background-color: #FBC02D !important; color: #212529 !important; } 
-    /* Columna 3 (Detractores/Malo) -> ROJO FUERTE */
-    [data-testid="stHorizontalBlock"] > div:nth-child(3) button { background-color: #D32F2F !important; } 
+
+    /* COLORES ESPECÍFICOS POR CONTENIDO (Selección por texto) */
+    /* Verdes */
+    div.stButton > button:has(div:contains("PROMOTORES")),
+    div.stButton > button:has(div:contains("EXCELENTE")) {
+        background-color: #2E7D32 !important;
+    }
     
-    .stCaption { margin-bottom: -15px; }
+    /* Amarillos */
+    div.stButton > button:has(div:contains("PASIVOS")),
+    div.stButton > button:has(div:contains("REGULAR")) {
+        background-color: #FBC02D !important;
+        color: #212529 !important;
+    }
+    
+    /* Rojos */
+    div.stButton > button:has(div:contains("DETRACTORES")),
+    div.stButton > button:has(div:contains("MALO")) {
+        background-color: #D32F2F !important;
+    }
+    
+    /* Ajuste de márgenes para que no se desplacen */
+    [data-testid="stHorizontalBlock"] {
+        align-items: center;
+    }
+    
     .stPlotlyChart { margin-top: -10px; }
     </style>
     """, unsafe_allow_html=True)
@@ -103,30 +121,31 @@ if df_raw is not None:
                     'bar': {'color': "#2c3e50", 'thickness': 0.15},
                     'bgcolor': "white",
                     'steps': [
-                        {'range': [0, 59], 'color': "#EF9A9A"}, # Rojo vibrante
-                        {'range': [60, 89], 'color': "#FFF59D"}, # Amarillo vibrante
-                        {'range': [90, 100], 'color': "#A5D6A7"} # Verde vibrante
+                        {'range': [0, 59], 'color': "#EF9A9A"}, 
+                        {'range': [60, 89], 'color': "#FFF59D"}, 
+                        {'range': [90, 100], 'color': "#A5D6A7"} 
                     ]
                 }
             )).update_layout(height=230, margin=dict(l=50, r=50, t=60, b=0))
 
         # --- LAYOUT PRINCIPAL ---
-        col_reloj_1, col_reloj_2 = st.columns(2)
-        with col_reloj_1:
+        col_main_1, col_main_2 = st.columns(2)
+        
+        with col_main_1:
             st.plotly_chart(crear_gauge_ultra_slim(nps_reloj, "NPS (Recomendación)"), use_container_width=True)
             st.caption("Filtrar auditoría NPS:")
             b_n1, b_n2, b_n3 = st.columns(3)
-            if b_n1.button(f"PROMOTORES ({p_c})"): st.session_state.f_tipo, st.session_state.f_val = "NPS", "Promotor"
-            if b_n2.button(f"PASIVOS ({pas_c})"): st.session_state.f_tipo, st.session_state.f_val = "NPS", "Pasivo"
-            if b_n3.button(f"DETRACTORES ({d_c})"): st.session_state.f_tipo, st.session_state.f_val = "NPS", "Detractor"
+            with b_n1: st.button(f"PROMOTORES ({p_c})", on_click=lambda: st.session_state.update({"f_tipo": "NPS", "f_val": "Promotor"}))
+            with b_n2: st.button(f"PASIVOS ({pas_c})", on_click=lambda: st.session_state.update({"f_tipo": "NPS", "f_val": "Pasivo"}))
+            with b_n3: st.button(f"DETRACTORES ({d_c})", on_click=lambda: st.session_state.update({"f_tipo": "NPS", "f_val": "Detractor"}))
 
-        with col_reloj_2:
+        with col_main_2:
             st.plotly_chart(crear_gauge_ultra_slim(csi_reloj, "CSI (Satisfacción)"), use_container_width=True)
             st.caption("Filtrar auditoría CSI:")
             b_c1, b_c2, b_c3 = st.columns(3)
-            if b_c1.button(f"EXCELENTE ({exc_c})"): st.session_state.f_tipo, st.session_state.f_val = "CSI", "Excelente"
-            if b_c2.button(f"REGULAR ({reg_c})"): st.session_state.f_tipo, st.session_state.f_val = "CSI", "Regular"
-            if b_c3.button(f"MALO ({mal_c})"): st.session_state.f_tipo, st.session_state.f_val = "CSI", "Malo"
+            with b_c1: st.button(f"EXCELENTE ({exc_c})", on_click=lambda: st.session_state.update({"f_tipo": "CSI", "f_val": "Excelente"}))
+            with b_c2: st.button(f"REGULAR ({reg_c})", on_click=lambda: st.session_state.update({"f_tipo": "CSI", "f_val": "Regular"}))
+            with b_c3: st.button(f"MALO ({mal_c})", on_click=lambda: st.session_state.update({"f_tipo": "CSI", "f_val": "Malo"}))
 
         # --- TABLA ---
         if st.session_state.f_tipo:
