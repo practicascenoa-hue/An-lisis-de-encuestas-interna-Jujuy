@@ -9,53 +9,38 @@ st.set_page_config(page_title="ENCUESTAS DE SATISFACCIÓN TALLER Cenoa", layout=
 if "f_tipo" not in st.session_state: st.session_state.f_tipo = None
 if "f_val" not in st.session_state: st.session_state.f_val = None
 
-# --- CSS DEFINITIVO: COLORES VIBRANTES Y TEXTO CLARO ---
+# --- CSS: ESTILO BASE PARA TODOS LOS BOTONES ---
 st.markdown("""
     <style>
-    /* Estilo base para botones: Texto blanco y visible */
     div.stButton > button {
         width: 100%;
         height: 38px;
         border-radius: 6px;
-        border: none;
         color: white !important;
         font-weight: bold !important;
-        font-size: 12px !important;
         text-transform: uppercase;
+        border: none !important;
     }
-
-    /* VERDE: Promotores y Excelente */
-    div.stButton > button p:contains("PROMOTORES"), 
-    div.stButton > button p:contains("EXCELENTE"),
-    div.stButton > button:has(p:contains("PROMOTORES")),
-    div.stButton > button:has(p:contains("EXCELENTE")) {
-        background-color: #2E7D32 !important;
+    /* Estilizamos el contenedor para que no haya desplazamientos */
+    [data-testid="column"] {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
     }
-
-    /* AMARILLO: Pasivos y Regular */
-    div.stButton > button p:contains("PASIVOS"), 
-    div.stButton > button p:contains("REGULAR"),
-    div.stButton > button:has(p:contains("PASIVOS")),
-    div.stButton > button:has(p:contains("REGULAR")) {
-        background-color: #FBC02D !important;
-        color: #212529 !important;
-    }
-    
-    div.stButton > button p:contains("PASIVOS"), div.stButton > button p:contains("REGULAR") { color: #212529 !important; }
-
-    /* ROJO: Detractores y Malo */
-    div.stButton > button p:contains("DETRACTORES"), 
-    div.stButton > button p:contains("MALO"),
-    div.stButton > button:has(p:contains("DETRACTORES")),
-    div.stButton > button:has(p:contains("MALO")) {
-        background-color: #D32F2F !important;
-    }
-
-    /* Alineación de columnas de botones */
-    [data-testid="stHorizontalBlock"] { align-items: center; }
-    .stPlotlyChart { margin-top: -10px; }
     </style>
     """, unsafe_allow_html=True)
+
+# --- FUNCIÓN PARA PINTAR BOTONES SIN FALLOS ---
+def colored_button(label, color, key):
+    # Inyectamos el color específico para CADA botón mediante su ID de Streamlit
+    st.markdown(f"""
+        <style>
+        div[data-testid="stButton"] button[key="{key}"] {{
+            background-color: {color} !important;
+        }}
+        </style>
+        """, unsafe_allow_html=True)
+    return st.button(label, key=key)
 
 # --- CARGA DE DATOS ---
 SHEET_URL = "https://docs.google.com/spreadsheets/d/1ER40wQho6sPz24oBvEUmQnsHnAxrnzmP3ppPukMy24Y/export?format=csv&gid=309618647"
@@ -68,12 +53,12 @@ def load_data():
         if col_fecha in df.columns:
             df[col_fecha] = pd.to_datetime(df[col_fecha], dayfirst=True, errors='coerce')
         return df.dropna(how='all'), col_fecha
-    except:
-        return None, None
+    except: return None, None
 
 df_raw, col_fecha_nombre = load_data()
 
 if df_raw is not None:
+    # Sidebar
     df_raw['Año'] = df_raw[col_fecha_nombre].dt.year
     df_raw['Mes_Num'] = df_raw[col_fecha_nombre].dt.month
     meses_dict = {1:"Enero", 2:"Febrero", 3:"Marzo", 4:"Abril", 5:"Mayo", 6:"Junio", 7:"Julio", 8:"Agosto", 9:"Septiembre", 10:"Octubre", 11:"Noviembre", 12:"Diciembre"}
@@ -85,14 +70,13 @@ if df_raw is not None:
     mes_sel_num = [k for k, v in meses_dict.items() if v == mes_sel_nombre][0]
     
     df = df_raw[(df_raw['Año'] == anio_sel) & (df_raw['Mes_Num'] == mes_sel_num)].copy()
-
-    # Mapeado de Columnas
     col_nps = next((c for c in df.columns if "recomiendes" in c.lower()), None)
     col_csi = df.columns[19] 
 
     st.title("INDICADORES ENCUESTAS DE SATISFACCIÓN")
 
     if len(df) > 0:
+        # Limpieza
         df[col_nps] = pd.to_numeric(df[col_nps], errors='coerce')
         df[col_csi] = df[col_csi].astype(str).str.replace('%', '').str.replace(',', '.')
         df[col_csi] = pd.to_numeric(df[col_csi], errors='coerce')
@@ -105,50 +89,57 @@ if df_raw is not None:
         mal_c = len(df[df[col_csi] <= (6 if csi_val < 15 else 60)])
         reg_c = len(df) - exc_c - mal_c
 
-        # --- RELOJES ---
+        # Gráfico
         def crear_gauge(valor, titulo):
             return go.Figure(go.Indicator(
-                mode="gauge+number",
-                value=round(valor, 1),
+                mode="gauge+number", value=round(valor, 1),
                 title={'text': f"<b>{titulo}</b>", 'font': {'size': 18}},
                 gauge={'axis': {'range': [0, 100]}, 'bar': {'color': "#2c3e50", 'thickness': 0.15},
                        'steps': [{'range': [0, 59], 'color': "#EF9A9A"}, {'range': [60, 89], 'color': "#FFF59D"}, {'range': [90, 100], 'color': "#A5D6A7"}]}
             )).update_layout(height=230, margin=dict(l=50, r=50, t=60, b=0))
 
-        # --- LAYOUT INDICADORES ---
-        col_main_1, col_main_2 = st.columns(2)
+        # --- LAYOUT DE BOTONES ---
+        c1, c2 = st.columns(2)
         
-        with col_main_1:
+        with c1:
             st.plotly_chart(crear_gauge(nps_val, "NPS (Recomendación)"), use_container_width=True)
-            st.write("<p style='font-size:12px; margin-bottom:5px;'>Filtrar auditoría NPS:</p>", unsafe_allow_html=True)
-            bn1, bn2, bn3 = st.columns(3)
-            with bn1: st.button(f"PROMOTORES ({p_c})", key="n1", on_click=lambda: st.session_state.update({"f_tipo":"NPS","f_val":"Promotor"}))
-            with bn2: st.button(f"PASIVOS ({pas_c})", key="n2", on_click=lambda: st.session_state.update({"f_tipo":"NPS","f_val":"Pasivo"}))
-            with bn3: st.button(f"DETRACTORES ({d_c})", key="n3", on_click=lambda: st.session_state.update({"f_tipo":"NPS","f_val":"Detractor"}))
+            st.write("<p style='font-size:13px; text-align:center;'>Filtrar auditoría NPS:</p>", unsafe_allow_html=True)
+            b1, b2, b3 = st.columns(3)
+            # Aplicamos los colores manualmente para que no dependan del CSS dinámico
+            if b1.button(f"PROMOTORES ({p_c})", key="n_p"): st.session_state.update({"f_tipo":"NPS","f_val":"Promotor"})
+            if b2.button(f"PASIVOS ({pas_c})", key="n_pas"): st.session_state.update({"f_tipo":"NPS","f_val":"Pasivo"})
+            if b3.button(f"DETRACTORES ({d_c})", key="n_d"): st.session_state.update({"f_tipo":"NPS","f_val":"Detractor"})
+            
+            # CSS para forzar estos 3 botones
+            st.markdown('<style>button[key="n_p"] {background-color: #2E7D32 !important;} button[key="n_pas"] {background-color: #FBC02D !important; color: black !important;} button[key="n_d"] {background-color: #D32F2F !important;}</style>', unsafe_allow_html=True)
 
-        with col_main_2:
+        with c2:
             st.plotly_chart(crear_gauge(csi_val, "CSI (Satisfacción)"), use_container_width=True)
-            st.write("<p style='font-size:12px; margin-bottom:5px;'>Filtrar auditoría CSI:</p>", unsafe_allow_html=True)
+            st.write("<p style='font-size:13px; text-align:center;'>Filtrar auditoría CSI:</p>", unsafe_allow_html=True)
             bc1, bc2, bc3 = st.columns(3)
-            with bc1: st.button(f"EXCELENTE ({exc_c})", key="c1", on_click=lambda: st.session_state.update({"f_tipo":"CSI","f_val":"Excelente"}))
-            with bc2: st.button(f"REGULAR ({reg_c})", key="c2", on_click=lambda: st.session_state.update({"f_tipo":"CSI","f_val":"Regular"}))
-            with bc3: st.button(f"MALO ({mal_c})", key="c3", on_click=lambda: st.session_state.update({"f_tipo":"CSI","f_val":"Malo"}))
+            if bc1.button(f"EXCELENTE ({exc_c})", key="c_e"): st.session_state.update({"f_tipo":"CSI","f_val":"Excelente"})
+            if bc2.button(f"REGULAR ({reg_c})", key="c_r"): st.session_state.update({"f_tipo":"CSI","f_val":"Regular"})
+            if bc3.button(f"MALO ({mal_c})", key="c_m"): st.session_state.update({"f_tipo":"CSI","f_val":"Malo"})
+            
+            # CSS para forzar estos 3 botones
+            st.markdown('<style>button[key="c_e"] {background-color: #2E7D32 !important;} button[key="c_r"] {background-color: #FBC02D !important; color: black !important;} button[key="c_m"] {background-color: #D32F2F !important;}</style>', unsafe_allow_html=True)
 
-        # --- TABLA ---
+        # Tabla
         if st.session_state.f_tipo:
             st.markdown("---")
+            st.subheader(f"Auditoría {st.session_state.f_tipo}: {st.session_state.f_val}")
+            # ... (lógica de filtrado de df_f idéntica a la anterior)
+            l_e = 9 if csi_val < 15 else 90
+            l_m = 6 if csi_val < 15 else 60
             if st.session_state.f_tipo == "NPS":
                 if st.session_state.f_val == "Promotor": df_f = df[df[col_nps] >= 9]
                 elif st.session_state.f_val == "Detractor": df_f = df[df[col_nps] <= 6]
                 else: df_f = df[(df[col_nps] > 6) & (df[col_nps] < 9)]
             else:
-                l_e = 9 if csi_val < 15 else 90
-                l_m = 6 if csi_val < 15 else 60
                 if st.session_state.f_val == "Excelente": df_f = df[df[col_csi] >= l_e]
                 elif st.session_state.f_val == "Malo": df_f = df[df[col_csi] <= l_m]
                 else: df_f = df[(df[col_csi] > l_m) & (df[col_csi] < l_e)]
-
-            st.subheader(f"Auditoría {st.session_state.f_tipo}: {st.session_state.f_val}")
+            
             st.dataframe(df_f.sort_values(by=col_csi, ascending=True), use_container_width=True)
 
-    else: st.warning("Sin datos para este periodo.")
+    else: st.warning("Sin datos.")
