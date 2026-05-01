@@ -4,37 +4,11 @@ import plotly.graph_objects as go
 import plotly.express as px
 
 # 1. Configuración de página
-st.set_page_config(page_title="ENCUESTAS DE SATISFACCIÓN TALLER Cenoa", layout="wide")
+st.set_page_config(page_title="DASHBOARD POSTVENTA", layout="wide")
 
 # Inicializar estados de filtro
 if "f_tipo" not in st.session_state: st.session_state.f_tipo = None
 if "f_val" not in st.session_state: st.session_state.f_val = None
-
-# --- CSS: ESTILO DE BOTONES Y PESTAÑAS ---
-st.markdown("""
-    <style>
-    div.stButton > button {
-        width: 100% !important;
-        height: 34px !important;
-        border-radius: 8px !important;
-        border: 1px solid #dee2e6 !important;
-        background-color: white !important;
-        color: #495057 !important;
-        font-size: 13px !important;
-        display: flex !important;
-        align-items: center !important;
-        justify-content: center !important;
-    }
-    .stTabs [data-baseweb="tab-list"] {
-        gap: 10px;
-        background-color: #f8f9fa;
-        padding: 10px;
-        border-radius: 10px;
-    }
-    [data-testid="column"] [data-testid="column"] { padding: 0px 3px !important; }
-    .stPlotlyChart { margin-bottom: -45px; }
-    </style>
-    """, unsafe_allow_html=True)
 
 # --- CARGA DE DATOS ---
 SHEET_URL = "https://docs.google.com/spreadsheets/d/1ER40wQho6sPz24oBvEUmQnsHnAxrnzmP3ppPukMy24Y/export?format=csv&gid=309618647"
@@ -67,106 +41,130 @@ if df_raw is not None:
     df_mes = df_anio[df_anio['Mes_Num'] == mes_sel_num].copy()
 
     # Mapeado de Columnas
-    col_ambiente = df_raw.columns[9]     # J
-    col_nps_puntaje = df_raw.columns[16] # Q
-    col_csi_final = df_raw.columns[18]   # S
-    col_nps_comentario = df_raw.columns[17]
-    col_comentario_I = df_raw.columns[8]
-    col_comentario_M = df_raw.columns[12]
-    col_comentario_O = df_raw.columns[14]
-    col_cliente = next((c for c in df_raw.columns if "nombre" in c.lower() and "apellido" in c.lower()), "Nombre y Apellido")
+    col_ambiente = df_raw.columns[9]     # Columna J
+    col_nps_puntaje = df_raw.columns[16] # Columna Q
+    col_csi_final = df_raw.columns[18]   # Columna S
+    col_nps_comentario = df_raw.columns[17] # Columna R
+    col_com_atencion = df_raw.columns[8]    # Columna I
+    col_com_calidad = df_raw.columns[12]   # Columna M
+    col_com_tiempo = df_raw.columns[14]    # Columna O
+    col_cliente = next((c for c in df_raw.columns if "nombre" in c.lower() and "apellido" in c.lower()), "Cliente")
     col_asesor = next((c for c in df_raw.columns if "asesor" in c.lower() or "recepcionista" in c.lower()), "Asesor")
 
-    # Limpieza Numérica Preventiva
-    for c in [col_nps_puntaje, col_ambiente, col_csi_final]:
-        if c == col_csi_final:
-            df_anio[c] = df_anio[c].astype(str).str.replace('%', '').str.replace(',', '.')
-            df_mes[c] = df_mes[c].astype(str).str.replace('%', '').str.replace(',', '.')
-        df_anio[c] = pd.to_numeric(df_anio[c], errors='coerce')
-        df_mes[c] = pd.to_numeric(df_mes[c], errors='coerce')
+    # Limpieza de datos
+    def clean_val(x):
+        try:
+            val = float(str(x).replace('%', '').replace(',', '.').strip())
+            return val
+        except: return 0.0
+
+    df_mes[col_nps_puntaje] = df_mes[col_nps_puntaje].apply(clean_val)
+    df_mes[col_csi_final] = df_mes[col_csi_final].apply(clean_val)
+    df_mes[col_ambiente] = df_mes[col_ambiente].apply(clean_val)
 
     st.title("INDICADORES ENCUESTAS DE SATISFACCIÓN")
     
-    # --- PESTAÑAS ---
-    tab1, tab2 = st.tabs(["🎯 INDICADORES", "📊 VOLUMEN MENSUAL"])
+    tab1, tab2 = st.tabs(["🎯 INDICADORES", "📊 EVOLUCIÓN MENSUAL"])
 
     with tab1:
-        if len(df_mes) > 0:
-            # Cálculos
-            nps_val = df_mes[col_nps_puntaje].mean() * 10 if not df_mes[col_nps_puntaje].dropna().empty else 0
-            csi_val = (df_mes[col_csi_final].mean() * 100 if df_mes[col_csi_final].max() <= 1.1 else df_mes[col_csi_final].mean()) if not df_mes[col_csi_final].dropna().empty else 0
-            amb_val = df_mes[col_ambiente].mean() * 10 if not df_mes[col_ambiente].dropna().empty else 0
+        # Cálculos
+        nps_f = df_mes[col_nps_puntaje].mean() * 10
+        csi_raw = df_mes[col_csi_final].mean()
+        csi_f = csi_raw * 100 if csi_raw <= 1.1 else csi_raw
+        amb_f = df_mes[col_ambiente].mean() * 10
 
-            # Gauges
-            c1, c2 = st.columns(2)
-            def crear_gauge(valor, titulo):
-                return go.Figure(go.Indicator(
-                    mode="gauge+number", value=valor,
-                    title={'text': f"<b>{titulo}</b>", 'font': {'size': 18}},
-                    number={'valueformat': ".1f", 'suffix': "%", 'font': {'size': 45}},
-                    gauge={'axis': {'range': [0, 100]}, 'bar': {'color': "#34495e", 'thickness': 0.2},
-                           'steps': [{'range': [0, 60], 'color': "#f8d7da"}, {'range': [60, 90], 'color': "#fff3cd"}, {'range': [90, 100], 'color': "#d1e7dd"}]}
-                )).update_layout(height=230, margin=dict(l=50, r=50, t=70, b=0), paper_bgcolor='rgba(0,0,0,0)')
+        # --- DISEÑO SUPERIOR: 2 GAUGES + KPI COMPACTO ---
+        col_g1, col_kpi, col_g2 = st.columns([1.5, 1, 1.5])
+        
+        def draw_gauge(val, title):
+            fig = go.Figure(go.Indicator(
+                mode="gauge+number", value=val,
+                title={'text': f"<b>{title}</b>", 'font': {'size': 18}},
+                number={'valueformat': ".1f", 'suffix': "%", 'font': {'size': 40}},
+                gauge={'axis': {'range': [0, 100]},
+                       'bar': {'color': "#34495e", 'thickness': 0.25},
+                       'steps': [{'range': [0, 60], 'color': "#f8d7da"},
+                                 {'range': [60, 90], 'color': "#fff3cd"},
+                                 {'range': [90, 100], 'color': "#d1e7dd"}]}
+            ))
+            fig.update_layout(height=260, margin=dict(l=30, r=30, t=50, b=20), paper_bgcolor='rgba(0,0,0,0)')
+            return fig
 
-            c1.plotly_chart(crear_gauge(nps_val, "NPS (Recomendación)"), use_container_width=True)
-            c2.plotly_chart(crear_gauge(csi_val, "CSI (Satisfacción)"), use_container_width=True)
-
-            # Tarjeta Ambiente
+        with col_g1:
+            st.plotly_chart(draw_gauge(nps_f, "NPS (Recomendación)"), use_container_width=True)
+        
+        with col_kpi:
+            # Opción 2: KPI Compacto Estilizado
+            st.markdown("<br>"*2, unsafe_allow_html=True)
             st.markdown(f"""
-                <div style="background-color:#f1f3f5; padding:15px; border-radius:10px; text-align:center; margin-top:20px; margin-bottom:20px; border: 1px solid #dee2e6;">
-                    <p style="margin:0; font-weight:bold; color:#495057; font-size:16px;">Satisfacción Ambiente Taller (Col J)</p>
-                    <h2 style="margin:0; color:#2c3e50;">{amb_val:.1f}%</h2>
+                <div style="background-color: #ffffff; padding: 20px; border-radius: 15px; border-left: 5px solid #5D6D7E; box-shadow: 2px 2px 10px rgba(0,0,0,0.1); text-align: center;">
+                    <p style="color: #5D6D7E; font-size: 14px; font-weight: bold; margin-bottom: 5px;">🏢 AMBIENTE TALLER</p>
+                    <h2 style="color: #2c3e50; margin: 0; font-size: 32px;">{amb_f:.1f}%</h2>
+                    <p style="color: #aeb6bf; font-size: 12px; margin-top: 5px;">Satisfacción Instalaciones</p>
                 </div>
             """, unsafe_allow_html=True)
 
-            # Botones
-            p_c = len(df_mes[df_mes[col_nps_puntaje] >= 9]); d_c = len(df_mes[df_mes[col_nps_puntaje] <= 6]); pas_c = len(df_mes[(df_mes[col_nps_puntaje] > 6) & (df_mes[col_nps_puntaje] < 9)])
-            l_e = 9 if csi_val < 15 else 90; l_m = 6 if csi_val < 15 else 60
-            exc_c = len(df_mes[df_mes[col_csi_final] >= l_e]); mal_c = len(df_mes[df_mes[col_csi_final] <= l_m]); reg_c = len(df_mes) - exc_c - mal_c
+        with col_g2:
+            st.plotly_chart(draw_gauge(csi_f, "CSI (Servicio)"), use_container_width=True)
 
-            v1, b1, b2, b3, v2, bc1, bc2, bc3, v3 = st.columns([0.1, 1, 1, 1, 0.2, 1, 1, 1, 0.1])
-            with b1: st.button(f"🟢 {p_c} Prom", key="p1", on_click=lambda: st.session_state.update({"f_tipo":"NPS","f_val":"Promotor"}))
-            with b2: st.button(f"🟡 {pas_c} Neu", key="p2", on_click=lambda: st.session_state.update({"f_tipo":"NPS","f_val":"Pasivo"}))
-            with b3: st.button(f"🔴 {d_c} Det", key="p3", on_click=lambda: st.session_state.update({"f_tipo":"NPS","f_val":"Detractor"}))
-            with bc1: st.button(f"🟢 {exc_c} Exc", key="e1", on_click=lambda: st.session_state.update({"f_tipo":"CSI","f_val":"Excelente"}))
-            with bc2: st.button(f"🟡 {reg_c} Reg", key="e2", on_click=lambda: st.session_state.update({"f_tipo":"CSI","f_val":"Regular"}))
-            with bc3: st.button(f"🔴 {mal_c} Mal", key="e3", on_click=lambda: st.session_state.update({"f_tipo":"CSI","f_val":"Malo"}))
+        st.divider()
 
-            # Tabla Auditoría
-            if st.session_state.f_tipo:
-                st.markdown("---")
-                st.subheader(f"Auditoría {st.session_state.f_tipo}: {st.session_state.f_val}")
-                if st.session_state.f_tipo == "NPS":
-                    if st.session_state.f_val == "Promotor": df_f = df_mes[df_mes[col_nps_puntaje] >= 9]
-                    elif st.session_state.f_val == "Detractor": df_f = df_mes[df_mes[col_nps_puntaje] <= 6]
-                    else: df_f = df_mes[(df_mes[col_nps_puntaje] > 6) & (df_mes[col_nps_puntaje] < 9)]
-                    cols_v = [col_cliente, col_asesor, col_ambiente, col_nps_puntaje, col_nps_comentario]
-                else:
-                    if st.session_state.f_val == "Excelente": df_f = df_mes[df_mes[col_csi_final] >= l_e]
-                    elif st.session_state.f_val == "Malo": df_f = df_mes[df_mes[col_csi_final] <= l_m]
-                    else: df_f = df_mes[(df_mes[col_csi_final] > l_m) & (df_mes[col_csi_final] < l_e)]
-                    cols_v = [col_cliente, col_asesor, col_ambiente, col_csi_final, col_comentario_I, col_comentario_M, col_comentario_O]
-                st.dataframe(df_f[cols_v].fillna("Sin comentario"), use_container_width=True)
-        else:
-            st.warning("Sin datos para este periodo.")
+        # --- BOTONES DE AUDITORÍA ---
+        p_c = len(df_mes[df_mes[col_nps_puntaje] >= 9])
+        d_c = len(df_mes[df_mes[col_nps_puntaje] <= 6])
+        pas_c = len(df_mes[(df_mes[col_nps_puntaje] > 6) & (df_mes[col_nps_puntaje] < 9)])
+        
+        limit = 90 if csi_f > 15 else 9
+        exc_c = len(df_mes[df_mes[col_csi_final] >= limit])
+        mal_c = len(df_mes[df_mes[col_csi_final] <= (limit-30 if limit==90 else 6)])
+        reg_c = len(df_mes) - exc_c - mal_c
+
+        st.write("### Auditoría de Calificaciones")
+        b_col1, b_col2 = st.columns(2)
+        
+        with b_col1:
+            st.write("**NPS:**")
+            s1, s2, s3 = st.columns(3)
+            s1.button(f"🟢 {p_c} Prom", key="p", on_click=lambda: st.session_state.update({"f_tipo":"NPS","f_val":"Promotor"}))
+            s2.button(f"🟡 {pas_c} Neu", key="n", on_click=lambda: st.session_state.update({"f_tipo":"NPS","f_val":"Pasivo"}))
+            s3.button(f"🔴 {d_c} Det", key="d", on_click=lambda: st.session_state.update({"f_tipo":"NPS","f_val":"Detractor"}))
+
+        with b_col2:
+            st.write("**CSI:**")
+            s4, s5, s6 = st.columns(3)
+            s4.button(f"🟢 {exc_c} Exc", key="e", on_click=lambda: st.session_state.update({"f_tipo":"CSI","f_val":"Excelente"}))
+            s5.button(f"🟡 {reg_c} Reg", key="r", on_click=lambda: st.session_state.update({"f_tipo":"CSI","f_val":"Regular"}))
+            s6.button(f"🔴 {mal_c} Mal", key="m", on_click=lambda: st.session_state.update({"f_tipo":"CSI","f_val":"Malo"}))
+
+        if st.session_state.f_tipo:
+            st.divider()
+            st.subheader(f"Auditoría {st.session_state.f_tipo}: {st.session_state.f_val}")
+            if st.session_state.f_tipo == "NPS":
+                if st.session_state.f_val == "Promotor": df_f = df_mes[df_mes[col_nps_puntaje] >= 9]
+                elif st.session_state.f_val == "Detractor": df_f = df_mes[df_mes[col_nps_puntaje] <= 6]
+                else: df_f = df_mes[(df_mes[col_nps_puntaje] > 6) & (df_mes[col_nps_puntaje] < 9)]
+                cols = [col_cliente, col_asesor, col_ambiente, col_nps_puntaje, col_nps_comentario]
+            else:
+                if st.session_state.f_val == "Excelente": df_f = df_mes[df_mes[col_csi_final] >= limit]
+                elif st.session_state.f_val == "Malo": df_f = df_mes[df_mes[col_csi_final] <= (limit-30 if limit==90 else 6)]
+                else: df_f = df_mes[(df_mes[col_csi_final] < limit) & (df_mes[col_csi_final] > (limit-30 if limit==90 else 6))]
+                cols = [col_cliente, col_asesor, col_ambiente, col_csi_final, col_com_atencion, col_com_calidad, col_com_tiempo]
+            
+            st.dataframe(df_f[cols].fillna("Sin comentarios"), use_container_width=True)
 
     with tab2:
-        st.subheader(f"Evolución Mensual - {anio_sel}")
-        # Agrupación segura para el gráfico
-        df_counts = df_anio.groupby('Mes_Num').size().reset_index(name='Encuestas')
-        df_means = df_anio.groupby('Mes_Num')[[col_csi_final, col_nps_puntaje]].mean().reset_index()
-        df_vol = pd.merge(df_counts, df_means, on='Mes_Num')
-        df_vol['Mes'] = df_vol['Mes_Num'].map(meses_dict)
-        df_vol['NPS_Scale'] = df_vol[col_nps_puntaje] * 10
-
-        fig_bar = px.bar(df_vol, y='Mes', x='Encuestas', orientation='h', text='Encuestas', color='Encuestas', 
-                         color_continuous_scale='Sunset',
-                         labels={'Encuestas': 'Volumen', 'Mes': 'Mes', col_csi_final: 'CSI (%)', 'NPS_Scale': 'NPS (%)'},
-                         hover_data={'Mes': False, 'Encuestas': True, col_csi_final: ':.1f', 'NPS_Scale': ':.1f'})
+        st.subheader(f"Evolución Mensual {anio_sel}")
+        df_anio[col_csi_final] = df_anio[col_csi_final].apply(clean_val)
+        df_anio[col_nps_puntaje] = df_anio[col_nps_puntaje].apply(clean_val)
         
-        fig_bar.update_layout(yaxis={'categoryorder':'array', 'categoryarray':list(meses_dict.values())[::-1]}, 
-                              height=500, coloraxis_showscale=False)
-        st.plotly_chart(fig_bar, use_container_width=True)
+        df_v = df_anio.groupby('Mes_Num').agg({col_fecha_nombre: 'count', col_csi_final: 'mean', col_nps_puntaje: lambda x: x.mean() * 10}).reset_index()
+        df_v.columns = ['Mes_Num', 'Cant', 'CSI', 'NPS']
+        df_v['Mes'] = df_v['Mes_Num'].map(meses_dict)
+
+        fig = px.bar(df_v, y='Mes', x='Cant', orientation='h', text='Cant', color='Cant', color_continuous_scale='Sunset',
+                     hover_data={'CSI': ':.1f', 'NPS': ':.1f'})
+        fig.update_layout(yaxis={'categoryorder':'array', 'categoryarray':list(meses_dict.values())[::-1]}, height=500, coloraxis_showscale=False)
+        st.plotly_chart(fig, use_container_width=True)
 
 else:
-    st.error("No se pudieron cargar los datos desde el Sheet.")
+    st.error("No se pudo cargar la información del Google Sheet.")
