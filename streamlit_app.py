@@ -6,7 +6,7 @@ import plotly.express as px
 # 1. Configuración de página
 st.set_page_config(page_title="ENCUESTAS DE SATISFACCIÓN TALLER Cenoa", layout="wide")
 
-# Inicializar estados de filtro para evitar errores de carga
+# Inicializar estados de filtro
 if "f_tipo" not in st.session_state: st.session_state.f_tipo = None
 if "f_val" not in st.session_state: st.session_state.f_val = None
 
@@ -25,7 +25,6 @@ st.markdown("""
         align-items: center !important;
         justify-content: center !important;
     }
-    /* Estilo para que las pestañas sean muy visibles */
     .stTabs [data-baseweb="tab-list"] {
         gap: 10px;
         background-color: #f8f9fa;
@@ -71,22 +70,20 @@ if df_raw is not None:
     mes_sel_num = [k for k, v in meses_dict.items() if v == mes_sel_nombre][0]
     df_mes = df_anio[df_anio['Mes_Num'] == mes_sel_num].copy()
 
-    # Mapeado de Columnas (Q, R, I, M, O, S)
-    col_nps_puntaje = df_raw.columns[16]    # Q
-    col_nps_comentario = df_raw.columns[17] # R
-    col_comentario_I = df_raw.columns[8]    # I
-    col_comentario_M = df_raw.columns[12]   # M
-    col_comentario_O = df_raw.columns[14]   # O
-    col_csi_final = df_raw.columns[18]      # S
+    # Mapeado de Columnas
+    col_nps_puntaje = df_raw.columns[16]
+    col_nps_comentario = df_raw.columns[17]
+    col_comentario_I = df_raw.columns[8]
+    col_comentario_M = df_raw.columns[12]
+    col_comentario_O = df_raw.columns[14]
+    col_csi_final = df_raw.columns[18]
     col_cliente = next((c for c in df_raw.columns if "nombre" in c.lower() and "apellido" in c.lower()), "Nombre y Apellido")
     col_asesor = next((c for c in df_raw.columns if "asesor" in c.lower() or "recepcionista" in c.lower()), "Asesor")
 
-    # --- PESTAÑAS (TABS) ---
     st.title("INDICADORES ENCUESTAS DE SATISFACCIÓN")
     tab1, tab2 = st.tabs(["🎯 INDICADORES", "📊 VOLUMEN MENSUAL"])
 
     with tab1:
-        # CONTENIDO DE INDICADORES (Relojes + Botones + Tabla)
         if len(df_mes) > 0:
             df_mes[col_nps_puntaje] = pd.to_numeric(df_mes[col_nps_puntaje], errors='coerce')
             df_mes[col_csi_final] = df_mes[col_csi_final].astype(str).str.replace('%', '').str.replace(',', '.')
@@ -139,15 +136,39 @@ if df_raw is not None:
                     else: df_f = df_mes[(df_mes[col_csi_final] > l_m) & (df_mes[col_csi_final] < l_e)]
                     cols_v = [col_cliente, col_asesor, col_csi_final, col_comentario_I, col_comentario_M, col_comentario_O]
                 st.dataframe(df_f[cols_v].fillna("Sin comentario"), use_container_width=True)
+        else: st.warning("Sin datos para este periodo.")
 
     with tab2:
-        # CONTENIDO DE VOLUMEN (Gráfico de Barras)
-        st.subheader(f"Total de Encuestas por Mes en {anio_sel}")
+        st.subheader(f"Evolución de Encuestas Mensuales - {anio_sel}")
+        # Preparación de datos
         df_vol = df_anio.groupby('Mes_Num').size().reset_index(name='Encuestas')
         df_vol['Mes'] = df_vol['Mes_Num'].map(meses_dict)
-        fig_bar = px.bar(df_vol, x='Mes', y='Encuestas', text='Encuestas', 
-                         color='Encuestas', color_continuous_scale='Blues')
-        fig_bar.update_layout(xaxis={'categoryorder':'array', 'categoryarray':list(meses_dict.values())})
+        
+        # Gráfico Horizontal: Más espacio para nombres y no se amontona
+        fig_bar = px.bar(
+            df_vol, 
+            y='Mes', 
+            x='Encuestas', 
+            orientation='h',
+            text='Encuestas',
+            labels={'Encuestas': 'Cantidad de Encuestas', 'Mes': 'Mes'},
+            color_discrete_sequence=['#34495e'] # Color elegante y fijo
+        )
+        
+        fig_bar.update_traces(
+            textposition='outside',
+            marker_line_color='rgb(8,48,107)',
+            marker_line_width=1.5, 
+            opacity=0.8
+        )
+        
+        fig_bar.update_layout(
+            yaxis={'categoryorder':'array', 'categoryarray':list(meses_dict.values())[::-1]}, # Orden cronológico
+            height=500,
+            margin=dict(l=20, r=20, t=20, b=20),
+            xaxis_title="",
+            yaxis_title=""
+        )
         st.plotly_chart(fig_bar, use_container_width=True)
 
 else: st.error("No se pudieron cargar los datos.")
