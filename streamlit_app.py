@@ -71,12 +71,12 @@ if df_raw is not None:
     df_mes = df_anio[df_anio['Mes_Num'] == mes_sel_num].copy()
 
     # Mapeado de Columnas
-    col_nps_puntaje = df_raw.columns[16]
-    col_nps_comentario = df_raw.columns[17]
+    col_nps_puntaje = df_raw.columns[16] # Q
+    col_csi_final = df_raw.columns[18]   # S
+    col_nps_comentario = df_raw.columns[17] # R
     col_comentario_I = df_raw.columns[8]
     col_comentario_M = df_raw.columns[12]
     col_comentario_O = df_raw.columns[14]
-    col_csi_final = df_raw.columns[18]
     col_cliente = next((c for c in df_raw.columns if "nombre" in c.lower() and "apellido" in c.lower()), "Nombre y Apellido")
     col_asesor = next((c for c in df_raw.columns if "asesor" in c.lower() or "recepcionista" in c.lower()), "Asesor")
 
@@ -139,36 +139,40 @@ if df_raw is not None:
         else: st.warning("Sin datos para este periodo.")
 
     with tab2:
-        st.subheader(f"Evolución de Encuestas Mensuales - {anio_sel}")
-        # Preparación de datos
-        df_vol = df_anio.groupby('Mes_Num').size().reset_index(name='Encuestas')
+        st.subheader(f"Volumen y Calidad de Encuestas - {anio_sel}")
+        
+        # Procesar datos por mes para el año seleccionado
+        df_anio[col_csi_final] = df_anio[col_csi_final].astype(str).str.replace('%', '').str.replace(',', '.')
+        df_anio[col_csi_final] = pd.to_numeric(df_anio[col_csi_final], errors='coerce')
+        
+        df_vol = df_anio.groupby('Mes_Num').agg({
+            col_fecha_nombre: 'count',
+            col_csi_final: 'mean'
+        }).reset_index()
+        df_vol.columns = ['Mes_Num', 'Encuestas', 'Promedio_CSI']
         df_vol['Mes'] = df_vol['Mes_Num'].map(meses_dict)
         
-        # Gráfico Horizontal: Más espacio para nombres y no se amontona
+        # Gráfico Horizontal con Color por Promedio CSI (Informativo y estético)
         fig_bar = px.bar(
             df_vol, 
             y='Mes', 
             x='Encuestas', 
             orientation='h',
             text='Encuestas',
-            labels={'Encuestas': 'Cantidad de Encuestas', 'Mes': 'Mes'},
-            color_discrete_sequence=['#34495e'] # Color elegante y fijo
+            color='Encuestas',
+            color_continuous_scale='tealgrn', # Un color vibrante y profesional
+            labels={'Encuestas': 'Cantidad', 'Mes': 'Mes', 'Encuestas': 'Volumen'},
+            hover_data={'Promedio_CSI': ':.1f'}
         )
         
-        fig_bar.update_traces(
-            textposition='outside',
-            marker_line_color='rgb(8,48,107)',
-            marker_line_width=1.5, 
-            opacity=0.8
-        )
-        
+        fig_bar.update_traces(textposition='outside', marker_line_width=0)
         fig_bar.update_layout(
-            yaxis={'categoryorder':'array', 'categoryarray':list(meses_dict.values())[::-1]}, # Orden cronológico
+            yaxis={'categoryorder':'array', 'categoryarray':list(meses_dict.values())[::-1]},
             height=500,
-            margin=dict(l=20, r=20, t=20, b=20),
-            xaxis_title="",
-            yaxis_title=""
+            margin=dict(l=20, r=40, t=20, b=20),
+            coloraxis_showscale=False # Quitamos la escala lateral para más limpieza
         )
         st.plotly_chart(fig_bar, use_container_width=True)
+        st.info("💡 El color de las barras representa el volumen de encuestas. Se incluyen etiquetas con el total por cada mes.")
 
 else: st.error("No se pudieron cargar los datos.")
