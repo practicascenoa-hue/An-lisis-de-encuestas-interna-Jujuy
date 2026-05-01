@@ -100,7 +100,7 @@ if df_raw is not None:
                 fig = go.Figure(go.Indicator(
                     mode="gauge+number", value=valor,
                     title={'text': f"<b>{titulo}</b>", 'font': {'size': 18}},
-                    # Agregamos el sufijo % a ambos relojes
+                    # ".1f" asegura exactamente un decimal
                     number={'valueformat': ".1f", 'suffix': "%", 'font': {'size': 45}},
                     gauge={'axis': {'range': [0, 100]}, 'bar': {'color': "#34495e", 'thickness': 0.2},
                            'steps': [{'range': [0, 60], 'color': "#f8d7da"}, {'range': [60, 90], 'color': "#fff3cd"}, {'range': [90, 100], 'color': "#d1e7dd"}]}
@@ -142,7 +142,6 @@ if df_raw is not None:
     with tab2:
         st.subheader(f"Evolución Mensual: Volumen, CSI y NPS - {anio_sel}")
         
-        # Limpieza de datos anuales
         df_anio[col_csi_final] = df_anio[col_csi_final].astype(str).str.replace('%', '').str.replace(',', '.')
         df_anio[col_csi_final] = pd.to_numeric(df_anio[col_csi_final], errors='coerce')
         df_anio[col_nps_puntaje] = pd.to_numeric(df_anio[col_nps_puntaje], errors='coerce')
@@ -156,7 +155,6 @@ if df_raw is not None:
         df_vol.columns = ['Mes_Num', 'Encuestas', 'Promedio_CSI', 'Promedio_NPS']
         df_vol['Mes'] = df_vol['Mes_Num'].map(meses_dict)
         
-        # Gráfico Horizontal con Hover incluyendo %
         fig_bar = px.bar(
             df_vol, 
             y='Mes', 
@@ -165,9 +163,9 @@ if df_raw is not None:
             text='Encuestas',
             color='Encuestas',
             color_continuous_scale='Sunset',
-            # Personalizamos las etiquetas del Hover para agregar el %
             labels={'Encuestas': 'Volumen', 'Mes': 'Mes', 'Promedio_CSI': 'CSI (%)', 'Promedio_NPS': 'NPS (%)'},
-            hover_data={'Mes': False, 'Encuestas': True, 'Promedio_CSI': ':.1f%', 'Promedio_NPS': ':.1f%'}
+            # ":.1f" en hover_data corrige el exceso de decimales en las barras
+            hover_data={'Mes': False, 'Encuestas': True, 'Promedio_CSI': ':.1f', 'Promedio_NPS': ':.1f'}
         )
         
         fig_bar.update_traces(textposition='outside')
@@ -178,6 +176,6 @@ if df_raw is not None:
             coloraxis_showscale=False
         )
         st.plotly_chart(fig_bar, use_container_width=True)
-        st.info("💡 Deslizá el mouse sobre las barras para ver los promedios en formato de porcentaje.")
+        st.info("💡 Deslizá el mouse sobre las barras para ver los promedios redondeados.")
 
 else: st.error("No se pudieron cargar los datos.")
