@@ -64,52 +64,49 @@ if df_raw is not None:
     mes_sel_num = [k for k, v in meses_dict.items() if v == mes_sel_nombre][0]
     
     df = df_raw[(df_raw['Año'] == anio_sel) & (df_raw['Mes_Num'] == mes_sel_num)].copy()
+
+    # --- IDENTIFICACIÓN DE COLUMNAS ESPECÍFICAS ---
+    # Columnas de Comentarios: I (índice 8), M (índice 12), O (índice 14) -> Según tu conteo de letras
+    # Nota: En Python el índice empieza en 0. A=0, B=1... H=7, I=8, L=11, M=12, N=13, O=14
+    col_comentario_I = df.columns[8]  # Comentario de Atención (H)
+    col_comentario_M = df.columns[12] # Comentario de Calidad (L)
+    col_comentario_O = df.columns[14] # Comentario de Tiempo (N)
+    col_csi_final = df.columns[18]    # Columna S (Índice 18)
+    
     col_nps = next((c for c in df.columns if "recomiendes" in c.lower()), None)
-    col_csi = df.columns[19]
+    col_cliente = next((c for c in df.columns if "nombre" in c.lower() and "apellido" in c.lower()), "Nombre y Apellido")
+    col_asesor = next((c for c in df.columns if "asesor" in c.lower() or "recepcionista" in c.lower()), "Asesor")
 
     st.title("INDICADORES ENCUESTAS DE SATISFACCIÓN")
 
     if len(df) > 0:
-        # Procesamiento
+        # Procesamiento numérico
         df[col_nps] = pd.to_numeric(df[col_nps], errors='coerce')
-        df[col_csi] = df[col_csi].astype(str).str.replace('%', '').str.replace(',', '.')
-        df[col_csi] = pd.to_numeric(df[col_csi], errors='coerce')
+        df[col_csi_final] = df[col_csi_final].astype(str).str.replace('%', '').str.replace(',', '.')
+        df[col_csi_final] = pd.to_numeric(df[col_csi_final], errors='coerce')
 
-        # NPS Calcs
         nps_val = df[col_nps].mean() * 10 if not df.dropna(subset=[col_nps]).empty else 0
         
-        # CSI Calcs (Corregido para volver a la info original)
-        df_csi_v = df.dropna(subset=[col_csi])
+        df_csi_v = df.dropna(subset=[col_csi_final])
         if not df_csi_v.empty:
-            csi_val = (df_csi_v[col_csi].mean() * 100 if df_csi_v[col_csi].max() <= 1.1 else df_csi_v[col_csi].mean())
-        else:
-            csi_val = 0
+            csi_val = (df_csi_v[col_csi_final].mean() * 100 if df_csi_v[col_csi_final].max() <= 1.1 else df_csi_v[col_csi_final].mean())
+        else: csi_val = 0
         
         # Conteos
         p_c = len(df[df[col_nps] >= 9]); d_c = len(df[df[col_nps] <= 6]); pas_c = len(df[(df[col_nps] > 6) & (df[col_nps] < 9)])
         l_e = 9 if csi_val < 15 else 90; l_m = 6 if csi_val < 15 else 60
-        exc_c = len(df[df[col_csi] >= l_e]); mal_c = len(df[df[col_csi] <= l_m]); reg_c = len(df) - exc_c - mal_c
+        exc_c = len(df[df[col_csi_final] >= l_e]); mal_c = len(df[df[col_csi_final] <= l_m]); reg_c = len(df) - exc_c - mal_c
 
-        # --- FUNCIÓN DE RELOJ MODERNA CORREGIDA ---
+        # Función Gauge
         def crear_gauge_moderno(valor, titulo):
-            # Formateo de número central para mantener la precisión original
             num_format = ".1f" if "CSI" in titulo else ".0f"
-            
             fig = go.Figure(go.Indicator(
-                mode="gauge+number",
-                value=valor,
+                mode="gauge+number", value=valor,
                 title={'text': f"<b>{titulo}</b>", 'font': {'size': 20, 'color': '#2c3e50'}},
                 number={'valueformat': num_format, 'font': {'size': 50, 'color': '#2c3e50'}},
-                gauge={
-                    'axis': {'range': [0, 100], 'tickwidth': 1, 'tickcolor': "#dee2e6"},
-                    'bar': {'color': "#34495e", 'thickness': 0.2},
-                    'bgcolor': "white",
-                    'steps': [
-                        {'range': [0, 60], 'color': "#f8d7da"},
-                        {'range': [60, 90], 'color': "#fff3cd"},
-                        {'range': [90, 100], 'color': "#d1e7dd"}
-                    ]
-                }
+                gauge={'axis': {'range': [0, 100], 'tickwidth': 1, 'tickcolor': "#dee2e6"},
+                    'bar': {'color': "#34495e", 'thickness': 0.2}, 'bgcolor': "white",
+                    'steps': [{'range': [0, 60], 'color': "#f8d7da"}, {'range': [60, 90], 'color': "#fff3cd"}, {'range': [90, 100], 'color': "#d1e7dd"}]}
             ))
             fig.update_layout(height=260, margin=dict(l=60, r=60, t=80, b=0), paper_bgcolor='rgba(0,0,0,0)')
             return fig
@@ -130,20 +127,28 @@ if df_raw is not None:
             with bc2: st.button(f"🟡 {reg_c} Reg", key="e2", on_click=lambda: st.session_state.update({"f_tipo":"CSI","f_val":"Regular"}))
             with bc3: st.button(f"🔴 {mal_c} Mal", key="e3", on_click=lambda: st.session_state.update({"f_tipo":"CSI","f_val":"Malo"}))
 
-        # --- TABLA ---
+        # --- TABLA DE AUDITORÍA (MODIFICADA SEGÚN TU PEDIDO) ---
         if st.session_state.f_tipo:
             st.markdown("---")
             st.subheader(f"Auditoría {st.session_state.f_tipo}: {st.session_state.f_val}")
-            # Lógica de filtrado idéntica para no romper la funcionalidad
+            
+            # Filtrado
             if st.session_state.f_tipo == "NPS":
                 if st.session_state.f_val == "Promotor": df_f = df[df[col_nps] >= 9]
                 elif st.session_state.f_val == "Detractor": df_f = df[df[col_nps] <= 6]
                 else: df_f = df[(df[col_nps] > 6) & (df[col_nps] < 9)]
             else:
-                if st.session_state.f_val == "Excelente": df_f = df[df[col_csi] >= l_e]
-                elif st.session_state.f_val == "Malo": df_f = df[df[col_csi] <= l_m]
-                else: df_f = df[(df[col_csi] > l_m) & (df[col_csi] < l_e)]
+                if st.session_state.f_val == "Excelente": df_f = df[df[col_csi_final] >= l_e]
+                elif st.session_state.f_val == "Malo": df_f = df[df[col_csi_final] <= l_m]
+                else: df_f = df[(df[col_csi_final] > l_m) & (df[col_csi_final] < l_e)]
+
+            # SELECCIÓN DE COLUMNAS REQUERIDAS:
+            # Nombre, Asesor, CSI Final y los Comentarios (I, M, O)
+            cols_to_show = [col_cliente, col_asesor, col_csi_final, col_comentario_I, col_comentario_M, col_comentario_O]
             
-            st.dataframe(df_f.sort_values(by=col_csi, ascending=True), use_container_width=True)
+            # Limpiamos None o valores vacíos para que la tabla sea legible
+            df_display = df_f[cols_to_show].fillna("Sin comentario")
+            
+            st.dataframe(df_display.sort_values(by=col_csi_final, ascending=True), use_container_width=True)
 
     else: st.warning("Sin datos.")
