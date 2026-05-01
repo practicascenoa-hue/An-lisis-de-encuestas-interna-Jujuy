@@ -65,15 +65,19 @@ if df_raw is not None:
     df_mes = df_anio[df_anio['Mes_Num'] == mes_sel_num].copy()
 
     # Mapeado de Columnas
-    col_seguimiento = df_raw.columns[15] # Columna P
-    col_comentario_K = df_raw.columns[10] # Columna K
-    col_ambiente = df_raw.columns[9]      # Columna J
-    col_nps_puntaje = df_raw.columns[16]  # Columna Q
-    col_csi_final = df_raw.columns[18]    # Columna S
-    col_cliente = next((c for c in df_raw.columns if "nombre" in c.lower() and "apellido" in c.lower()), "Cliente")
+    col_seguimiento = df_raw.columns[15] # P
+    col_comentario_K = df_raw.columns[10] # K
+    col_ambiente = df_raw.columns[9]      # J
+    col_nps_puntaje = df_raw.columns[16]  # Q
+    col_csi_final = df_raw.columns[18]    # S
+    col_nps_comentario = df_raw.columns[17] # R
+    col_comentario_I = df_raw.columns[8]
+    col_comentario_M = df_raw.columns[12]
+    col_comentario_O = df_raw.columns[14]
+    col_cliente = next((c for c in df_raw.columns if "nombre" in c.lower() and "apellido" in c.lower()), "Nombre y Apellido")
     col_asesor = next((c for c in df_raw.columns if "asesor" in c.lower() or "recepcionista" in c.lower()), "Asesor")
 
-    # Limpieza de datos numérica
+    # Limpieza de datos
     def clean_val(x):
         try:
             val = float(str(x).replace('%', '').replace(',', '.').strip())
@@ -107,8 +111,28 @@ if df_raw is not None:
                 fig.update_layout(height=280, margin=dict(l=50, r=50, t=80, b=0), paper_bgcolor='rgba(0,0,0,0)')
                 return fig
 
-            c1.plotly_chart(crear_gauge(nps_val, "NPS (Recomendación)"), use_container_width=True)
-            c2.plotly_chart(crear_gauge(csi_val, "CSI (Satisfacción)"), use_container_width=True)
+            with c1:
+                st.plotly_chart(crear_gauge(nps_val, "NPS (Recomendación)"), use_container_width=True)
+                # Botones NPS
+                v1, b1, b2, b3, v2 = st.columns([0.2, 1, 1, 1, 0.2])
+                p_c = len(df_mes[df_mes[col_nps_puntaje] >= 9])
+                d_c = len(df_mes[df_mes[col_nps_puntaje] <= 6])
+                pas_c = len(df_mes[(df_mes[col_nps_puntaje] > 6) & (df_mes[col_nps_puntaje] < 9)])
+                with b1: st.button(f"🟢 {p_c} Prom", key="p1", on_click=lambda: st.session_state.update({"f_tipo":"NPS","f_val":"Promotor"}))
+                with b2: st.button(f"🟡 {pas_c} Neu", key="p2", on_click=lambda: st.session_state.update({"f_tipo":"NPS","f_val":"Pasivo"}))
+                with b3: st.button(f"🔴 {d_c} Det", key="p3", on_click=lambda: st.session_state.update({"f_tipo":"NPS","f_val":"Detractor"}))
+
+            with c2:
+                st.plotly_chart(crear_gauge(csi_val, "CSI (Satisfacción)"), use_container_width=True)
+                # Botones CSI
+                v3, bc1, bc2, bc3, v4 = st.columns([0.2, 1, 1, 1, 0.2])
+                limit = 90 if csi_val > 15 else 9
+                exc_c = len(df_mes[df_mes[col_csi_final] >= limit])
+                mal_c = len(df_mes[df_mes[col_csi_final] <= (limit-30 if limit==90 else 6)])
+                reg_c = len(df_mes) - exc_c - mal_c
+                with bc1: st.button(f"🟢 {exc_c} Exc", key="e1", on_click=lambda: st.session_state.update({"f_tipo":"CSI","f_val":"Excelente"}))
+                with bc2: st.button(f"🟡 {reg_c} Reg", key="e2", on_click=lambda: st.session_state.update({"f_tipo":"CSI","f_val":"Regular"}))
+                with bc3: st.button(f"🔴 {mal_c} Mal", key="e3", on_click=lambda: st.session_state.update({"f_tipo":"CSI","f_val":"Malo"}))
 
             st.markdown(f"""
                 <div style="background-color: #f8f9fa; padding: 15px; border-radius: 12px; border: 1px solid #dee2e6; text-align: center; width: 100%; margin-top: 20px;">
@@ -121,47 +145,42 @@ if df_raw is not None:
                 for com in df_mes[col_comentario_K].dropna().unique():
                     if str(com).strip(): st.markdown(f"- {com}")
 
+            if st.session_state.f_tipo:
+                st.markdown("---")
+                st.subheader(f"Auditoría {st.session_state.f_tipo}: {st.session_state.f_val}")
+                if st.session_state.f_tipo == "NPS":
+                    if st.session_state.f_val == "Promotor": df_f = df_mes[df_mes[col_nps_puntaje] >= 9]
+                    elif st.session_state.f_val == "Detractor": df_f = df_mes[df_mes[col_nps_puntaje] <= 6]
+                    else: df_f = df_mes[(df_mes[col_nps_puntaje] > 6) & (df_mes[col_nps_puntaje] < 9)]
+                    cols_v = [col_cliente, col_asesor, col_ambiente, col_nps_puntaje, col_nps_comentario]
+                else:
+                    if st.session_state.f_val == "Excelente": df_f = df_mes[df_mes[col_csi_final] >= limit]
+                    elif st.session_state.f_val == "Malo": df_f = df_mes[df_mes[col_csi_final] <= (limit-30 if limit==90 else 6)]
+                    else: df_f = df_mes[(df_mes[col_csi_final] < limit) & (df_mes[col_csi_final] > (limit-30 if limit==90 else 6))]
+                    cols_v = [col_cliente, col_asesor, col_ambiente, col_csi_final, col_comentario_I, col_comentario_M, col_comentario_O]
+                st.dataframe(df_f[cols_v].fillna("Sin comentario"), use_container_width=True)
+
     with tab2:
         st.subheader(f"Desempeño de Asesores - {mes_sel_nombre}")
         if len(df_mes) > 0:
-            # 1. Gráfico de Volumen por Asesor
+            # 1. Gráfico de Volumen
             df_asesores = df_mes.groupby(col_asesor).size().reset_index(name='Encuestas')
             fig_asesor = px.bar(df_asesores, x=col_asesor, y='Encuestas', text='Encuestas',
-                                labels={col_asesor: 'Asesor', 'Encuestas': 'N° de Encuestas'},
                                 color='Encuestas', color_continuous_scale='Blues')
             st.plotly_chart(fig_asesor, use_container_width=True)
             
             st.markdown("---")
-            
-            # 2. Análisis de Seguimiento (Columna P)
-            col_a, col_b = st.columns([1, 2])
-            with col_a:
-                st.write("**¿Recibió seguimiento? (Columna P)**")
-                respuestas_p = df_mes[col_seguimiento].fillna("Sin respuesta").value_counts().reset_index()
-                respuestas_p.columns = ['Respuesta', 'Cantidad']
-                fig_pie = px.pie(respuestas_p, names='Respuesta', values='Cantidad', hole=0.4, 
-                                 color_discrete_sequence=px.colors.qualitative.Pastel)
-                fig_pie.update_layout(height=350, margin=dict(l=20, r=20, t=20, b=20))
-                st.plotly_chart(fig_pie, use_container_width=True)
-            
-            with col_b:
-                st.write("**Resumen de Seguimiento por Asesor**")
-                # Lógica corregida para la tabla
-                df_mes['Cumple_Seguimiento'] = df_mes[col_seguimiento].apply(lambda x: 1 if str(x).lower().strip() == 'sí' else 0)
-                
-                # Agrupamos por asesor
-                df_resumen = df_mes.groupby(col_asesor).agg(
-                    Total_Encuestas=(col_asesor, 'size'),
-                    Siguio_Cliente=('Cumple_Seguimiento', 'sum')
-                ).reset_index()
-                
-                df_resumen['% Cumplimiento'] = (df_resumen['Siguio_Cliente'] / df_resumen['Total_Encuestas'] * 100).round(1)
-                
-                # Formateo para mostrar
-                df_resumen['% Cumplimiento'] = df_resumen['% Cumplimiento'].astype(str) + "%"
-                st.dataframe(df_resumen.sort_values('Total_Encuestas', ascending=False), use_container_width=True)
-        else:
-            st.warning("No hay datos suficientes para procesar el análisis de asesores en este mes.")
+            # 2. Seguimiento y Resumen
+            ca, cb = st.columns([1, 2])
+            with ca:
+                resp_p = df_mes[col_seguimiento].fillna("N/C").value_counts().reset_index()
+                resp_p.columns = ['R', 'Cant']
+                st.plotly_chart(px.pie(resp_p, names='R', values='Cant', hole=0.4), use_container_width=True)
+            with cb:
+                df_mes['Sigue'] = df_mes[col_seguimiento].apply(lambda x: 1 if str(x).lower().strip() == 'sí' else 0)
+                df_res = df_mes.groupby(col_asesor).agg(Total=(col_asesor, 'size'), Sigue=('Sigue', 'sum')).reset_index()
+                df_res['% Seguimiento'] = (df_res['Sigue'] / df_res['Total'] * 100).round(1).astype(str) + "%"
+                st.dataframe(df_res.sort_values('Total', ascending=False), use_container_width=True)
 
     with tab3:
         st.subheader(f"Evolución Mensual {anio_sel}")
@@ -173,6 +192,5 @@ if df_raw is not None:
         fig_bar = px.bar(df_v, y='Mes', x='Cant', orientation='h', text='Cant', color='Cant', color_continuous_scale='Sunset')
         fig_bar.update_layout(yaxis={'categoryorder':'array', 'categoryarray':list(meses_dict.values())[::-1]}, height=500, coloraxis_showscale=False)
         st.plotly_chart(fig_bar, use_container_width=True)
-
 else:
     st.error("No se pudieron cargar los datos.")
