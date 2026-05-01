@@ -9,10 +9,9 @@ st.set_page_config(page_title="ENCUESTAS DE SATISFACCIÓN TALLER Cenoa", layout=
 if "f_tipo" not in st.session_state: st.session_state.f_tipo = None
 if "f_val" not in st.session_state: st.session_state.f_val = None
 
-# --- CSS: CENTRADO DINÁMICO ---
+# --- CSS: ESTILO DE BOTONES ---
 st.markdown("""
     <style>
-    /* Estilo de los botones */
     div.stButton > button {
         width: 100% !important;
         height: 34px !important;
@@ -25,31 +24,16 @@ st.markdown("""
         align-items: center !important;
         justify-content: center !important;
     }
-    
     div.stButton > button:hover {
         border-color: #adb5bd !important;
         background-color: #f8f9fa !important;
     }
-
-    /* FORZAR CENTRADO: 
-       Aumentamos el margen izquierdo para desplazar el bloque de 3 botones a la derecha */
-    [data-testid="column"] [data-testid="stHorizontalBlock"] {
-        padding-left: 12% !important; /* Desplazamiento porcentual para mejor centrado */
-        padding-right: 5% !important;
-        gap: 10px !important;
-    }
-
-    /* Espaciado entre los botones individuales */
+    /* Espacio entre botones */
     [data-testid="column"] [data-testid="column"] {
-        padding: 0px 4px !important;
+        padding: 0px 2px !important;
     }
-
-    /* Margen superior para separarlos del arco */
-    div.stButton {
-        margin-top: 20px;
-    }
-    
-    .stPlotlyChart { margin-bottom: -30px; }
+    div.stButton { margin-top: 10px; }
+    .stPlotlyChart { margin-bottom: -40px; }
     </style>
     """, unsafe_allow_html=True)
 
@@ -82,7 +66,7 @@ if df_raw is not None:
     
     df = df_raw[(df_raw['Año'] == anio_sel) & (df_raw['Mes_Num'] == mes_sel_num)].copy()
     col_nps = next((c for c in df.columns if "recomiendes" in c.lower()), None)
-    col_csi = df.columns[19] 
+    col_csi = df.columns[19]
 
     st.title("INDICADORES ENCUESTAS DE SATISFACCIÓN")
 
@@ -106,22 +90,24 @@ if df_raw is not None:
                        'steps': [{'range': [0, 59], 'color': "#EF9A9A"}, {'range': [60, 89], 'color': "#FFF59D"}, {'range': [90, 100], 'color': "#A5D6A7"}]}
             )).update_layout(height=230, margin=dict(l=60, r=60, t=60, b=0))
 
-        # --- GRID DE CONTENIDO ---
+        # --- GRID CON COLUMNAS DE BALANCE ---
         col_main_1, col_main_2 = st.columns(2)
         
         with col_main_1:
             st.plotly_chart(crear_gauge(nps_val, "NPS (Recomendación)"), use_container_width=True)
-            bn1, bn2, bn3 = st.columns(3)
-            bn1.button(f"🟢 {p_c} Prom", key="p1", on_click=lambda: st.session_state.update({"f_tipo":"NPS","f_val":"Promotor"}))
-            bn2.button(f"🟡 {pas_c} Neu", key="p2", on_click=lambda: st.session_state.update({"f_tipo":"NPS","f_val":"Pasivo"}))
-            bn3.button(f"🔴 {d_c} Det", key="p3", on_click=lambda: st.session_state.update({"f_tipo":"NPS","f_val":"Detractor"}))
+            # Creamos 5 columnas: la 1 y la 5 son aire para CENTRAR las 3 del medio
+            v1, b1, b2, b3, v2 = st.columns([0.5, 1, 1, 1, 0.5])
+            with b1: st.button(f"🟢 {p_c} Prom", key="p1", on_click=lambda: st.session_state.update({"f_tipo":"NPS","f_val":"Promotor"}))
+            with b2: st.button(f"🟡 {pas_c} Neu", key="p2", on_click=lambda: st.session_state.update({"f_tipo":"NPS","f_val":"Pasivo"}))
+            with b3: st.button(f"🔴 {d_c} Det", key="p3", on_click=lambda: st.session_state.update({"f_tipo":"NPS","f_val":"Detractor"}))
 
         with col_main_2:
             st.plotly_chart(crear_gauge(csi_val, "CSI (Satisfacción)"), use_container_width=True)
-            bc1, bc2, bc3 = st.columns(3)
-            bc1.button(f"🟢 {exc_c} Exc", key="e1", on_click=lambda: st.session_state.update({"f_tipo":"CSI","f_val":"Excelente"}))
-            bc2.button(f"🟡 {reg_c} Reg", key="e2", on_click=lambda: st.session_state.update({"f_tipo":"CSI","f_val":"Regular"}))
-            bc3.button(f"🔴 {mal_c} Mal", key="e3", on_click=lambda: st.session_state.update({"f_tipo":"CSI","f_val":"Malo"}))
+            # Mismo balance para CSI
+            v3, bc1, bc2, bc3, v4 = st.columns([0.5, 1, 1, 1, 0.5])
+            with bc1: st.button(f"🟢 {exc_c} Exc", key="e1", on_click=lambda: st.session_state.update({"f_tipo":"CSI","f_val":"Excelente"}))
+            with bc2: st.button(f"🟡 {reg_c} Reg", key="e2", on_click=lambda: st.session_state.update({"f_tipo":"CSI","f_val":"Regular"}))
+            with bc3: st.button(f"🔴 {mal_c} Mal", key="e3", on_click=lambda: st.session_state.update({"f_tipo":"CSI","f_val":"Malo"}))
 
         # --- TABLA ---
         if st.session_state.f_tipo:
