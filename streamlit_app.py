@@ -9,7 +9,7 @@ st.set_page_config(page_title="ENCUESTAS DE SATISFACCIÓN TALLER Cenoa", layout=
 if "f_tipo" not in st.session_state: st.session_state.f_tipo = None
 if "f_val" not in st.session_state: st.session_state.f_val = None
 
-# --- CSS: ALINEACIÓN MILIMÉTRICA ---
+# --- CSS: CENTRADO DE BOTONES SIN TEXTO ---
 st.markdown("""
     <style>
     /* Estilo de los botones tipo Badge */
@@ -32,20 +32,17 @@ st.markdown("""
         background-color: #f8f9fa !important;
     }
 
-    /* Quitar espacios extra entre columnas de botones */
+    /* Reducción de espacio lateral para centrar bajo el gráfico */
     [data-testid="column"] [data-testid="column"] {
-        padding: 0px 4px !important;
+        padding: 0px 8px !important;
     }
 
-    /* Centrar captions y reducir margen */
-    .stCaption {
-        text-align: center !important;
-        margin-bottom: 2px !important;
-        font-size: 12px !important;
-        color: #6c757d !important;
+    /* Ajuste de margen superior de los botones al quitar el texto */
+    div.stButton {
+        margin-top: 10px;
     }
     
-    .stPlotlyChart { margin-bottom: -10px; }
+    .stPlotlyChart { margin-bottom: -25px; }
     </style>
     """, unsafe_allow_html=True)
 
@@ -102,27 +99,24 @@ if df_raw is not None:
                        'steps': [{'range': [0, 59], 'color': "#EF9A9A"}, {'range': [60, 89], 'color': "#FFF59D"}, {'range': [90, 100], 'color': "#A5D6A7"}]}
             )).update_layout(height=230, margin=dict(l=60, r=60, t=60, b=0))
 
-        # --- LAYOUT CENTRADO ---
+        # --- GRID DE CONTENIDO ---
         col_main_1, col_main_2 = st.columns(2)
         
         with col_main_1:
             st.plotly_chart(crear_gauge(nps_val, "NPS (Recomendación)"), use_container_width=True)
-            st.caption("Filtrar auditoría NPS:")
-            # Usamos un contenedor para forzar el ancho
-            with st.container():
-                bn1, bn2, bn3 = st.columns(3)
-                bn1.button(f"🟢 {p_c} Prom", key="p1", on_click=lambda: st.session_state.update({"f_tipo":"NPS","f_val":"Promotor"}))
-                bn2.button(f"🟡 {pas_c} Neu", key="p2", on_click=lambda: st.session_state.update({"f_tipo":"NPS","f_val":"Pasivo"}))
-                bn3.button(f"🔴 {d_c} Det", key="p3", on_click=lambda: st.session_state.update({"f_tipo":"NPS","f_val":"Detractor"}))
+            # Se eliminó st.caption/st.write
+            bn1, bn2, bn3 = st.columns(3)
+            bn1.button(f"🟢 {p_c} Prom", key="p1", on_click=lambda: st.session_state.update({"f_tipo":"NPS","f_val":"Promotor"}))
+            bn2.button(f"🟡 {pas_c} Neu", key="p2", on_click=lambda: st.session_state.update({"f_tipo":"NPS","f_val":"Pasivo"}))
+            bn3.button(f"🔴 {d_c} Det", key="p3", on_click=lambda: st.session_state.update({"f_tipo":"NPS","f_val":"Detractor"}))
 
         with col_main_2:
             st.plotly_chart(crear_gauge(csi_val, "CSI (Satisfacción)"), use_container_width=True)
-            st.caption("Filtrar auditoría CSI:")
-            with st.container():
-                bc1, bc2, bc3 = st.columns(3)
-                bc1.button(f"🟢 {exc_c} Exc", key="e1", on_click=lambda: st.session_state.update({"f_tipo":"CSI","f_val":"Excelente"}))
-                bc2.button(f"🟡 {reg_c} Reg", key="e2", on_click=lambda: st.session_state.update({"f_tipo":"CSI","f_val":"Regular"}))
-                bc3.button(f"🔴 {mal_c} Mal", key="e3", on_click=lambda: st.session_state.update({"f_tipo":"CSI","f_val":"Malo"}))
+            # Se eliminó st.caption/st.write
+            bc1, bc2, bc3 = st.columns(3)
+            bc1.button(f"🟢 {exc_c} Exc", key="e1", on_click=lambda: st.session_state.update({"f_tipo":"CSI","f_val":"Excelente"}))
+            bc2.button(f"🟡 {reg_c} Reg", key="e2", on_click=lambda: st.session_state.update({"f_tipo":"CSI","f_val":"Regular"}))
+            bc3.button(f"🔴 {mal_c} Mal", key="e3", on_click=lambda: st.session_state.update({"f_tipo":"CSI","f_val":"Malo"}))
 
         # --- TABLA ---
         if st.session_state.f_tipo:
