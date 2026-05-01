@@ -67,13 +67,14 @@ if df_raw is not None:
     df_mes = df_anio[df_anio['Mes_Num'] == mes_sel_num].copy()
 
     # Mapeado de Columnas
-    col_ambiente = df_raw.columns[9]     # Columna J
-    col_nps_puntaje = df_raw.columns[16] # Columna Q
-    col_csi_final = df_raw.columns[18]   # Columna S
-    col_nps_comentario = df_raw.columns[17]
-    col_comentario_I = df_raw.columns[8]
-    col_comentario_M = df_raw.columns[12]
-    col_comentario_O = df_raw.columns[14]
+    col_comentario_K = df_raw.columns[10]    # Columna K (Observaciones generales)
+    col_ambiente = df_raw.columns[9]        # Columna J
+    col_nps_puntaje = df_raw.columns[16]    # Columna Q
+    col_csi_final = df_raw.columns[18]      # Columna S
+    col_nps_comentario = df_raw.columns[17] # Columna R
+    col_comentario_I = df_raw.columns[8]     # Columna I
+    col_comentario_M = df_raw.columns[12]    # Columna M
+    col_comentario_O = df_raw.columns[14]    # Columna O
     col_cliente = next((c for c in df_raw.columns if "nombre" in c.lower() and "apellido" in c.lower()), "Nombre y Apellido")
     col_asesor = next((c for c in df_raw.columns if "asesor" in c.lower() or "recepcionista" in c.lower()), "Asesor")
 
@@ -100,7 +101,7 @@ if df_raw is not None:
             csi_val = csi_raw * 100 if csi_raw <= 1.1 else csi_raw
             amb_val = df_mes[col_ambiente].mean() * 10
 
-            # --- FILA DE INDICADORES (RECUPERANDO SIMETRÍA) ---
+            # --- FILA DE INDICADORES ---
             c1, c2 = st.columns(2)
             
             def crear_gauge(valor, titulo):
@@ -119,7 +120,6 @@ if df_raw is not None:
 
             with c1:
                 st.plotly_chart(crear_gauge(nps_val, "NPS (Recomendación)"), use_container_width=True)
-                # Botones NPS bajo su indicador
                 v1, b1, b2, b3, v2 = st.columns([0.2, 1, 1, 1, 0.2])
                 p_c = len(df_mes[df_mes[col_nps_puntaje] >= 9])
                 d_c = len(df_mes[df_mes[col_nps_puntaje] <= 6])
@@ -130,7 +130,6 @@ if df_raw is not None:
 
             with c2:
                 st.plotly_chart(crear_gauge(csi_val, "CSI (Satisfacción)"), use_container_width=True)
-                # Botones CSI bajo su indicador
                 v3, bc1, bc2, bc3, v4 = st.columns([0.2, 1, 1, 1, 0.2])
                 limit = 90 if csi_val > 15 else 9
                 exc_c = len(df_mes[df_mes[col_csi_final] >= limit])
@@ -140,14 +139,25 @@ if df_raw is not None:
                 with bc2: st.button(f"🟡 {reg_c} Reg", key="e2", on_click=lambda: st.session_state.update({"f_tipo":"CSI","f_val":"Regular"}))
                 with bc3: st.button(f"🔴 {mal_c} Mal", key="e3", on_click=lambda: st.session_state.update({"f_tipo":"CSI","f_val":"Malo"}))
 
-            # --- TARJETA DE AMBIENTE ABAJO Y ALARGADA ---
+            # --- TARJETA DE AMBIENTE ---
             st.markdown("<br>", unsafe_allow_html=True)
             st.markdown(f"""
                 <div style="background-color: #f8f9fa; padding: 15px; border-radius: 12px; border: 1px solid #dee2e6; text-align: center; width: 100%;">
-                    <span style="color: #495057; font-size: 16px; font-weight: bold;">🏢 SATISFACCIÓN AMBIENTE TALLER (RECEPCION): </span>
+                    <span style="color: #495057; font-size: 16px; font-weight: bold;">🏢 SATISFACCIÓN AMBIENTE TALLER: </span>
                     <span style="color: #2c3e50; font-size: 24px; font-weight: bold; margin-left: 10px;">{amb_val:.1f}%</span>
                 </div>
             """, unsafe_allow_html=True)
+
+            # --- NUEVA SECCIÓN: COMENTARIOS GENERALES (COL K) ---
+            st.markdown("<br>", unsafe_allow_html=True)
+            with st.expander(f"💬 Ver Comentarios Generales de {mes_sel_nombre}"):
+                comentarios_k = df_mes[col_comentario_K].dropna().unique()
+                if len(comentarios_k) > 0:
+                    for com in comentarios_k:
+                        if str(com).strip() != "":
+                            st.markdown(f"- {com}")
+                else:
+                    st.info("No hay comentarios registrados para este mes.")
 
             if st.session_state.f_tipo:
                 st.markdown("---")
