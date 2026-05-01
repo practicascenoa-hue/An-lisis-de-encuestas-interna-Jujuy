@@ -10,9 +10,10 @@ st.set_page_config(page_title="ENCUESTAS DE SATISFACCIÓN TALLER Cenoa", layout=
 if "f_tipo" not in st.session_state: st.session_state.f_tipo = None
 if "f_val" not in st.session_state: st.session_state.f_val = None
 
-# --- CSS: ESTILO DE BOTONES Y ALINEACIÓN ---
+# --- CSS: ESTILO DE BOTONES Y PESTAÑAS (FORZADO) ---
 st.markdown("""
     <style>
+    /* Estilo de los botones tipo Badge */
     div.stButton > button {
         width: 100% !important;
         height: 34px !important;
@@ -25,34 +26,34 @@ st.markdown("""
         align-items: center !important;
         justify-content: center !important;
     }
-    div.stButton > button:hover {
-        border-color: #adb5bd !important;
-        background-color: #f8f9fa !important;
-    }
-    [data-testid="column"] [data-testid="column"] {
-        padding: 0px 3px !important;
-    }
-    div.stButton { margin-top: 10px; }
-    .stPlotlyChart { margin-bottom: -45px; }
-    /* Estilo para las pestañas */
+    
+    /* Estilo visual para que las pestañas resalten */
     .stTabs [data-baseweb="tab-list"] {
-        gap: 20px;
+        gap: 8px;
+        background-color: #f1f3f5;
+        padding: 10px 10px 0px 10px;
+        border-radius: 10px 10px 0px 0px;
     }
     .stTabs [data-baseweb="tab"] {
-        height: 50px;
-        white-space: pre-wrap;
-        background-color: #f8f9fa;
-        border-radius: 4px 4px 0px 0px;
-        gap: 1px;
-        padding-top: 10px;
+        background-color: #f1f3f5;
+        border-radius: 5px 5px 0px 0px;
+        padding: 10px 20px;
+        font-weight: bold;
     }
+    .stTabs [aria-selected="true"] {
+        background-color: white !important;
+        border-bottom: 2px solid #007bff !important;
+    }
+
+    [data-testid="column"] [data-testid="column"] { padding: 0px 3px !important; }
+    .stPlotlyChart { margin-bottom: -45px; }
     </style>
     """, unsafe_allow_html=True)
 
 # --- CARGA DE DATOS ---
 SHEET_URL = "https://docs.google.com/spreadsheets/d/1ER40wQho6sPz24oBvEUmQnsHnAxrnzmP3ppPukMy24Y/export?format=csv&gid=309618647"
 
-@st.cache_data(ttl=60)
+@st.cache_data(ttl=30) # Bajamos el TTL para que refresque más rápido
 def load_data():
     try:
         df = pd.read_csv(SHEET_URL)
@@ -73,16 +74,14 @@ if df_raw is not None:
     st.sidebar.header("FILTROS PERIODO")
     anio_sel = st.sidebar.selectbox("Año", sorted(df_raw['Año'].dropna().unique().astype(int), reverse=True))
     
-    # Datos del año para el gráfico de barras
     df_anio = df_raw[df_raw['Año'] == anio_sel].copy()
-    
     meses_nros = sorted(df_anio['Mes_Num'].dropna().unique().astype(int))
     mes_sel_nombre = st.sidebar.selectbox("Mes", [meses_dict[m] for m in meses_nros])
     mes_sel_num = [k for k, v in meses_dict.items() if v == mes_sel_nombre][0]
     
     df_mes = df_anio[df_anio['Mes_Num'] == mes_sel_num].copy()
 
-    # Mapeado de Columnas según lo último hablado
+    # Mapeado de Columnas (Q, R, I, M, O, S)
     col_nps_puntaje = df_raw.columns[16]    # Q
     col_nps_comentario = df_raw.columns[17] # R
     col_comentario_I = df_raw.columns[8]    # I
@@ -92,14 +91,12 @@ if df_raw is not None:
     col_cliente = next((c for c in df_raw.columns if "nombre" in c.lower() and "apellido" in c.lower()), "Nombre y Apellido")
     col_asesor = next((c for c in df_raw.columns if "asesor" in c.lower() or "recepcionista" in c.lower()), "Asesor")
 
-    st.title("INDICADORES ENCUESTAS DE SATISFACCIÓN")
-
-    # --- AQUÍ DEFINIMOS LAS PESTAÑAS ---
-    tab1, tab2 = st.tabs(["📊 Satisfacción Detallada", "📈 Estadísticas de Volumen"])
+    # --- PESTAÑAS PRINCIPALES ---
+    tab1, tab2 = st.tabs(["🎯 INDICADORES DE SATISFACCIÓN", "📊 VOLUMEN MENSUAL"])
 
     with tab1:
+        st.title("INDICADORES DE SATISFACCIÓN")
         if len(df_mes) > 0:
-            # Procesamiento
             df_mes[col_nps_puntaje] = pd.to_numeric(df_mes[col_nps_puntaje], errors='coerce')
             df_mes[col_csi_final] = df_mes[col_csi_final].astype(str).str.replace('%', '').str.replace(',', '.')
             df_mes[col_csi_final] = pd.to_numeric(df_mes[col_csi_final], errors='coerce')
@@ -155,7 +152,8 @@ if df_raw is not None:
         else: st.warning("Sin datos para este periodo.")
 
     with tab2:
-        st.subheader(f"Volumen de Encuestas Mensuales - Año {anio_sel}")
+        st.title("ESTADÍSTICAS DE VOLUMEN")
+        st.subheader(f"Total de Encuestas por Mes en {anio_sel}")
         df_vol = df_anio.groupby('Mes_Num').size().reset_index(name='Encuestas')
         df_vol['Mes'] = df_vol['Mes_Num'].map(meses_dict)
         
