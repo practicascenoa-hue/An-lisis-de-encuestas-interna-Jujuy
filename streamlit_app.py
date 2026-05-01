@@ -34,6 +34,18 @@ st.markdown("""
     }
     div.stButton { margin-top: 10px; }
     .stPlotlyChart { margin-bottom: -45px; }
+    /* Estilo para las pestañas */
+    .stTabs [data-baseweb="tab-list"] {
+        gap: 20px;
+    }
+    .stTabs [data-baseweb="tab"] {
+        height: 50px;
+        white-space: pre-wrap;
+        background-color: #f8f9fa;
+        border-radius: 4px 4px 0px 0px;
+        gap: 1px;
+        padding-top: 10px;
+    }
     </style>
     """, unsafe_allow_html=True)
 
@@ -53,16 +65,15 @@ def load_data():
 df_raw, col_fecha_nombre = load_data()
 
 if df_raw is not None:
-    # Sidebar: Filtros de Periodo
+    # Sidebar: Filtros
     df_raw['Año'] = df_raw[col_fecha_nombre].dt.year
     df_raw['Mes_Num'] = df_raw[col_fecha_nombre].dt.month
     meses_dict = {1:"Enero", 2:"Febrero", 3:"Marzo", 4:"Abril", 5:"Mayo", 6:"Junio", 7:"Julio", 8:"Agosto", 9:"Septiembre", 10:"Octubre", 11:"Noviembre", 12:"Diciembre"}
     
     st.sidebar.header("FILTROS PERIODO")
-    anios_disp = sorted(df_raw['Año'].dropna().unique().astype(int), reverse=True)
-    anio_sel = st.sidebar.selectbox("Año", anios_disp)
+    anio_sel = st.sidebar.selectbox("Año", sorted(df_raw['Año'].dropna().unique().astype(int), reverse=True))
     
-    # Datos filtrados por año para el gráfico de barras y por mes para los indicadores
+    # Datos del año para el gráfico de barras
     df_anio = df_raw[df_raw['Año'] == anio_sel].copy()
     
     meses_nros = sorted(df_anio['Mes_Num'].dropna().unique().astype(int))
@@ -71,24 +82,24 @@ if df_raw is not None:
     
     df_mes = df_anio[df_anio['Mes_Num'] == mes_sel_num].copy()
 
-    # --- MAPEADO DE COLUMNAS ---
-    col_nps_puntaje = df_raw.columns[16]    # Columna Q
-    col_nps_comentario = df_raw.columns[17] # Columna R
-    col_comentario_I = df_raw.columns[8]    # Columna I
-    col_comentario_M = df_raw.columns[12]   # Columna M
-    col_comentario_O = df_raw.columns[14]   # Columna O
-    col_csi_final = df_raw.columns[18]      # Columna S
+    # Mapeado de Columnas según lo último hablado
+    col_nps_puntaje = df_raw.columns[16]    # Q
+    col_nps_comentario = df_raw.columns[17] # R
+    col_comentario_I = df_raw.columns[8]    # I
+    col_comentario_M = df_raw.columns[12]   # M
+    col_comentario_O = df_raw.columns[14]   # O
+    col_csi_final = df_raw.columns[18]      # S
     col_cliente = next((c for c in df_raw.columns if "nombre" in c.lower() and "apellido" in c.lower()), "Nombre y Apellido")
     col_asesor = next((c for c in df_raw.columns if "asesor" in c.lower() or "recepcionista" in c.lower()), "Asesor")
 
-    st.title("DASHBOARD DE ENCUESTAS")
+    st.title("INDICADORES ENCUESTAS DE SATISFACCIÓN")
 
-    # --- CREACIÓN DE PESTAÑAS ---
-    tab1, tab2 = st.tabs(["📊 Indicadores de Satisfacción", "📈 Volumen Mensual"])
+    # --- AQUÍ DEFINIMOS LAS PESTAÑAS ---
+    tab1, tab2 = st.tabs(["📊 Satisfacción Detallada", "📈 Estadísticas de Volumen"])
 
     with tab1:
         if len(df_mes) > 0:
-            # Procesamiento numérico
+            # Procesamiento
             df_mes[col_nps_puntaje] = pd.to_numeric(df_mes[col_nps_puntaje], errors='coerce')
             df_mes[col_csi_final] = df_mes[col_csi_final].astype(str).str.replace('%', '').str.replace(',', '.')
             df_mes[col_csi_final] = pd.to_numeric(df_mes[col_csi_final], errors='coerce')
@@ -144,20 +155,14 @@ if df_raw is not None:
         else: st.warning("Sin datos para este periodo.")
 
     with tab2:
-        st.subheader(f"Encuestas totales por mes en {anio_sel}")
-        # Agrupar por mes
-        df_barras = df_anio.groupby('Mes_Num').size().reset_index(name='Cantidad')
-        df_barras['Mes'] = df_barras['Mes_Num'].map(meses_dict)
+        st.subheader(f"Volumen de Encuestas Mensuales - Año {anio_sel}")
+        df_vol = df_anio.groupby('Mes_Num').size().reset_index(name='Encuestas')
+        df_vol['Mes'] = df_vol['Mes_Num'].map(meses_dict)
         
-        # Gráfico de barras
         fig_bar = px.bar(
-            df_barras, 
-            x='Mes', 
-            y='Cantidad',
-            text='Cantidad',
-            color='Cantidad',
-            color_continuous_scale='Blues',
-            labels={'Cantidad': 'N° de Encuestas', 'Mes': 'Mes'}
+            df_vol, x='Mes', y='Encuestas', text='Encuestas',
+            labels={'Encuestas': 'Total Encuestas', 'Mes': 'Mes'},
+            color='Encuestas', color_continuous_scale='Blues'
         )
         fig_bar.update_traces(textposition='outside')
         fig_bar.update_layout(xaxis={'categoryorder':'array', 'categoryarray':list(meses_dict.values())})
