@@ -28,7 +28,6 @@ st.markdown("""
         border-color: #adb5bd !important;
         background-color: #f8f9fa !important;
     }
-    /* Espacio mínimo entre botones para que no se peguen al desplazarlos */
     [data-testid="column"] [data-testid="column"] {
         padding: 0px 3px !important;
     }
@@ -90,21 +89,20 @@ if df_raw is not None:
                        'steps': [{'range': [0, 59], 'color': "#EF9A9A"}, {'range': [60, 89], 'color': "#FFF59D"}, {'range': [90, 100], 'color': "#A5D6A7"}]}
             )).update_layout(height=230, margin=dict(l=60, r=60, t=60, b=0))
 
-        # --- GRID CON DESPLAZAMIENTO A LA DERECHA ---
+        # --- GRID CON DESPLAZAMIENTO AJUSTADO (UN POQUITO MENOS) ---
         col_main_1, col_main_2 = st.columns(2)
         
         with col_main_1:
             st.plotly_chart(crear_gauge(nps_val, "NPS (Recomendación)"), use_container_width=True)
-            # Aumentamos el peso de la primera columna (0.8) para empujar a la derecha
-            v1, b1, b2, b3, v2 = st.columns([0.8, 1, 1, 1, 0.2])
+            # Ajuste de 0.8 a 0.7 para centrar mejor
+            v1, b1, b2, b3, v2 = st.columns([0.7, 1, 1, 1, 0.3])
             with b1: st.button(f"🟢 {p_c} Prom", key="p1", on_click=lambda: st.session_state.update({"f_tipo":"NPS","f_val":"Promotor"}))
             with b2: st.button(f"🟡 {pas_c} Neu", key="p2", on_click=lambda: st.session_state.update({"f_tipo":"NPS","f_val":"Pasivo"}))
             with b3: st.button(f"🔴 {d_c} Det", key="p3", on_click=lambda: st.session_state.update({"f_tipo":"NPS","f_val":"Detractor"}))
 
         with col_main_2:
             st.plotly_chart(crear_gauge(csi_val, "CSI (Satisfacción)"), use_container_width=True)
-            # Mismo desplazamiento para CSI
-            v3, bc1, bc2, bc3, v4 = st.columns([0.8, 1, 1, 1, 0.2])
+            v3, bc1, bc2, bc3, v4 = st.columns([0.7, 1, 1, 1, 0.3])
             with bc1: st.button(f"🟢 {exc_c} Exc", key="e1", on_click=lambda: st.session_state.update({"f_tipo":"CSI","f_val":"Excelente"}))
             with bc2: st.button(f"🟡 {reg_c} Reg", key="e2", on_click=lambda: st.session_state.update({"f_tipo":"CSI","f_val":"Regular"}))
             with bc3: st.button(f"🔴 {mal_c} Mal", key="e3", on_click=lambda: st.session_state.update({"f_tipo":"CSI","f_val":"Malo"}))
