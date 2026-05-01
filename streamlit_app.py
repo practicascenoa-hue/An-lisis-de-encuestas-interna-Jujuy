@@ -144,7 +144,7 @@ if df_raw is not None:
             st.markdown("<br>", unsafe_allow_html=True)
             st.markdown(f"""
                 <div style="background-color: #f8f9fa; padding: 15px; border-radius: 12px; border: 1px solid #dee2e6; text-align: center; width: 100%;">
-                    <span style="color: #495057; font-size: 16px; font-weight: bold;">🏢 SATISFACCIÓN AMBIENTE TALLER (Col J): </span>
+                    <span style="color: #495057; font-size: 16px; font-weight: bold;">🏢 SATISFACCIÓN AMBIENTE TALLER (RECEPCION): </span>
                     <span style="color: #2c3e50; font-size: 24px; font-weight: bold; margin-left: 10px;">{amb_val:.1f}%</span>
                 </div>
             """, unsafe_allow_html=True)
