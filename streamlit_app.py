@@ -9,10 +9,10 @@ st.set_page_config(page_title="ENCUESTAS DE SATISFACCIÓN TALLER Cenoa", layout=
 if "f_tipo" not in st.session_state: st.session_state.f_tipo = None
 if "f_val" not in st.session_state: st.session_state.f_val = None
 
-# --- CSS: COMPENSACIÓN PARA CENTRADO REAL ---
+# --- CSS: CENTRADO DINÁMICO ---
 st.markdown("""
     <style>
-    /* Estilo de los botones tipo Badge */
+    /* Estilo de los botones */
     div.stButton > button {
         width: 100% !important;
         height: 34px !important;
@@ -21,7 +21,6 @@ st.markdown("""
         background-color: white !important;
         color: #495057 !important;
         font-size: 13px !important;
-        padding: 0px !important;
         display: flex !important;
         align-items: center !important;
         justify-content: center !important;
@@ -32,24 +31,25 @@ st.markdown("""
         background-color: #f8f9fa !important;
     }
 
-    /* DESPLAZAMIENTO A LA DERECHA: 
-       Añadimos un margen izquierdo a los bloques de botones para centrarlos bajo el arco */
+    /* FORZAR CENTRADO: 
+       Aumentamos el margen izquierdo para desplazar el bloque de 3 botones a la derecha */
     [data-testid="column"] [data-testid="stHorizontalBlock"] {
-        padding-left: 15px !important;
-        padding-right: 15px !important;
+        padding-left: 12% !important; /* Desplazamiento porcentual para mejor centrado */
+        padding-right: 5% !important;
+        gap: 10px !important;
     }
 
     /* Espaciado entre los botones individuales */
     [data-testid="column"] [data-testid="column"] {
-        padding: 0px 6px !important;
+        padding: 0px 4px !important;
     }
 
-    /* Espacio superior de los botones al no tener texto */
+    /* Margen superior para separarlos del arco */
     div.stButton {
-        margin-top: 15px;
+        margin-top: 20px;
     }
     
-    .stPlotlyChart { margin-bottom: -20px; }
+    .stPlotlyChart { margin-bottom: -30px; }
     </style>
     """, unsafe_allow_html=True)
 
