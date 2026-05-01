@@ -139,20 +139,24 @@ if df_raw is not None:
         else: st.warning("Sin datos para este periodo.")
 
     with tab2:
-        st.subheader(f"Volumen y Calidad de Encuestas - {anio_sel}")
+        st.subheader(f"Evolución Mensual: Volumen, CSI y NPS - {anio_sel}")
         
-        # Procesar datos por mes para el año seleccionado
+        # Limpieza de datos anuales para promedios correctos
         df_anio[col_csi_final] = df_anio[col_csi_final].astype(str).str.replace('%', '').str.replace(',', '.')
         df_anio[col_csi_final] = pd.to_numeric(df_anio[col_csi_final], errors='coerce')
+        df_anio[col_nps_puntaje] = pd.to_numeric(df_anio[col_nps_puntaje], errors='coerce')
         
+        # AGRUPACIÓN CORREGIDA: Incluimos NPS
         df_vol = df_anio.groupby('Mes_Num').agg({
             col_fecha_nombre: 'count',
-            col_csi_final: 'mean'
+            col_csi_final: 'mean',
+            col_nps_puntaje: lambda x: x.mean() * 10 # Escalado a 100 como en los relojes
         }).reset_index()
-        df_vol.columns = ['Mes_Num', 'Encuestas', 'Promedio_CSI']
+        
+        df_vol.columns = ['Mes_Num', 'Encuestas', 'Promedio_CSI', 'Promedio_NPS']
         df_vol['Mes'] = df_vol['Mes_Num'].map(meses_dict)
         
-        # Gráfico Horizontal con Color por Promedio CSI (Informativo y estético)
+        # Gráfico con escala Sunset y Hover con ambos indicadores
         fig_bar = px.bar(
             df_vol, 
             y='Mes', 
@@ -160,19 +164,19 @@ if df_raw is not None:
             orientation='h',
             text='Encuestas',
             color='Encuestas',
-            color_continuous_scale='tealgrn', # Un color vibrante y profesional
-            labels={'Encuestas': 'Cantidad', 'Mes': 'Mes', 'Encuestas': 'Volumen'},
-            hover_data={'Promedio_CSI': ':.1f'}
+            color_continuous_scale='Sunset', # Color nuevo
+            labels={'Encuestas': 'Volumen', 'Mes': 'Mes', 'Promedio_CSI': 'CSI (%)', 'Promedio_NPS': 'NPS'},
+            hover_data={'Mes': False, 'Encuestas': True, 'Promedio_CSI': ':.1f', 'Promedio_NPS': ':.1f'}
         )
         
-        fig_bar.update_traces(textposition='outside', marker_line_width=0)
+        fig_bar.update_traces(textposition='outside')
         fig_bar.update_layout(
             yaxis={'categoryorder':'array', 'categoryarray':list(meses_dict.values())[::-1]},
             height=500,
             margin=dict(l=20, r=40, t=20, b=20),
-            coloraxis_showscale=False # Quitamos la escala lateral para más limpieza
+            coloraxis_showscale=False
         )
         st.plotly_chart(fig_bar, use_container_width=True)
-        st.info("💡 El color de las barras representa el volumen de encuestas. Se incluyen etiquetas con el total por cada mes.")
+        st.info("💡 Deslizá el mouse sobre las barras para ver los promedios de CSI y NPS de cada mes.")
 
 else: st.error("No se pudieron cargar los datos.")
