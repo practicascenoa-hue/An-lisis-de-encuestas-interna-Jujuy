@@ -100,7 +100,8 @@ if df_raw is not None:
                 fig = go.Figure(go.Indicator(
                     mode="gauge+number", value=valor,
                     title={'text': f"<b>{titulo}</b>", 'font': {'size': 18}},
-                    number={'valueformat': ".1f" if "CSI" in titulo else ".0f", 'font': {'size': 45}},
+                    # Agregamos el sufijo % a ambos relojes
+                    number={'valueformat': ".1f", 'suffix': "%", 'font': {'size': 45}},
                     gauge={'axis': {'range': [0, 100]}, 'bar': {'color': "#34495e", 'thickness': 0.2},
                            'steps': [{'range': [0, 60], 'color': "#f8d7da"}, {'range': [60, 90], 'color': "#fff3cd"}, {'range': [90, 100], 'color': "#d1e7dd"}]}
                 ))
@@ -141,22 +142,21 @@ if df_raw is not None:
     with tab2:
         st.subheader(f"Evolución Mensual: Volumen, CSI y NPS - {anio_sel}")
         
-        # Limpieza de datos anuales para promedios correctos
+        # Limpieza de datos anuales
         df_anio[col_csi_final] = df_anio[col_csi_final].astype(str).str.replace('%', '').str.replace(',', '.')
         df_anio[col_csi_final] = pd.to_numeric(df_anio[col_csi_final], errors='coerce')
         df_anio[col_nps_puntaje] = pd.to_numeric(df_anio[col_nps_puntaje], errors='coerce')
         
-        # AGRUPACIÓN CORREGIDA: Incluimos NPS
         df_vol = df_anio.groupby('Mes_Num').agg({
             col_fecha_nombre: 'count',
             col_csi_final: 'mean',
-            col_nps_puntaje: lambda x: x.mean() * 10 # Escalado a 100 como en los relojes
+            col_nps_puntaje: lambda x: x.mean() * 10
         }).reset_index()
         
         df_vol.columns = ['Mes_Num', 'Encuestas', 'Promedio_CSI', 'Promedio_NPS']
         df_vol['Mes'] = df_vol['Mes_Num'].map(meses_dict)
         
-        # Gráfico con escala Sunset y Hover con ambos indicadores
+        # Gráfico Horizontal con Hover incluyendo %
         fig_bar = px.bar(
             df_vol, 
             y='Mes', 
@@ -164,9 +164,10 @@ if df_raw is not None:
             orientation='h',
             text='Encuestas',
             color='Encuestas',
-            color_continuous_scale='Sunset', # Color nuevo
-            labels={'Encuestas': 'Volumen', 'Mes': 'Mes', 'Promedio_CSI': 'CSI (%)', 'Promedio_NPS': 'NPS'},
-            hover_data={'Mes': False, 'Encuestas': True, 'Promedio_CSI': ':.1f', 'Promedio_NPS': ':.1f'}
+            color_continuous_scale='Sunset',
+            # Personalizamos las etiquetas del Hover para agregar el %
+            labels={'Encuestas': 'Volumen', 'Mes': 'Mes', 'Promedio_CSI': 'CSI (%)', 'Promedio_NPS': 'NPS (%)'},
+            hover_data={'Mes': False, 'Encuestas': True, 'Promedio_CSI': ':.1f%', 'Promedio_NPS': ':.1f%'}
         )
         
         fig_bar.update_traces(textposition='outside')
@@ -177,6 +178,6 @@ if df_raw is not None:
             coloraxis_showscale=False
         )
         st.plotly_chart(fig_bar, use_container_width=True)
-        st.info("💡 Deslizá el mouse sobre las barras para ver los promedios de CSI y NPS de cada mes.")
+        st.info("💡 Deslizá el mouse sobre las barras para ver los promedios en formato de porcentaje.")
 
 else: st.error("No se pudieron cargar los datos.")
