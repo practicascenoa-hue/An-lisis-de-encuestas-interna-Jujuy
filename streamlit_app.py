@@ -73,7 +73,7 @@ if df_raw is not None:
     col_cliente = next((c for c in df_raw.columns if "nombre" in c.lower() and "apellido" in c.lower()), "Cliente")
     col_asesor = next((c for c in df_raw.columns if "asesor" in c.lower() or "recepcionista" in c.lower()), "Asesor")
 
-    # Limpieza de datos
+    # Limpieza de datos numérica
     def clean_val(x):
         try:
             val = float(str(x).replace('%', '').replace(',', '.').strip())
@@ -86,7 +86,6 @@ if df_raw is not None:
 
     st.title("INDICADORES ENCUESTAS DE SATISFACCIÓN")
     
-    # --- PESTAÑAS ---
     tab1, tab2, tab3 = st.tabs(["🎯 INDICADORES", "👤 ASESORES", "📊 EVOLUCIÓN MENSUAL"])
 
     with tab1:
@@ -128,7 +127,7 @@ if df_raw is not None:
             # 1. Gráfico de Volumen por Asesor
             df_asesores = df_mes.groupby(col_asesor).size().reset_index(name='Encuestas')
             fig_asesor = px.bar(df_asesores, x=col_asesor, y='Encuestas', text='Encuestas',
-                                title="Volumen de Encuestas por Asesor",
+                                labels={col_asesor: 'Asesor', 'Encuestas': 'N° de Encuestas'},
                                 color='Encuestas', color_continuous_scale='Blues')
             st.plotly_chart(fig_asesor, use_container_width=True)
             
@@ -138,26 +137,31 @@ if df_raw is not None:
             col_a, col_b = st.columns([1, 2])
             with col_a:
                 st.write("**¿Recibió seguimiento? (Columna P)**")
-                # Limpiar respuestas de Columna P (Sí/No)
-                df_mes[col_seguimiento] = df_mes[col_seguimiento].fillna("Sin respuesta")
-                fig_pie = px.pie(df_mes, names=col_seguimiento, hole=0.4, 
+                respuestas_p = df_mes[col_seguimiento].fillna("Sin respuesta").value_counts().reset_index()
+                respuestas_p.columns = ['Respuesta', 'Cantidad']
+                fig_pie = px.pie(respuestas_p, names='Respuesta', values='Cantidad', hole=0.4, 
                                  color_discrete_sequence=px.colors.qualitative.Pastel)
-                fig_pie.update_layout(height=300, margin=dict(l=20, r=20, t=20, b=20))
+                fig_pie.update_layout(height=350, margin=dict(l=20, r=20, t=20, b=20))
                 st.plotly_chart(fig_pie, use_container_width=True)
             
             with col_b:
-                st.write("**Cumplimiento de Seguimiento por Asesor**")
-                # Crear tabla de porcentaje de "Sí" por asesor
-                df_mes['Seguimiento_Num'] = df_mes[col_seguimiento].apply(lambda x: 1 if str(x).lower().strip() == 'sí' else 0)
-                df_perf = df_mes.groupby(col_asesor).agg({
-                    'Encuestas': 'count' if 'Encuestas' in df_mes.columns else col_cliente,
-                    'Seguimiento_Num': 'mean'
-                }).reset_index()
-                df_perf.columns = ['Asesor', 'Total Encuestas', '% Seguimiento']
-                df_perf['% Seguimiento'] = (df_perf['% Seguimiento'] * 100).map("{:.1f}%".format)
-                st.dataframe(df_perf.sort_values('Total Encuestas', ascending=False), use_container_width=True)
+                st.write("**Resumen de Seguimiento por Asesor**")
+                # Lógica corregida para la tabla
+                df_mes['Cumple_Seguimiento'] = df_mes[col_seguimiento].apply(lambda x: 1 if str(x).lower().strip() == 'sí' else 0)
+                
+                # Agrupamos por asesor
+                df_resumen = df_mes.groupby(col_asesor).agg(
+                    Total_Encuestas=(col_asesor, 'size'),
+                    Siguio_Cliente=('Cumple_Seguimiento', 'sum')
+                ).reset_index()
+                
+                df_resumen['% Cumplimiento'] = (df_resumen['Siguio_Cliente'] / df_resumen['Total_Encuestas'] * 100).round(1)
+                
+                # Formateo para mostrar
+                df_resumen['% Cumplimiento'] = df_resumen['% Cumplimiento'].astype(str) + "%"
+                st.dataframe(df_resumen.sort_values('Total_Encuestas', ascending=False), use_container_width=True)
         else:
-            st.warning("No hay datos para mostrar en este mes.")
+            st.warning("No hay datos suficientes para procesar el análisis de asesores en este mes.")
 
     with tab3:
         st.subheader(f"Evolución Mensual {anio_sel}")
