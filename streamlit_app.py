@@ -9,7 +9,7 @@ st.set_page_config(page_title="ENCUESTAS DE SATISFACCIÓN TALLER Cenoa", layout=
 if "f_tipo" not in st.session_state: st.session_state.f_tipo = None
 if "f_val" not in st.session_state: st.session_state.f_val = None
 
-# --- CSS: CENTRADO DE BOTONES SIN TEXTO ---
+# --- CSS: COMPENSACIÓN PARA CENTRADO REAL ---
 st.markdown("""
     <style>
     /* Estilo de los botones tipo Badge */
@@ -32,17 +32,24 @@ st.markdown("""
         background-color: #f8f9fa !important;
     }
 
-    /* Reducción de espacio lateral para centrar bajo el gráfico */
-    [data-testid="column"] [data-testid="column"] {
-        padding: 0px 8px !important;
+    /* DESPLAZAMIENTO A LA DERECHA: 
+       Añadimos un margen izquierdo a los bloques de botones para centrarlos bajo el arco */
+    [data-testid="column"] [data-testid="stHorizontalBlock"] {
+        padding-left: 15px !important;
+        padding-right: 15px !important;
     }
 
-    /* Ajuste de margen superior de los botones al quitar el texto */
+    /* Espaciado entre los botones individuales */
+    [data-testid="column"] [data-testid="column"] {
+        padding: 0px 6px !important;
+    }
+
+    /* Espacio superior de los botones al no tener texto */
     div.stButton {
-        margin-top: 10px;
+        margin-top: 15px;
     }
     
-    .stPlotlyChart { margin-bottom: -25px; }
+    .stPlotlyChart { margin-bottom: -20px; }
     </style>
     """, unsafe_allow_html=True)
 
@@ -104,7 +111,6 @@ if df_raw is not None:
         
         with col_main_1:
             st.plotly_chart(crear_gauge(nps_val, "NPS (Recomendación)"), use_container_width=True)
-            # Se eliminó st.caption/st.write
             bn1, bn2, bn3 = st.columns(3)
             bn1.button(f"🟢 {p_c} Prom", key="p1", on_click=lambda: st.session_state.update({"f_tipo":"NPS","f_val":"Promotor"}))
             bn2.button(f"🟡 {pas_c} Neu", key="p2", on_click=lambda: st.session_state.update({"f_tipo":"NPS","f_val":"Pasivo"}))
@@ -112,7 +118,6 @@ if df_raw is not None:
 
         with col_main_2:
             st.plotly_chart(crear_gauge(csi_val, "CSI (Satisfacción)"), use_container_width=True)
-            # Se eliminó st.caption/st.write
             bc1, bc2, bc3 = st.columns(3)
             bc1.button(f"🟢 {exc_c} Exc", key="e1", on_click=lambda: st.session_state.update({"f_tipo":"CSI","f_val":"Excelente"}))
             bc2.button(f"🟡 {reg_c} Reg", key="e2", on_click=lambda: st.session_state.update({"f_tipo":"CSI","f_val":"Regular"}))
