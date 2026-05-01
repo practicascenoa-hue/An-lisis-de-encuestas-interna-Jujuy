@@ -67,9 +67,9 @@ if df_raw is not None:
     df_mes = df_anio[df_anio['Mes_Num'] == mes_sel_num].copy()
 
     # Mapeado de Columnas
-    col_ambiente = df_raw.columns[9]     # Columna J (Índice 9)
-    col_nps_puntaje = df_raw.columns[16] # Columna Q
-    col_csi_final = df_raw.columns[18]   # Columna S
+    col_ambiente = df_raw.columns[9]     # J
+    col_nps_puntaje = df_raw.columns[16] # Q
+    col_csi_final = df_raw.columns[18]   # S
     col_nps_comentario = df_raw.columns[17]
     col_comentario_I = df_raw.columns[8]
     col_comentario_M = df_raw.columns[12]
@@ -77,25 +77,23 @@ if df_raw is not None:
     col_cliente = next((c for c in df_raw.columns if "nombre" in c.lower() and "apellido" in c.lower()), "Nombre y Apellido")
     col_asesor = next((c for c in df_raw.columns if "asesor" in c.lower() or "recepcionista" in c.lower()), "Asesor")
 
+    # Asegurar limpieza numérica en todo el dataframe de trabajo
+    for c in [col_nps_puntaje, col_ambiente, col_csi_final]:
+        if c == col_csi_final:
+            df_anio[c] = df_anio[c].astype(str).str.replace('%', '').str.replace(',', '.')
+        df_anio[c] = pd.to_numeric(df_anio[c], errors='coerce')
+        df_mes[c] = pd.to_numeric(df_mes[c], errors='coerce')
+
     st.title("INDICADORES ENCUESTAS DE SATISFACCIÓN")
     tab1, tab2 = st.tabs(["🎯 INDICADORES", "📊 VOLUMEN MENSUAL"])
 
     with tab1:
         if len(df_mes) > 0:
-            # Procesamiento numérico
-            for c in [col_nps_puntaje, col_ambiente]:
-                df_mes[c] = pd.to_numeric(df_mes[c], errors='coerce')
-            
-            df_mes[col_csi_final] = df_mes[col_csi_final].astype(str).str.replace('%', '').str.replace(',', '.')
-            df_mes[col_csi_final] = pd.to_numeric(df_mes[col_csi_final], errors='coerce')
+            nps_val = df_mes[col_nps_puntaje].mean() * 10 if not df_mes[col_nps_puntaje].dropna().empty else 0
+            csi_val = (df_mes[col_csi_final].mean() * 100 if df_mes[col_csi_final].max() <= 1.1 else df_mes[col_csi_final].mean()) if not df_mes[col_csi_final].dropna().empty else 0
+            amb_val = df_mes[col_ambiente].mean() * 10 if not df_mes[col_ambiente].dropna().empty else 0
 
-            nps_val = df_mes[col_nps_puntaje].mean() * 10 if not df_mes.dropna(subset=[col_nps_puntaje]).empty else 0
-            csi_val = (df_mes[col_csi_final].mean() * 100 if df_mes[col_csi_final].max() <= 1.1 else df_mes[col_csi_final].mean()) if not df_mes.dropna(subset=[col_csi_final]).empty else 0
-            amb_val = df_mes[col_ambiente].mean() * 10 if not df_mes.dropna(subset=[col_ambiente]).empty else 0
-
-            # Gauges principales
             c1, c2 = st.columns(2)
-            
             def crear_gauge(valor, titulo):
                 return go.Figure(go.Indicator(
                     mode="gauge+number", value=valor,
@@ -108,15 +106,13 @@ if df_raw is not None:
             c1.plotly_chart(crear_gauge(nps_val, "NPS (Recomendación)"), use_container_width=True)
             c2.plotly_chart(crear_gauge(csi_val, "CSI (Satisfacción)"), use_container_width=True)
 
-            # --- Métrica de Ambiente (NUEVA) ---
             st.markdown(f"""
                 <div style="background-color:#f1f3f5; padding:15px; border-radius:10px; text-align:center; margin-bottom:20px;">
-                    <p style="margin:0; font-weight:bold; color:#495057;">Satisfacción con el Ambiente del Taller (Col J)</p>
+                    <p style="margin:0; font-weight:bold; color:#495057;">Satisfacción Ambiente Taller (Col J)</p>
                     <h2 style="margin:0; color:#2c3e50;">{amb_val:.1f}%</h2>
                 </div>
             """, unsafe_allow_html=True)
 
-            # Botones de Filtrado
             p_c = len(df_mes[df_mes[col_nps_puntaje] >= 9]); d_c = len(df_mes[df_mes[col_nps_puntaje] <= 6]); pas_c = len(df_mes[(df_mes[col_nps_puntaje] > 6) & (df_mes[col_nps_puntaje] < 9)])
             l_e = 9 if csi_val < 15 else 90; l_m = 6 if csi_val < 15 else 60
             exc_c = len(df_mes[df_mes[col_csi_final] >= l_e]); mal_c = len(df_mes[df_mes[col_csi_final] <= l_m]); reg_c = len(df_mes) - exc_c - mal_c
@@ -144,10 +140,19 @@ if df_raw is not None:
                 st.dataframe(df_f[cols_v].fillna("Sin comentario"), use_container_width=True)
 
     with tab2:
-        st.subheader(f"Análisis Mensual: Volumen y Calidad - {anio_sel}")
-        df_vol = df_anio.groupby('Mes_Num').agg({col_fecha_nombre: 'count', col_csi_final: 'mean', col_nps_puntaje: lambda x: x.mean() * 10}).reset_index()
-        df_vol.columns = ['Mes_Num', 'Encuestas', 'CSI', 'NPS']; df_vol['Mes'] = df_vol['Mes_Num'].map(meses_dict)
-        fig_bar = px.bar(df_vol, y='Mes', x='Encuestas', orientation='h', text='Encuestas', color='Encuestas', color_continuous_scale='Sunset', hover_data={'CSI': ':.1f', 'NPS': ':.1f'})
+        st.subheader(f"Evolución Mensual - {anio_sel}")
+        # Agrupación segura
+        df_counts = df_anio.groupby('Mes_Num').size().reset_index(name='Encuestas')
+        df_means = df_anio.groupby('Mes_Num')[[col_csi_final, col_nps_puntaje]].mean().reset_index()
+        df_vol = pd.merge(df_counts, df_means, on='Mes_Num')
+        
+        df_vol['Mes'] = df_vol['Mes_Num'].map(meses_dict)
+        df_vol['NPS_Scale'] = df_vol[col_nps_puntaje] * 10
+
+        fig_bar = px.bar(df_vol, y='Mes', x='Encuestas', orientation='h', text='Encuestas', color='Encuestas', color_continuous_scale='Sunset',
+                         labels={'Encuestas': 'Volumen', 'Mes': 'Mes', col_csi_final: 'CSI (%)', 'NPS_Scale': 'NPS (%)'},
+                         hover_data={'Mes': False, 'Encuestas': True, col_csi_final: ':.1f', 'NPS_Scale': ':.1f'})
+        
         fig_bar.update_layout(yaxis={'categoryorder':'array', 'categoryarray':list(meses_dict.values())[::-1]}, height=500, coloraxis_showscale=False)
         st.plotly_chart(fig_bar, use_container_width=True)
 
