@@ -29,7 +29,6 @@ st.markdown("""
         border-radius: 10px;
     }
     .stTabs [data-baseweb="tab"] { font-weight: bold; }
-    /* Ajuste para reducir el espacio blanco entre el gráfico y los botones */
     .stPlotlyChart { margin-bottom: -60px !important; }
     </style>
     """, unsafe_allow_html=True)
@@ -70,6 +69,11 @@ if df_raw is not None:
     col_ambiente = df_raw.columns[9]      # J
     col_nps_puntaje = df_raw.columns[16]  # Q
     col_csi_final = df_raw.columns[18]    # S
+    col_nps_comentario = df_raw.columns[17] # R
+    col_com_atencion = df_raw.columns[8]  # I
+    col_com_calidad = df_raw.columns[12]  # M
+    col_com_tiempo = df_raw.columns[14]   # O
+    col_cliente = next((c for c in df_raw.columns if "nombre" in c.lower() and "apellido" in c.lower()), "Cliente")
     col_asesor = next((c for c in df_raw.columns if "asesor" in c.lower() or "recepcionista" in c.lower()), "Asesor")
 
     def clean_val(x):
@@ -101,7 +105,6 @@ if df_raw is not None:
                     gauge={
                         'axis': {'range': [0, 100]},
                         'bar': {'color': "#34495e", 'thickness': 0.25},
-                        # El 'domain' ayuda a centrar el dibujo dentro del espacio del gráfico
                         'steps': [
                             {'range': [0, 60], 'color': "#f8d7da"},
                             {'range': [60, 90], 'color': "#fff3cd"},
@@ -109,12 +112,7 @@ if df_raw is not None:
                         ]
                     }
                 ))
-                # Ajuste de márgenes para que el número quede DENTRO del arco
-                fig.update_layout(
-                    height=280, 
-                    margin=dict(l=30, r=30, t=80, b=20), 
-                    paper_bgcolor='rgba(0,0,0,0)'
-                )
+                fig.update_layout(height=280, margin=dict(l=30, r=30, t=80, b=20), paper_bgcolor='rgba(0,0,0,0)')
                 return fig
 
             with c1:
@@ -148,6 +146,23 @@ if df_raw is not None:
             with st.expander(f"💬 Comentarios Generales de {mes_sel_nombre}"):
                 for com in df_mes[col_comentario_K].dropna().unique():
                     if str(com).strip(): st.markdown(f"- {com}")
+            
+            # --- SECCIÓN DE AUDITORÍA (LISTADO FILTRADO) ---
+            if st.session_state.f_tipo:
+                st.divider()
+                st.subheader(f"Auditoría {st.session_state.f_tipo}: {st.session_state.f_val}")
+                if st.session_state.f_tipo == "NPS":
+                    if st.session_state.f_val == "Promotor": df_f = df_mes[df_mes[col_nps_puntaje] >= 9]
+                    elif st.session_state.f_val == "Detractor": df_f = df_mes[df_mes[col_nps_puntaje] <= 6]
+                    else: df_f = df_mes[(df_mes[col_nps_puntaje] > 6) & (df_mes[col_nps_puntaje] < 9)]
+                    cols = [col_cliente, col_asesor, col_nps_puntaje, col_nps_comentario]
+                else:
+                    if st.session_state.f_val == "Excelente": df_f = df_mes[df_mes[col_csi_final] >= limit]
+                    elif st.session_state.f_val == "Malo": df_f = df_mes[df_mes[col_csi_final] <= (limit-30 if limit==90 else 6)]
+                    else: df_f = df_mes[(df_mes[col_csi_final] < limit) & (df_mes[col_csi_final] > (limit-30 if limit==90 else 6))]
+                    cols = [col_cliente, col_asesor, col_csi_final, col_com_atencion, col_com_calidad, col_com_tiempo]
+                
+                st.dataframe(df_f[cols].fillna("Sin comentario"), use_container_width=True)
 
     with tab2:
         st.subheader(f"Desempeño de Asesores - {mes_sel_nombre}")
