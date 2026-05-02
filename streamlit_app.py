@@ -11,27 +11,19 @@ if "f_tipo" not in st.session_state: st.session_state.f_tipo = None
 if "f_val" not in st.session_state: st.session_state.f_val = None
 if "btn_active" not in st.session_state: st.session_state.btn_active = None
 
-# --- CSS: ESTILO DEFINITIVO Y COLOR DE RESALTADO ---
+# --- CSS: ESTILO DEFINITIVO ---
 st.markdown("""
     <style>
-    /* Estilo para los botones estándar */
     div.stButton > button {
         width: 100% !important;
         height: 38px !important;
         border-radius: 8px !important;
     }
-    
-    /* CAMBIO DE COLOR PRIMARIO (AZUL EN LUGAR DE ROJO) */
     button[kind="primary"] {
         background-color: #007bff !important;
         border-color: #007bff !important;
         color: white !important;
     }
-    button[kind="primary"]:hover {
-        background-color: #0056b3 !important;
-        border-color: #0056b3 !important;
-    }
-
     .stTabs [data-baseweb="tab-list"] {
         gap: 10px;
         background-color: #f8f9fa;
@@ -74,15 +66,12 @@ if df_raw is not None:
     df_mes = df_anio[df_anio['Mes_Num'] == mes_sel_num].copy()
 
     # Mapeado de Columnas
-    col_seguimiento = df_raw.columns[15] # P
-    col_comentario_K = df_raw.columns[10] # K
-    col_ambiente = df_raw.columns[9]      # J
-    col_nps_puntaje = df_raw.columns[16]  # Q
-    col_csi_final = df_raw.columns[18]    # S
-    col_nps_comentario = df_raw.columns[17] # R
-    col_com_atencion = df_raw.columns[8]  # I
-    col_com_calidad = df_raw.columns[12]  # M
-    col_com_tiempo = df_raw.columns[14]   # O
+    col_seguimiento = df_raw.columns[15] 
+    col_comentario_K = df_raw.columns[10] 
+    col_ambiente = df_raw.columns[9]      
+    col_nps_puntaje = df_raw.columns[16]  
+    col_csi_final = df_raw.columns[18]    
+    col_nps_comentario = df_raw.columns[17] 
     col_cliente = next((c for c in df_raw.columns if "nombre" in c.lower() and "apellido" in c.lower()), "Cliente")
     col_asesor = next((c for c in df_raw.columns if "asesor" in c.lower() or "recepcionista" in c.lower()), "Asesor")
 
@@ -123,7 +112,8 @@ if df_raw is not None:
                 d_c = len(df_mes[df_mes[col_nps_puntaje] <= 6])
                 pas_c = len(df_mes[(df_mes[col_nps_puntaje] > 6) & (df_mes[col_nps_puntaje] < 9)])
                 
-                b1, b2, b3 = st.columns(3)
+                # Desplazamiento a la derecha con columna de espacio inicial
+                _, b1, b2, b3 = st.columns([0.1, 1, 1, 1])
                 if b1.button(f"🟢 {p_c} Prom", key="btn1", type="primary" if st.session_state.btn_active == "btn1" else "secondary"):
                     st.session_state.update({"f_tipo":"NPS","f_val":"Promotor", "btn_active":"btn1"})
                     st.rerun()
@@ -141,7 +131,8 @@ if df_raw is not None:
                 mal_c = len(df_mes[df_mes[col_csi_final] <= (limit-30 if limit==90 else 6)])
                 reg_c = len(df_mes) - exc_c - mal_c
                 
-                b4, b5, b6 = st.columns(3)
+                # Desplazamiento a la derecha con columna de espacio inicial
+                _, b4, b5, b6 = st.columns([0.1, 1, 1, 1])
                 if b4.button(f"🟢 {exc_c} Exc", key="btn4", type="primary" if st.session_state.btn_active == "btn4" else "secondary"):
                     st.session_state.update({"f_tipo":"CSI","f_val":"Excelente", "btn_active":"btn4"})
                     st.rerun()
@@ -154,7 +145,7 @@ if df_raw is not None:
 
             st.markdown(f"""
                 <div style="background-color: #f8f9fa; padding: 12px; border-radius: 10px; border: 1px solid #dee2e6; text-align: center; width: 100%; margin-top: 35px;">
-                    <span style="color: #495057; font-size: 15px; font-weight: bold;">🏢 SATISFACCIÓN AMBIENTE TALLER: </span>
+                    <span style="color: #495057; font-size: 15px; font-weight: bold;">🏢 AMBIENTE TALLER: </span>
                     <span style="color: #2c3e50; font-size: 22px; font-weight: bold; margin-left: 8px;">{amb_val:.1f}%</span>
                 </div>
             """, unsafe_allow_html=True)
@@ -175,15 +166,20 @@ if df_raw is not None:
                     if st.session_state.f_val == "Excelente": df_f = df_mes[df_mes[col_csi_final] >= limit]
                     elif st.session_state.f_val == "Malo": df_f = df_mes[df_mes[col_csi_final] <= (limit-30 if limit==90 else 6)]
                     else: df_f = df_mes[(df_mes[col_csi_final] < limit) & (df_mes[col_csi_final] > (limit-30 if limit==90 else 6))]
-                    cols = [col_cliente, col_asesor, col_csi_final, col_com_atencion, col_com_calidad, col_com_tiempo]
+                    cols = [col_cliente, col_asesor, col_csi_final, col_ambiente]
                 
-                st.dataframe(df_f[cols].fillna("Sin comentario"), use_container_width=True)
+                # Ocultar índice de fila
+                st.dataframe(df_f[cols].fillna("Sin comentario"), use_container_width=True, hide_index=True)
 
     with tab2:
         st.subheader(f"Desempeño de Asesores - {mes_sel_nombre}")
         if len(df_mes) > 0:
             df_as = df_mes.groupby(col_asesor).size().reset_index(name='Encuestas')
-            st.plotly_chart(px.bar(df_as, x=col_asesor, y='Encuestas', text='Encuestas', color='Encuestas', color_continuous_scale='Blues'), use_container_width=True)
+            fig_as = px.bar(df_as, x=col_asesor, y='Encuestas', text='Encuestas', color='Encuestas', color_continuous_scale='Blues')
+            # Ajuste para que las barras no sean tan anchas
+            fig_as.update_layout(bargap=0.6)
+            st.plotly_chart(fig_as, use_container_width=True)
+            
             st.markdown("---")
             ca, cb = st.columns([1, 2])
             with ca:
@@ -196,7 +192,8 @@ if df_raw is not None:
                 df_res['¿RECIBIÓ SEGUIMIENTO?'] = df_res['Recibio_Seg_Count'].apply(lambda x: "Sí" if x > 0 else "No")
                 df_final = df_res[[col_asesor, 'Total_Encuestas', '¿RECIBIÓ SEGUIMIENTO?', '% Cumplimiento']]
                 df_final.columns = ['Nombre de tu Asesor de Taller:', 'TOTAL ENCUESTAS', '¿RECIBIÓ SEGUIMIENTO?', '% Cumplimiento']
-                st.dataframe(df_final.sort_values('TOTAL ENCUESTAS', ascending=False), use_container_width=True)
+                # Ocultar índice de fila
+                st.dataframe(df_final.sort_values('TOTAL ENCUESTAS', ascending=False), use_container_width=True, hide_index=True)
 
     with tab3:
         st.subheader(f"Evolución Mensual {anio_sel}")
