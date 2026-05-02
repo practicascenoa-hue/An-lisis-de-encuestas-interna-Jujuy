@@ -197,7 +197,7 @@ if df_raw is not None:
                 df_res['% Cumplimiento'] = (df_res['Recibio_Seg_Count'] / df_res['Total_Encuestas'] * 100).round(1).astype(str) + "%"
                 df_res['¿RECIBIÓ SEGUIMIENTO?'] = df_res['Recibio_Seg_Count'].apply(lambda x: "Sí" if x > 0 else "No")
                 df_final = df_res[[col_asesor, 'Total_Encuestas', '¿RECIBIÓ SEGUIMIENTO?', '% Cumplimiento']]
-                df_final.columns = ['Nombre de tu Asesor de Taller:', 'TOTAL ENCUESTAS', '¿RECIBIÓ SEGUIMIENTO?', '% Cumplimiento']
+                df_final.columns = ['Asesor de Taller', 'TOTAL ENCUESTAS', '¿RECIBIÓ SEGUIMIENTO?', '% Cumplimiento']
                 st.dataframe(df_final.sort_values('TOTAL ENCUESTAS', ascending=False), use_container_width=True, hide_index=True)
 
     with tab3:
