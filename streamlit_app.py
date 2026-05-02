@@ -11,7 +11,7 @@ if "f_tipo" not in st.session_state: st.session_state.f_tipo = None
 if "f_val" not in st.session_state: st.session_state.f_val = None
 if "btn_active" not in st.session_state: st.session_state.btn_active = None
 
-# --- CSS: ESTILO DEFINITIVO ---
+# --- CSS: ESTILO DEFINITIVO Y COLOR DE RESALTADO ---
 st.markdown("""
     <style>
     /* Estilo para los botones estándar */
@@ -20,6 +20,18 @@ st.markdown("""
         height: 38px !important;
         border-radius: 8px !important;
     }
+    
+    /* CAMBIO DE COLOR PRIMARIO (AZUL EN LUGAR DE ROJO) */
+    button[kind="primary"] {
+        background-color: #007bff !important;
+        border-color: #007bff !important;
+        color: white !important;
+    }
+    button[kind="primary"]:hover {
+        background-color: #0056b3 !important;
+        border-color: #0056b3 !important;
+    }
+
     .stTabs [data-baseweb="tab-list"] {
         gap: 10px;
         background-color: #f8f9fa;
