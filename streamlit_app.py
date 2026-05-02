@@ -10,7 +10,7 @@ st.set_page_config(page_title="DASHBOARD POSTVENTA", layout="wide")
 if "f_tipo" not in st.session_state: st.session_state.f_tipo = None
 if "f_val" not in st.session_state: st.session_state.f_val = None
 
-# --- CSS: ESTILO DEFINITIVO ---
+# --- CSS: ESTILO ---
 st.markdown("""
     <style>
     div.stButton > button {
@@ -28,7 +28,7 @@ st.markdown("""
         padding: 10px;
         border-radius: 10px;
     }
-    /* Eliminar espacio extra entre gráfico y botones */
+    .stTabs [data-baseweb="tab"] { font-weight: bold; }
     .stPlotlyChart { margin-bottom: -40px !important; }
     </style>
     """, unsafe_allow_html=True)
@@ -90,30 +90,19 @@ if df_raw is not None:
             amb_val = df_mes[col_ambiente].mean() * 10
 
             c1, c2 = st.columns(2)
-            
             def crear_gauge(valor, titulo):
-                # Usamos una configuración de gauge estándar y segura para evitar ValueErrors
                 fig = go.Figure(go.Indicator(
-                    mode="gauge+number",
-                    value=valor,
+                    mode="gauge+number", value=valor,
                     title={'text': f"<b>{titulo}</b>", 'font': {'size': 18}},
                     number={'valueformat': ".1f", 'suffix': "%", 'font': {'size': 40}},
-                    gauge={
-                        'axis': {'range': [0, 100]},
-                        'bar': {'color': "#34495e", 'thickness': 0.2},
-                        'steps': [
-                            {'range': [0, 60], 'color': "#f8d7da"},
-                            {'range': [60, 90], 'color': "#fff3cd"},
-                            {'range': [90, 100], 'color': "#d1e7dd"}
-                        ]
-                    }
+                    gauge={'axis': {'range': [0, 100]}, 'bar': {'color': "#34495e", 'thickness': 0.2},
+                           'steps': [{'range': [0, 60], 'color': "#f8d7da"}, {'range': [60, 90], 'color': "#fff3cd"}, {'range': [90, 100], 'color': "#d1e7dd"}]}
                 ))
                 fig.update_layout(height=260, margin=dict(l=30, r=30, t=50, b=0), paper_bgcolor='rgba(0,0,0,0)')
                 return fig
 
             with c1:
                 st.plotly_chart(crear_gauge(nps_val, "NPS (Recomendación)"), use_container_width=True)
-                # Botones NPS
                 p_c = len(df_mes[df_mes[col_nps_puntaje] >= 9])
                 d_c = len(df_mes[df_mes[col_nps_puntaje] <= 6])
                 pas_c = len(df_mes[(df_mes[col_nps_puntaje] > 6) & (df_mes[col_nps_puntaje] < 9)])
@@ -124,7 +113,6 @@ if df_raw is not None:
 
             with c2:
                 st.plotly_chart(crear_gauge(csi_val, "CSI (Satisfacción)"), use_container_width=True)
-                # Botones CSI
                 limit = 90 if csi_val > 15 else 9
                 exc_c = len(df_mes[df_mes[col_csi_final] >= limit])
                 mal_c = len(df_mes[df_mes[col_csi_final] <= (limit-30 if limit==90 else 6)])
@@ -156,10 +144,24 @@ if df_raw is not None:
                 res_p = df_mes[col_seguimiento].fillna("N/C").value_counts().reset_index()
                 st.plotly_chart(px.pie(res_p, names=res_p.columns[0], values='count', hole=0.4), use_container_width=True)
             with cb:
-                df_mes['Sigue'] = df_mes[col_seguimiento].apply(lambda x: 1 if str(x).lower().strip() == 'sí' else 0)
-                df_res = df_mes.groupby(col_asesor).agg(Total=(col_asesor, 'size'), Sigue=('Sigue', 'sum')).reset_index()
-                df_res['% Seguimiento'] = (df_res['Sigue'] / df_res['Total'] * 100).round(1).astype(str) + "%"
-                st.dataframe(df_res.sort_values('Total', ascending=False), use_container_width=True)
+                # Lógica para la tabla con nombres de columnas solicitados
+                df_mes['Sigue_Num'] = df_mes[col_seguimiento].apply(lambda x: 1 if str(x).lower().strip() == 'sí' else 0)
+                
+                df_res = df_mes.groupby(col_asesor).agg(
+                    Total_Encuestas=(col_asesor, 'size'),
+                    Recibio_Seg_Count=('Sigue_Num', 'sum')
+                ).reset_index()
+                
+                df_res['% Seguimiento'] = (df_res['Recibio_Seg_Count'] / df_res['Total_Encuestas'] * 100).round(1).astype(str) + "%"
+                
+                # Cambiamos el número por "Sí" en la visualización
+                df_res['¿RECIBIO SEGUIMIENTO?'] = df_res['Recibio_Seg_Count'].apply(lambda x: f"{int(x)} (Sí)")
+                
+                # Seleccionamos y renombramos columnas para la tabla final
+                df_final = df_res[[col_asesor, 'Total_Encuestas', '¿RECIBIO SEGUIMIENTO?', '% Seguimiento']]
+                df_final.columns = ['Nombre de tu Asesor de Taller:', 'TOTAL ENCUESTAS', '¿RECIBIÓ SEGUIMIENTO?', '% Cumplimiento']
+                
+                st.dataframe(df_final.sort_values('TOTAL ENCUESTAS', ascending=False), use_container_width=True)
 
     with tab3:
         st.subheader(f"Evolución Mensual {anio_sel}")
