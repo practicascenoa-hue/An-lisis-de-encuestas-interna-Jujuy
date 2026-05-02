@@ -66,12 +66,12 @@ if df_raw is not None:
     df_mes = df_anio[df_anio['Mes_Num'] == mes_sel_num].copy()
 
     # Mapeado de Columnas
-    col_seguimiento = df_raw.columns[15] 
-    col_comentario_K = df_raw.columns[10] 
-    col_ambiente = df_raw.columns[9]      
-    col_nps_puntaje = df_raw.columns[16]  
-    col_csi_final = df_raw.columns[18]    
-    col_nps_comentario = df_raw.columns[17] 
+    col_comentario_K = df_raw.columns[10] # K (Comentario General)
+    col_ambiente_J = df_raw.columns[9]    # J (Nota Ambiente)
+    col_seguimiento = df_raw.columns[15]  # P
+    col_nps_puntaje = df_raw.columns[16]   # Q
+    col_csi_final = df_raw.columns[18]     # S
+    col_nps_comentario = df_raw.columns[17] # R
     col_cliente = next((c for c in df_raw.columns if "nombre" in c.lower() and "apellido" in c.lower()), "Cliente")
     col_asesor = next((c for c in df_raw.columns if "asesor" in c.lower() or "recepcionista" in c.lower()), "Asesor")
 
@@ -81,7 +81,7 @@ if df_raw is not None:
 
     df_mes[col_nps_puntaje] = df_mes[col_nps_puntaje].apply(clean_val)
     df_mes[col_csi_final] = df_mes[col_csi_final].apply(clean_val)
-    df_mes[col_ambiente] = df_mes[col_ambiente].apply(clean_val)
+    df_mes[col_ambiente_J] = df_mes[col_ambiente_J].apply(clean_val)
 
     st.title("INDICADORES ENCUESTAS DE SATISFACCIÓN")
     tab1, tab2, tab3 = st.tabs(["🎯 INDICADORES", "👤 ASESORES", "📊 EVOLUCIÓN MENSUAL"])
@@ -91,7 +91,7 @@ if df_raw is not None:
             nps_val = df_mes[col_nps_puntaje].mean() * 10
             csi_raw = df_mes[col_csi_final].mean()
             csi_val = csi_raw * 100 if csi_raw <= 1.1 else csi_raw
-            amb_val = df_mes[col_ambiente].mean() * 10
+            amb_val = df_mes[col_ambiente_J].mean() * 10
 
             c1, c2 = st.columns(2)
             
@@ -111,8 +111,6 @@ if df_raw is not None:
                 p_c = len(df_mes[df_mes[col_nps_puntaje] >= 9])
                 d_c = len(df_mes[df_mes[col_nps_puntaje] <= 6])
                 pas_c = len(df_mes[(df_mes[col_nps_puntaje] > 6) & (df_mes[col_nps_puntaje] < 9)])
-                
-                # Desplazamiento a la derecha con columna de espacio inicial
                 _, b1, b2, b3 = st.columns([0.1, 1, 1, 1])
                 if b1.button(f"🟢 {p_c} Prom", key="btn1", type="primary" if st.session_state.btn_active == "btn1" else "secondary"):
                     st.session_state.update({"f_tipo":"NPS","f_val":"Promotor", "btn_active":"btn1"})
@@ -130,8 +128,6 @@ if df_raw is not None:
                 exc_c = len(df_mes[df_mes[col_csi_final] >= limit])
                 mal_c = len(df_mes[df_mes[col_csi_final] <= (limit-30 if limit==90 else 6)])
                 reg_c = len(df_mes) - exc_c - mal_c
-                
-                # Desplazamiento a la derecha con columna de espacio inicial
                 _, b4, b5, b6 = st.columns([0.1, 1, 1, 1])
                 if b4.button(f"🟢 {exc_c} Exc", key="btn4", type="primary" if st.session_state.btn_active == "btn4" else "secondary"):
                     st.session_state.update({"f_tipo":"CSI","f_val":"Excelente", "btn_active":"btn4"})
@@ -151,12 +147,24 @@ if df_raw is not None:
             """, unsafe_allow_html=True)
 
             with st.expander(f"💬 Comentarios Generales de {mes_sel_nombre}"):
-                for com in df_mes[col_comentario_K].dropna().unique():
-                    if str(com).strip(): st.markdown(f"- {com}")
-            
+                # Iterar sobre las filas para construir el comentario con la nota
+                for _, row in df_mes.iterrows():
+                    coment = str(row[col_comentario_K]).strip()
+                    nota = row[col_ambiente_J]
+                    
+                    # Formatear la nota para que no tenga decimales si es 10.0, por ejemplo
+                    nota_str = f"{int(nota)}" if nota == int(nota) else f"{nota:.1f}"
+                    
+                    if coment != "" and coment.lower() != "nan":
+                        st.markdown(f"- {coment} **({nota_str})**")
+                    elif not pd.isna(nota):
+                        # Si no hay comentario pero hay nota, mostramos solo la nota
+                        st.markdown(f"- **({nota_str})**")
+
             if st.session_state.f_tipo:
                 st.divider()
                 st.subheader(f"Auditoría {st.session_state.f_tipo}: {st.session_state.f_val}")
+                # ... (resto de lógica de tablas se mantiene igual)
                 if st.session_state.f_tipo == "NPS":
                     if st.session_state.f_val == "Promotor": df_f = df_mes[df_mes[col_nps_puntaje] >= 9]
                     elif st.session_state.f_val == "Detractor": df_f = df_mes[df_mes[col_nps_puntaje] <= 6]
@@ -166,20 +174,18 @@ if df_raw is not None:
                     if st.session_state.f_val == "Excelente": df_f = df_mes[df_mes[col_csi_final] >= limit]
                     elif st.session_state.f_val == "Malo": df_f = df_mes[df_mes[col_csi_final] <= (limit-30 if limit==90 else 6)]
                     else: df_f = df_mes[(df_mes[col_csi_final] < limit) & (df_mes[col_csi_final] > (limit-30 if limit==90 else 6))]
-                    cols = [col_cliente, col_asesor, col_csi_final, col_ambiente]
+                    cols = [col_cliente, col_asesor, col_csi_final, col_ambiente_J]
                 
-                # Ocultar índice de fila
                 st.dataframe(df_f[cols].fillna("Sin comentario"), use_container_width=True, hide_index=True)
 
     with tab2:
+        # ... (pestaña asesores se mantiene igual)
         st.subheader(f"Desempeño de Asesores - {mes_sel_nombre}")
         if len(df_mes) > 0:
             df_as = df_mes.groupby(col_asesor).size().reset_index(name='Encuestas')
             fig_as = px.bar(df_as, x=col_asesor, y='Encuestas', text='Encuestas', color='Encuestas', color_continuous_scale='Blues')
-            # Ajuste para que las barras no sean tan anchas
             fig_as.update_layout(bargap=0.6)
             st.plotly_chart(fig_as, use_container_width=True)
-            
             st.markdown("---")
             ca, cb = st.columns([1, 2])
             with ca:
@@ -192,10 +198,10 @@ if df_raw is not None:
                 df_res['¿RECIBIÓ SEGUIMIENTO?'] = df_res['Recibio_Seg_Count'].apply(lambda x: "Sí" if x > 0 else "No")
                 df_final = df_res[[col_asesor, 'Total_Encuestas', '¿RECIBIÓ SEGUIMIENTO?', '% Cumplimiento']]
                 df_final.columns = ['Nombre de tu Asesor de Taller:', 'TOTAL ENCUESTAS', '¿RECIBIÓ SEGUIMIENTO?', '% Cumplimiento']
-                # Ocultar índice de fila
                 st.dataframe(df_final.sort_values('TOTAL ENCUESTAS', ascending=False), use_container_width=True, hide_index=True)
 
     with tab3:
+        # ... (pestaña evolución se mantiene igual)
         st.subheader(f"Evolución Mensual {anio_sel}")
         df_anio[col_csi_final] = df_anio[col_csi_final].apply(clean_val)
         df_anio[col_nps_puntaje] = df_anio[col_nps_puntaje].apply(clean_val)
