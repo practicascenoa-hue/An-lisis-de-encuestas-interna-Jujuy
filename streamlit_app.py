@@ -144,7 +144,7 @@ if df_raw is not None:
                 res_p = df_mes[col_seguimiento].fillna("N/C").value_counts().reset_index()
                 st.plotly_chart(px.pie(res_p, names=res_p.columns[0], values='count', hole=0.4), use_container_width=True)
             with cb:
-                # Lógica para la tabla con nombres de columnas solicitados
+                # Calculamos el cumplimiento
                 df_mes['Sigue_Num'] = df_mes[col_seguimiento].apply(lambda x: 1 if str(x).lower().strip() == 'sí' else 0)
                 
                 df_res = df_mes.groupby(col_asesor).agg(
@@ -152,13 +152,12 @@ if df_raw is not None:
                     Recibio_Seg_Count=('Sigue_Num', 'sum')
                 ).reset_index()
                 
-                df_res['% Seguimiento'] = (df_res['Recibio_Seg_Count'] / df_res['Total_Encuestas'] * 100).round(1).astype(str) + "%"
+                df_res['% Cumplimiento'] = (df_res['Recibio_Seg_Count'] / df_res['Total_Encuestas'] * 100).round(1).astype(str) + "%"
                 
-                # Cambiamos el número por "Sí" en la visualización
-                df_res['¿RECIBIO SEGUIMIENTO?'] = df_res['Recibio_Seg_Count'].apply(lambda x: f"{int(x)} (Sí)")
+                # CAMBIO SOLICITADO: Solo muestra "Sí" si hay al menos un seguimiento positivo
+                df_res['¿RECIBIÓ SEGUIMIENTO?'] = df_res['Recibio_Seg_Count'].apply(lambda x: "Sí" if x > 0 else "No")
                 
-                # Seleccionamos y renombramos columnas para la tabla final
-                df_final = df_res[[col_asesor, 'Total_Encuestas', '¿RECIBIO SEGUIMIENTO?', '% Seguimiento']]
+                df_final = df_res[[col_asesor, 'Total_Encuestas', '¿RECIBIÓ SEGUIMIENTO?', '% Cumplimiento']]
                 df_final.columns = ['Nombre de tu Asesor de Taller:', 'TOTAL ENCUESTAS', '¿RECIBIÓ SEGUIMIENTO?', '% Cumplimiento']
                 
                 st.dataframe(df_final.sort_values('TOTAL ENCUESTAS', ascending=False), use_container_width=True)
