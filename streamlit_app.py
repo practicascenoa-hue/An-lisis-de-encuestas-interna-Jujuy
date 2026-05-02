@@ -6,21 +6,36 @@ import plotly.express as px
 # 1. Configuración de página
 st.set_page_config(page_title="DASHBOARD POSTVENTA", layout="wide")
 
-# Inicializar estados de filtro
+# Inicializar estados de filtro y resaltado
 if "f_tipo" not in st.session_state: st.session_state.f_tipo = None
 if "f_val" not in st.session_state: st.session_state.f_val = None
 
-# --- CSS: ESTILO DEFINITIVO Y ALINEACIÓN ---
+# --- CSS: ESTILO CON RESALTADO DINÁMICO ---
+def get_button_style(button_key):
+    """Genera CSS para resaltar el botón seleccionado"""
+    if st.session_state.get("last_clicked") == button_key:
+        return f"""
+            <style>
+            div[data-testid="stHorizontalBlock"] div:nth-child(n) button[key="{button_key}"] {{
+                background-color: #e7f3ff !important;
+                border: 2px solid #007bff !important;
+                color: #0056b3 !important;
+                font-weight: bold !important;
+            }}
+            </style>
+        """
+    return ""
+
 st.markdown("""
     <style>
     div.stButton > button {
         width: 100% !important;
-        height: 34px !important;
+        height: 38px !important;
         border-radius: 8px !important;
         border: 1px solid #dee2e6 !important;
         background-color: white !important;
         color: #495057 !important;
-        font-size: 13px !important;
+        transition: all 0.3s ease;
     }
     .stTabs [data-baseweb="tab-list"] {
         gap: 10px;
@@ -28,7 +43,6 @@ st.markdown("""
         padding: 10px;
         border-radius: 10px;
     }
-    .stTabs [data-baseweb="tab"] { font-weight: bold; }
     .stPlotlyChart { margin-bottom: -60px !important; }
     </style>
     """, unsafe_allow_html=True)
@@ -98,19 +112,11 @@ if df_raw is not None:
             
             def crear_gauge(valor, titulo):
                 fig = go.Figure(go.Indicator(
-                    mode="gauge+number",
-                    value=valor,
+                    mode="gauge+number", value=valor,
                     title={'text': f"<b>{titulo}</b>", 'font': {'size': 18}},
                     number={'valueformat': ".1f", 'suffix': "%", 'font': {'size': 40}},
-                    gauge={
-                        'axis': {'range': [0, 100]},
-                        'bar': {'color': "#34495e", 'thickness': 0.25},
-                        'steps': [
-                            {'range': [0, 60], 'color': "#f8d7da"},
-                            {'range': [60, 90], 'color': "#fff3cd"},
-                            {'range': [90, 100], 'color': "#d1e7dd"}
-                        ]
-                    }
+                    gauge={'axis': {'range': [0, 100]}, 'bar': {'color': "#34495e", 'thickness': 0.25},
+                           'steps': [{'range': [0, 60], 'color': "#f8d7da"}, {'range': [60, 90], 'color': "#fff3cd"}, {'range': [90, 100], 'color': "#d1e7dd"}]}
                 ))
                 fig.update_layout(height=280, margin=dict(l=30, r=30, t=80, b=20), paper_bgcolor='rgba(0,0,0,0)')
                 return fig
@@ -120,10 +126,14 @@ if df_raw is not None:
                 p_c = len(df_mes[df_mes[col_nps_puntaje] >= 9])
                 d_c = len(df_mes[df_mes[col_nps_puntaje] <= 6])
                 pas_c = len(df_mes[(df_mes[col_nps_puntaje] > 6) & (df_mes[col_nps_puntaje] < 9)])
+                
                 b1, b2, b3 = st.columns(3)
-                b1.button(f"🟢 {p_c} Prom", key="p1", on_click=lambda: st.session_state.update({"f_tipo":"NPS","f_val":"Promotor"}))
-                b2.button(f"🟡 {pas_c} Neu", key="p2", on_click=lambda: st.session_state.update({"f_tipo":"NPS","f_val":"Pasivo"}))
-                b3.button(f"🔴 {d_c} Det", key="p3", on_click=lambda: st.session_state.update({"f_tipo":"NPS","f_val":"Detractor"}))
+                if b1.button(f"🟢 {p_c} Prom", key="p_prom"):
+                    st.session_state.update({"f_tipo":"NPS","f_val":"Promotor", "last_clicked":"p_prom"})
+                if b2.button(f"🟡 {pas_c} Neu", key="p_neu"):
+                    st.session_state.update({"f_tipo":"NPS","f_val":"Pasivo", "last_clicked":"p_neu"})
+                if b3.button(f"🔴 {d_c} Det", key="p_det"):
+                    st.session_state.update({"f_tipo":"NPS","f_val":"Detractor", "last_clicked":"p_det"})
 
             with c2:
                 st.plotly_chart(crear_gauge(csi_val, "CSI (Satisfacción)"), use_container_width=True)
@@ -131,10 +141,26 @@ if df_raw is not None:
                 exc_c = len(df_mes[df_mes[col_csi_final] >= limit])
                 mal_c = len(df_mes[df_mes[col_csi_final] <= (limit-30 if limit==90 else 6)])
                 reg_c = len(df_mes) - exc_c - mal_c
+                
                 b4, b5, b6 = st.columns(3)
-                b4.button(f"🟢 {exc_c} Exc", key="e1", on_click=lambda: st.session_state.update({"f_tipo":"CSI","f_val":"Excelente"}))
-                b5.button(f"🟡 {reg_c} Reg", key="e2", on_click=lambda: st.session_state.update({"f_tipo":"CSI","f_val":"Regular"}))
-                b6.button(f"🔴 {mal_c} Mal", key="e3", on_click=lambda: st.session_state.update({"f_tipo":"CSI","f_val":"Malo"}))
+                if b4.button(f"🟢 {exc_c} Exc", key="c_exc"):
+                    st.session_state.update({"f_tipo":"CSI","f_val":"Excelente", "last_clicked":"c_exc"})
+                if b5.button(f"🟡 {reg_c} Reg", key="c_reg"):
+                    st.session_state.update({"f_tipo":"CSI","f_val":"Regular", "last_clicked":"c_reg"})
+                if b6.button(f"🔴 {mal_c} Mal", key="c_mal"):
+                    st.session_state.update({"f_tipo":"CSI","f_val":"Malo", "last_clicked":"c_mal"})
+
+            # Inyectar CSS dinámico para resaltar el botón seleccionado
+            if "last_clicked" in st.session_state:
+                st.markdown(f"""
+                    <style>
+                    button[kind="secondary"]:has(div:contains("{st.session_state.f_val}")) {{
+                        background-color: #e7f3ff !important;
+                        border: 2px solid #007bff !important;
+                        box-shadow: 0 0 10px rgba(0,123,255,0.2) !important;
+                    }}
+                    </style>
+                """, unsafe_allow_html=True)
 
             st.markdown(f"""
                 <div style="background-color: #f8f9fa; padding: 12px; border-radius: 10px; border: 1px solid #dee2e6; text-align: center; width: 100%; margin-top: 35px;">
@@ -147,7 +173,6 @@ if df_raw is not None:
                 for com in df_mes[col_comentario_K].dropna().unique():
                     if str(com).strip(): st.markdown(f"- {com}")
             
-            # --- SECCIÓN DE AUDITORÍA (LISTADO FILTRADO) ---
             if st.session_state.f_tipo:
                 st.divider()
                 st.subheader(f"Auditoría {st.session_state.f_tipo}: {st.session_state.f_val}")
@@ -164,6 +189,7 @@ if df_raw is not None:
                 
                 st.dataframe(df_f[cols].fillna("Sin comentario"), use_container_width=True)
 
+    # ... (Resto de pestañas Asesores y Evolución se mantienen igual)
     with tab2:
         st.subheader(f"Desempeño de Asesores - {mes_sel_nombre}")
         if len(df_mes) > 0:
