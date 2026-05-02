@@ -183,7 +183,7 @@ if df_raw is not None:
         st.subheader(f"Desempeño de Asesores - {mes_sel_nombre}")
         if len(df_mes) > 0:
             df_as = df_mes.groupby(col_asesor).size().reset_index(name='Encuestas')
-            fig_as = px.bar(df_as, x=col_asesor, text='Asesor de Taller', y='Encuestas', text='Encuestas', color='Encuestas', color_continuous_scale='Blues')
+            fig_as = px.bar(df_as, x=col_asesor, y='Encuestas', text='Encuestas', color='Encuestas', color_continuous_scale='Blues')
             fig_as.update_layout(bargap=0.6)
             st.plotly_chart(fig_as, use_container_width=True)
             st.markdown("---")
