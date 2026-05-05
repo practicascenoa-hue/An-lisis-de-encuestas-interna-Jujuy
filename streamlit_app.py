@@ -65,13 +65,19 @@ if df_raw is not None:
     mes_sel_num = [k for k, v in meses_dict.items() if v == mes_sel_nombre][0]
     df_mes = df_anio[df_anio['Mes_Num'] == mes_sel_num].copy()
 
-    # Mapeado de Columnas
-    col_comentario_K = df_raw.columns[10] # K (Comentario General)
+    # Mapeado de Columnas según Ledger y Summary
+    col_comentario_K = df_raw.columns[10] # K (Obs Ambiente)
     col_ambiente_J = df_raw.columns[9]    # J (Nota Ambiente)
     col_seguimiento = df_raw.columns[15]  # P
-    col_nps_puntaje = df_raw.columns[16]   # Q
-    col_csi_final = df_raw.columns[18]     # S
-    col_nps_comentario = df_raw.columns[17] # R
+    col_nps_puntaje = df_raw.columns[16]  # Q (Recomendación NPS)
+    col_csi_final = df_raw.columns[18]    # S (CSI Satisfacción)
+    col_nps_comentario = df_raw.columns[17] # R (Comentario NPS)
+    
+    # Columnas de Comentarios CSI
+    col_com_atencion = df_raw.columns[8]  # I
+    col_com_calidad = df_raw.columns[12]  # M
+    col_com_tiempo = df_raw.columns[14]   # O
+    
     col_cliente = next((c for c in df_raw.columns if "nombre" in c.lower() and "apellido" in c.lower()), "Cliente")
     col_asesor = next((c for c in df_raw.columns if "asesor" in c.lower() or "recepcionista" in c.lower()), "Asesor")
 
@@ -147,24 +153,18 @@ if df_raw is not None:
             """, unsafe_allow_html=True)
 
             with st.expander(f"💬 Comentarios Generales de {mes_sel_nombre}"):
-                # Iterar sobre las filas para construir el comentario con la nota
                 for _, row in df_mes.iterrows():
                     coment = str(row[col_comentario_K]).strip()
                     nota = row[col_ambiente_J]
-                    
-                    # Formatear la nota para que no tenga decimales si es 10.0, por ejemplo
                     nota_str = f"{int(nota)}" if nota == int(nota) else f"{nota:.1f}"
-                    
                     if coment != "" and coment.lower() != "nan":
                         st.markdown(f"- {coment} **({nota_str})**")
                     elif not pd.isna(nota):
-                        # Si no hay comentario pero hay nota, mostramos solo la nota
                         st.markdown(f"- **({nota_str})**")
 
             if st.session_state.f_tipo:
                 st.divider()
                 st.subheader(f"Auditoría {st.session_state.f_tipo}: {st.session_state.f_val}")
-                # ... (resto de lógica de tablas se mantiene igual)
                 if st.session_state.f_tipo == "NPS":
                     if st.session_state.f_val == "Promotor": df_f = df_mes[df_mes[col_nps_puntaje] >= 9]
                     elif st.session_state.f_val == "Detractor": df_f = df_mes[df_mes[col_nps_puntaje] <= 6]
@@ -174,17 +174,17 @@ if df_raw is not None:
                     if st.session_state.f_val == "Excelente": df_f = df_mes[df_mes[col_csi_final] >= limit]
                     elif st.session_state.f_val == "Malo": df_f = df_mes[df_mes[col_csi_final] <= (limit-30 if limit==90 else 6)]
                     else: df_f = df_mes[(df_mes[col_csi_final] < limit) & (df_mes[col_csi_final] > (limit-30 if limit==90 else 6))]
-                    cols = [col_cliente, col_asesor, col_csi_final, col_ambiente_J]
+                    # AQUÍ SE INCLUYEN LOS COMENTARIOS DE ATENCIÓN, CALIDAD Y TIEMPO
+                    cols = [col_cliente, col_asesor, col_csi_final, col_com_atencion, col_com_calidad, col_com_tiempo]
                 
                 st.dataframe(df_f[cols].fillna("Sin comentario"), use_container_width=True, hide_index=True)
 
     with tab2:
-        # ... (pestaña asesores se mantiene igual)
         st.subheader(f"Desempeño de Asesores - {mes_sel_nombre}")
         if len(df_mes) > 0:
             df_as = df_mes.groupby(col_asesor).size().reset_index(name='Encuestas')
             fig_as = px.bar(df_as, x=col_asesor, y='Encuestas', text='Encuestas', color='Encuestas', color_continuous_scale='Blues')
-            fig_as.update_layout(bargap=0.6)
+            fig_as.update_layout(bargap=0.6, xaxis_title="ASESOR DE TALLER")
             st.plotly_chart(fig_as, use_container_width=True)
             st.markdown("---")
             ca, cb = st.columns([1, 2])
@@ -197,11 +197,10 @@ if df_raw is not None:
                 df_res['% Cumplimiento'] = (df_res['Recibio_Seg_Count'] / df_res['Total_Encuestas'] * 100).round(1).astype(str) + "%"
                 df_res['¿RECIBIÓ SEGUIMIENTO?'] = df_res['Recibio_Seg_Count'].apply(lambda x: "Sí" if x > 0 else "No")
                 df_final = df_res[[col_asesor, 'Total_Encuestas', '¿RECIBIÓ SEGUIMIENTO?', '% Cumplimiento']]
-                df_final.columns = ['Asesor de Taller', 'TOTAL ENCUESTAS', '¿RECIBIÓ SEGUIMIENTO?', '% Cumplimiento']
+                df_final.columns = ['Nombre de tu Asesor de Taller:', 'TOTAL ENCUESTAS', '¿RECIBIÓ SEGUIMIENTO?', '% Cumplimiento']
                 st.dataframe(df_final.sort_values('TOTAL ENCUESTAS', ascending=False), use_container_width=True, hide_index=True)
 
     with tab3:
-        # ... (pestaña evolución se mantiene igual)
         st.subheader(f"Evolución Mensual {anio_sel}")
         df_anio[col_csi_final] = df_anio[col_csi_final].apply(clean_val)
         df_anio[col_nps_puntaje] = df_anio[col_nps_puntaje].apply(clean_val)
