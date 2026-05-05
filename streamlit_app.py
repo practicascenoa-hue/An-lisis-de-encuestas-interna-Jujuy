@@ -6,7 +6,7 @@ import plotly.express as px
 # 1. Configuración de página
 st.set_page_config(page_title="DASHBOARD POSTVENTA", layout="wide")
 
-# Inicializar estados de sesión para filtros y botones
+# Inicializar estados de sesión
 if "f_tipo" not in st.session_state: st.session_state.f_tipo = None
 if "f_val" not in st.session_state: st.session_state.f_val = None
 if "btn_active" not in st.session_state: st.session_state.btn_active = None
@@ -20,7 +20,6 @@ st.markdown("""
         height: 38px !important;
         border-radius: 8px !important;
     }
-    /* Color de resaltado para botones seleccionados (Azul) */
     button[kind="primary"] {
         background-color: #007bff !important;
         border-color: #007bff !important;
@@ -70,16 +69,16 @@ if df_raw is not None:
     df_mes = df_anio[df_anio['Mes_Num'] == mes_sel_num].copy()
 
     # Mapeado de Columnas
-    col_comentario_K = df_raw.columns[10] # K
-    col_ambiente_J = df_raw.columns[9]    # J
-    col_seguimiento = df_raw.columns[15]  # P
-    col_nps_puntaje = df_raw.columns[16]  # Q
-    col_csi_final = df_raw.columns[18]    # S
-    col_nps_comentario = df_raw.columns[17] # R
-    col_com_atencion = df_raw.columns[8]  # I
-    col_com_calidad = df_raw.columns[12]  # M
-    col_com_tiempo = df_raw.columns[14]   # O
-    col_t_concatenado = df_raw.columns[19] # T
+    col_comentario_K = df_raw.columns[10] 
+    col_ambiente_J = df_raw.columns[9]    
+    col_seguimiento = df_raw.columns[15]  
+    col_nps_puntaje = df_raw.columns[16]  
+    col_csi_final = df_raw.columns[18]    
+    col_nps_comentario = df_raw.columns[17] 
+    col_com_atencion = df_raw.columns[8]  
+    col_com_calidad = df_raw.columns[12]  
+    col_com_tiempo = df_raw.columns[14]   
+    col_t_concatenado = df_raw.columns[19] 
     col_cliente = next((c for c in df_raw.columns if "nombre" in c.lower() and "apellido" in c.lower()), "Cliente")
     col_asesor = next((c for c in df_raw.columns if "asesor" in c.lower() or "recepcionista" in c.lower()), "Asesor")
 
@@ -207,34 +206,62 @@ if df_raw is not None:
         fig_bar.update_layout(yaxis={'categoryorder':'array', 'categoryarray':list(meses_dict.values())[::-1]}, height=500, coloraxis_showscale=False)
         st.plotly_chart(fig_bar, use_container_width=True)
 
-    # --- TAB 4: RECLAMOS ---
+    # --- TAB 4: RECLAMOS CON CATEGORIZACIÓN ---
     with tab4:
         st.header("⚠️ Análisis de Reclamos vs. Promotores (NPS)")
         if len(df_mes) > 0:
+            # Motor de Categorización Específico
+            def categorizar_reclamo(texto):
+                texto = str(texto).lower()
+                if any(word in texto for word in ["pintura", "tono", "lijado", "acabado", "ruido", "armado", "alineado", "basura", "pulido"]):
+                    return "🎨 Acabado / Calidad Técnica"
+                elif any(word in texto for word in ["demora", "tiempo", "fecha", "plazo", "retraso", "repuesto", "espera"]):
+                    return "⏳ Plazos y Repuestos"
+                elif any(word in texto for word in ["atención", "asesor", "información", "trato", "comunicación", "llamó"]):
+                    return "👤 Gestión y Comunicación"
+                elif any(word in texto for word in ["limpieza", "sucio", "lavado", "polvo", "entrega"]):
+                    return "🧹 Entrega y Limpieza"
+                return "📝 Otros / General"
+
             df_mes['Segmento_NPS'] = df_mes[col_nps_puntaje].apply(lambda x: 'Promotor' if x >= 9 else ('Reclamo' if x <= 6 else 'Pasivo'))
+            df_mes['Categoría'] = df_mes[col_t_concatenado].apply(categorizar_reclamo)
+            
             cp, cr = len(df_mes[df_mes['Segmento_NPS'] == 'Promotor']), len(df_mes[df_mes['Segmento_NPS'] == 'Reclamo'])
 
             col_izq, col_der = st.columns([1, 2], gap="large")
             with col_izq:
                 c_btn1, c_btn2 = st.columns(2)
                 with c_btn1:
-                    if st.button("🟢 PROMOTORES", key="t4_p", type="primary" if st.session_state.tab4_filter == "Promotor" else "secondary"):
+                    is_p = st.session_state.tab4_filter == "Promotor"
+                    if st.button("🟢 PROMOTORES", key="t4_p", type="primary" if is_p else "secondary"):
                         st.session_state.tab4_filter = "Promotor"; st.rerun()
                     st.metric("", cp)
                 with c_btn2:
-                    if st.button("🔴 RECLAMOS", key="t4_r", type="primary" if st.session_state.tab4_filter == "Reclamo" else "secondary"):
+                    is_r = st.session_state.tab4_filter == "Reclamo"
+                    if st.button("🔴 RECLAMOS", key="t4_r", type="primary" if is_r else "secondary"):
                         st.session_state.tab4_filter = "Reclamo"; st.rerun()
                     st.metric("", cr)
                 if st.session_state.tab4_filter:
                     if st.button("🔄 Ver Todo", use_container_width=True): st.session_state.tab4_filter = None; st.rerun()
                 
-                df_p = df_mes[df_mes['Segmento_NPS'].isin(['Promotor', 'Reclamo'])]
-                if not df_p.empty:
-                    rp = df_p['Segmento_NPS'].value_counts().reset_index()
-                    rp.columns = ['Tipo', 'Cantidad']
-                    fig_t = px.pie(rp, values='Cantidad', names='Tipo', hole=0.5, color='Tipo', color_discrete_map={'Promotor': '#198754', 'Reclamo': '#dc3545'})
-                    fig_t.update_layout(showlegend=True, height=350, margin=dict(t=0,b=0,l=0,r=0)); fig_t.update_traces(textinfo='percent')
-                    st.plotly_chart(fig_t, use_container_width=True)
+                # Gráfico de Torta o Barras de Motivos
+                st.write("---")
+                df_reclamos_only = df_mes[df_mes['Segmento_NPS'] == 'Reclamo']
+                if not df_reclamos_only.empty:
+                    res_cat = df_reclamos_only['Categoría'].value_counts().reset_index()
+                    res_cat.columns = ['Motivo', 'Cant']
+                    fig_cat = px.bar(res_cat, x='Cant', y='Motivo', orientation='h', title="Motivos de Reclamo", color='Motivo', color_discrete_sequence=px.colors.qualitative.Pastel)
+                    fig_cat.update_layout(showlegend=False, height=300, margin=dict(t=30,b=0,l=0,r=0))
+                    st.plotly_chart(fig_cat, use_container_width=True)
+                else:
+                    # Si no hay reclamos, mostrar torta general Promotores/Reclamos
+                    df_p = df_mes[df_mes['Segmento_NPS'].isin(['Promotor', 'Reclamo'])]
+                    if not df_p.empty:
+                        rp = df_p['Segmento_NPS'].value_counts().reset_index()
+                        rp.columns = ['Tipo', 'Cantidad']
+                        fig_t = px.pie(rp, values='Cantidad', names='Tipo', hole=0.5, color='Tipo', color_discrete_map={'Promotor': '#198754', 'Reclamo': '#dc3545'})
+                        fig_t.update_layout(showlegend=True, height=300, margin=dict(t=0,b=0,l=0,r=0))
+                        st.plotly_chart(fig_t, use_container_width=True)
 
             with col_der:
                 if st.session_state.tab4_filter:
@@ -243,6 +270,8 @@ if df_raw is not None:
                 else:
                     st.subheader("Listado General (Promotores y Reclamos)")
                     df_t = df_mes[df_mes['Segmento_NPS'].isin(['Promotor', 'Reclamo'])]
-                st.dataframe(df_t[[col_cliente, col_asesor, col_nps_puntaje, col_t_concatenado]].rename(columns={col_t_concatenado: "Comentario / Concatenado (Col T)"}), use_container_width=True, hide_index=True, height=550)
+                
+                cols_f = [col_cliente, col_asesor, 'Categoría', col_nps_puntaje, col_t_concatenado]
+                st.dataframe(df_t[cols_f].rename(columns={col_t_concatenado: "Comentario / Concatenado (Col T)"}), use_container_width=True, hide_index=True, height=550)
 else:
     st.error("No se pudieron cargar los datos.")
