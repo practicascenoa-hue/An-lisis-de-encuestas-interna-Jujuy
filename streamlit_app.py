@@ -65,19 +65,16 @@ if df_raw is not None:
     mes_sel_num = [k for k, v in meses_dict.items() if v == mes_sel_nombre][0]
     df_mes = df_anio[df_anio['Mes_Num'] == mes_sel_num].copy()
 
-    # Mapeado de Columnas según Ledger y Summary
-    col_comentario_K = df_raw.columns[10] # K (Obs Ambiente)
-    col_ambiente_J = df_raw.columns[9]    # J (Nota Ambiente)
+    # Mapeado de Columnas
+    col_comentario_K = df_raw.columns[10] # K
+    col_ambiente_J = df_raw.columns[9]    # J
     col_seguimiento = df_raw.columns[15]  # P
-    col_nps_puntaje = df_raw.columns[16]  # Q (Recomendación NPS)
-    col_csi_final = df_raw.columns[18]    # S (CSI Satisfacción)
-    col_nps_comentario = df_raw.columns[17] # R (Comentario NPS)
-    
-    # Columnas de Comentarios CSI
+    col_nps_puntaje = df_raw.columns[16]  # Q
+    col_csi_final = df_raw.columns[18]    # S
+    col_nps_comentario = df_raw.columns[17] # R
     col_com_atencion = df_raw.columns[8]  # I
     col_com_calidad = df_raw.columns[12]  # M
     col_com_tiempo = df_raw.columns[14]   # O
-    
     col_cliente = next((c for c in df_raw.columns if "nombre" in c.lower() and "apellido" in c.lower()), "Cliente")
     col_asesor = next((c for c in df_raw.columns if "asesor" in c.lower() or "recepcionista" in c.lower()), "Asesor")
 
@@ -90,7 +87,9 @@ if df_raw is not None:
     df_mes[col_ambiente_J] = df_mes[col_ambiente_J].apply(clean_val)
 
     st.title("INDICADORES ENCUESTAS DE SATISFACCIÓN")
-    tab1, tab2, tab3 = st.tabs(["🎯 INDICADORES", "👤 ASESORES", "📊 EVOLUCIÓN MENSUAL"])
+    
+    # NUEVA ESTRUCTURA DE PESTAÑAS
+    tab1, tab2, tab3, tab4 = st.tabs(["🎯 INDICADORES", "👤 ASESORES", "📊 EVOLUCIÓN MENSUAL", "⚠️ ANÁLISIS DE RECLAMOS"])
 
     with tab1:
         if len(df_mes) > 0:
@@ -100,7 +99,6 @@ if df_raw is not None:
             amb_val = df_mes[col_ambiente_J].mean() * 10
 
             c1, c2 = st.columns(2)
-            
             def crear_gauge(valor, titulo):
                 fig = go.Figure(go.Indicator(
                     mode="gauge+number", value=valor,
@@ -174,7 +172,6 @@ if df_raw is not None:
                     if st.session_state.f_val == "Excelente": df_f = df_mes[df_mes[col_csi_final] >= limit]
                     elif st.session_state.f_val == "Malo": df_f = df_mes[df_mes[col_csi_final] <= (limit-30 if limit==90 else 6)]
                     else: df_f = df_mes[(df_mes[col_csi_final] < limit) & (df_mes[col_csi_final] > (limit-30 if limit==90 else 6))]
-                    # AQUÍ SE INCLUYEN LOS COMENTARIOS DE ATENCIÓN, CALIDAD Y TIEMPO
                     cols = [col_cliente, col_asesor, col_csi_final, col_com_atencion, col_com_calidad, col_com_tiempo]
                 
                 st.dataframe(df_f[cols].fillna("Sin comentario"), use_container_width=True, hide_index=True)
@@ -210,5 +207,10 @@ if df_raw is not None:
         fig_bar = px.bar(df_v, y='Mes', x='Cant', orientation='h', text='Cant', color='Cant', color_continuous_scale='Sunset')
         fig_bar.update_layout(yaxis={'categoryorder':'array', 'categoryarray':list(meses_dict.values())[::-1]}, height=500, coloraxis_showscale=False)
         st.plotly_chart(fig_bar, use_container_width=True)
+
+    with tab4:
+        st.header("⚠️ Análisis de Reclamos")
+        st.info("Esta sección está lista para ser configurada. ¿Qué datos de reclamos te gustaría analizar primero?")
+
 else:
     st.error("No se pudieron cargar los datos.")
