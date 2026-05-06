@@ -200,41 +200,94 @@ if df_raw is not None:
         fig_bar.update_layout(yaxis={'categoryorder':'array', 'categoryarray':list(meses_dict.values())[::-1]}, height=500)
         st.plotly_chart(fig_bar, use_container_width=True)
 
+    # --- TAB 4: RECLAMOS (Lógica Corregida y Refinada) ---
     with tab4:
         st.header("⚠️ Análisis de Calidad: Reclamos vs Promotores")
         if len(df_mes) > 0:
             def clasificar_intencion(row):
-                nota, texto = row[col_nps_puntaje], str(row[col_t_concatenado]).lower()
-                limpio = texto.replace("-", "").replace("sí, fue entregado en la fecha acordada ✔️", "").replace("sí", "").replace("no", "").replace("nan", "").strip()
-                if nota <= 6: return "⚠️ Reclamo Crítico"
-                elif nota >= 9: return "💡 Oportunidad de Mejora" if len(limpio) > 5 else "✅ Conforme"
+                nota = row[col_nps_puntaje]
+                texto_original = str(row[col_t_concatenado]).lower()
+                
+                # 1. Definimos el "Ruido": frases que NO son comentarios del cliente
+                ruido = [
+                    "nan", "-", "sí", "no", "✔️", "acordada", 
+                    "sí, fue entregado en la fecha acordada",
+                    "¿qué tan satisfecho estás con la atención?", # Título de la pregunta
+                    "comentarios", "concatenado", "puntuación"
+                ]
+                
+                # 2. Limpiamos el texto quitando todo el ruido
+                limpio = texto_original
+                for palabra in ruido:
+                    limpio = limpio.replace(palabra, "")
+                
+                # Quitamos espacios en blanco y caracteres especiales sobrantes
+                limpio = limpio.strip()
+                
+                # 3. Clasificación final
+                if nota <= 6:
+                    return "⚠️ Reclamo Crítico"
+                elif nota >= 9:
+                    # Solo si después de limpiar TODO queda contenido real (más de 3 letras)
+                    if len(limpio) > 3:
+                        return "💡 Oportunidad de Mejora"
+                    else:
+                        return "✅ Conforme"
                 return "Neutral"
 
+            # Aplicamos la nueva lógica
             df_mes['Intención'] = df_mes.apply(clasificar_intencion, axis=1)
-            df_mes['Grupo_Grafico'] = df_mes['Intención'].apply(lambda x: "Reclamos" if "Reclamo" in x else ("Promotores" if x != "Neutral" else "Neutral"))
-            cp, cr = len(df_mes[df_mes['Intención'].str.contains("Conforme|Oportunidad")]), len(df_mes[df_mes['Intención'] == "⚠️ Reclamo Crítico"])
+            
+            # Agrupación para el Gráfico de Torta (Verde vs Rojo)
+            df_mes['Grupo_Grafico'] = df_mes['Intención'].apply(
+                lambda x: "Reclamos" if "Reclamo" in x else ("Promotores" if x != "Neutral" else "Neutral")
+            )
+
+            # Contadores para las métricas
+            cp = len(df_mes[df_mes['Intención'].str.contains("Conforme|Oportunidad")])
+            cr = len(df_mes[df_mes['Intención'] == "⚠️ Reclamo Crítico"])
 
             col_izq, col_der = st.columns([1, 2], gap="large")
+            
             with col_izq:
-                c1, c2 = st.columns(2)
-                with c1:
-                    if st.button("🟢 PROMOTORES", key="t4_p", type="primary" if st.session_state.tab4_filter == "Promotor" else "secondary"):
-                        st.session_state.tab4_filter = "Promotor"; st.rerun()
-                    st.metric("", cp)
-                with c2:
-                    if st.button("🔴 RECLAMOS", key="t4_r", type="primary" if st.session_state.tab4_filter == "Reclamo" else "secondary"):
-                        st.session_state.tab4_filter = "Reclamo"; st.rerun()
-                    st.metric("", cr)
-                if st.session_state.tab4_filter:
-                    if st.button("🔄 Ver Todo", key="btn_all"): st.session_state.tab4_filter = None; st.rerun()
+                # Botones con métricas abajo
+                c_btn1, c_btn2 = st.columns(2)
+                with c_btn1:
+                    is_p = st.session_state.tab4_filter == "Promotor"
+                    if st.button("🟢 PROMOTORES", key="t4_p_final", type="primary" if is_p else "secondary"):
+                        st.session_state.tab4_filter = "Promotor"
+                        st.rerun()
+                    st.metric("Total Promotores", cp)
                 
+                with c_btn2:
+                    is_r = st.session_state.tab4_filter == "Reclamo"
+                    if st.button("🔴 RECLAMOS", key="t4_r_final", type="primary" if is_r else "secondary"):
+                        st.session_state.tab4_filter = "Reclamo"
+                        st.rerun()
+                    st.metric("Total Reclamos", cr)
+                
+                if st.session_state.tab4_filter:
+                    if st.button("🔄 Ver Todo", key="btn_clear_t4"):
+                        st.session_state.tab4_filter = None
+                        st.rerun()
+
+                st.write("---")
+                
+                # Gráfico de Torta simplificado (Solo Promotores y Reclamos)
                 df_pie = df_mes[df_mes['Grupo_Grafico'] != "Neutral"]
                 if not df_pie.empty:
-                    fig_t = px.pie(df_pie, names='Grupo_Grafico', hole=0.5, color='Grupo_Grafico', color_discrete_map={"Reclamos": "#dc3545", "Promotores": "#198754"}, title="Distribución")
-                    fig_t.update_layout(showlegend=True, height=350, margin=dict(t=30,b=0,l=0,r=0))
-                    st.plotly_chart(fig_t, use_container_width=True)
+                    resumen_pie = df_pie['Grupo_Grafico'].value_counts().reset_index()
+                    resumen_pie.columns = ['Tipo', 'Cantidad']
+                    fig_torta = px.pie(
+                        resumen_pie, values='Cantidad', names='Tipo', hole=0.5,
+                        color='Tipo', color_discrete_map={"Reclamos": "#dc3545", "Promotores": "#198754"},
+                        title="Salud General del Taller"
+                    )
+                    fig_torta.update_layout(showlegend=True, height=350, margin=dict(t=30, b=0, l=0, r=0))
+                    st.plotly_chart(fig_torta, use_container_width=True)
 
             with col_der:
+                # Filtrado de la tabla según el botón activo
                 if st.session_state.tab4_filter == "Promotor":
                     df_t = df_mes[df_mes['Intención'].str.contains("Conforme|Oportunidad")]
                 elif st.session_state.tab4_filter == "Reclamo":
@@ -242,11 +295,19 @@ if df_raw is not None:
                 else:
                     df_t = df_mes[df_mes['Intención'] != "Neutral"]
                 
-                st.subheader("Auditoría de Feedback")
+                st.subheader("Auditoría de Feedback Detallado")
+                
+                # Tabla configurada para ver el texto completo
+                cols_mostrar = [col_cliente, 'Intención', col_nps_puntaje, col_t_concatenado]
                 st.dataframe(
-                    df_t[[col_cliente, 'Intención', col_nps_puntaje, col_t_concatenado]].rename(columns={col_nps_puntaje: "Puntaje Rec.", col_t_concatenado: "Comentario Completo"}), 
-                    use_container_width=True, hide_index=True, height=550,
-                    column_config={"Comentario Completo": st.column_config.TextColumn(width="large")}
+                    df_t[cols_mostrar].rename(columns={
+                        col_nps_puntaje: "Puntaje Rec.",
+                        col_t_concatenado: "Comentario Completo (Col T)"
+                    }),
+                    use_container_width=True,
+                    hide_index=True,
+                    height=550,
+                    column_config={
+                        "Comentario Completo (Col T)": st.column_config.TextColumn(width="large")
+                    }
                 )
-else:
-    st.error("No se pudieron cargar los datos.")
