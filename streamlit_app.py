@@ -39,7 +39,7 @@ st.markdown("""
     }
     .stTabs [data-baseweb="tab"] { font-weight: bold; }
     
-    /* MODIFICACIÓN CRÍTICA: FORZAR SALTO DE LÍNEA EN TABLAS (PARA VER TODO EL COMENTARIO) */
+    /* FORZAR SALTO DE LÍNEA EN TABLAS Y DATAFRAMES */
     [data-testid="stTable"] td, [data-testid="stDataFrame"] td {
         white-space: normal !important;
         word-break: break-word !important;
@@ -64,6 +64,33 @@ def load_data():
 df_raw, col_fecha_nombre = load_data()
 
 if df_raw is not None:
+    # --- MAPEADO DE COLUMNAS ---
+    col_comentario_K = df_raw.columns[10]
+    col_ambiente_J = df_raw.columns[9]
+    col_seguimiento = df_raw.columns[15]
+    col_nps_puntaje = df_raw.columns[16]
+    col_csi_final = df_raw.columns[18]
+    col_nps_comentario = df_raw.columns[17]
+    col_com_atencion = df_raw.columns[8]
+    col_com_calidad = df_raw.columns[12]
+    col_com_tiempo = df_raw.columns[14]
+    col_t_concatenado = df_raw.columns[19]
+    col_cliente = next((c for c in df_raw.columns if "nombre" in c.lower() and "apellido" in c.lower()), "Cliente")
+    col_asesor = next((c for c in df_raw.columns if "asesor" in c.lower() or "recepcionista" in c.lower()), "Asesor")
+
+    # --- LIMPIEZA DE DATOS (CRÍTICO PARA EVITAR TYPEERROR) ---
+    def clean_val(x):
+        if pd.isna(x): return 0.0
+        try:
+            val = str(x).replace('%', '').replace(',', '.').strip()
+            return float(val)
+        except: return 0.0
+
+    # Limpiamos df_raw antes de filtrar para que df_anio y df_mes ya sean numéricos
+    df_raw[col_nps_puntaje] = df_raw[col_nps_puntaje].apply(clean_val)
+    df_raw[col_csi_final] = df_raw[col_csi_final].apply(clean_val)
+    df_raw[col_ambiente_J] = df_raw[col_ambiente_J].apply(clean_val)
+
     # Sidebar: Filtros de Tiempo
     df_raw['Año'] = df_raw[col_fecha_nombre].dt.year
     df_raw['Mes_Num'] = df_raw[col_fecha_nombre].dt.month
@@ -78,32 +105,10 @@ if df_raw is not None:
     mes_sel_num = [k for k, v in meses_dict.items() if v == mes_sel_nombre][0]
     df_mes = df_anio[df_anio['Mes_Num'] == mes_sel_num].copy()
 
-    # Mapeado de Columnas
-    col_comentario_K = df_raw.columns[10]
-    col_ambiente_J = df_raw.columns[9]
-    col_seguimiento = df_raw.columns[15]
-    col_nps_puntaje = df_raw.columns[16]
-    col_csi_final = df_raw.columns[18]
-    col_nps_comentario = df_raw.columns[17]
-    col_com_atencion = df_raw.columns[8]
-    col_com_calidad = df_raw.columns[12]
-    col_com_tiempo = df_raw.columns[14]
-    col_t_concatenado = df_raw.columns[19]
-    col_cliente = next((c for c in df_raw.columns if "nombre" in c.lower() and "apellido" in c.lower()), "Cliente")
-    col_asesor = next((c for c in df_raw.columns if "asesor" in c.lower() or "recepcionista" in c.lower()), "Asesor")
-
-    def clean_val(x):
-        try: return float(str(x).replace('%', '').replace(',', '.').strip())
-        except: return 0.0
-
-    df_mes[col_nps_puntaje] = df_mes[col_nps_puntaje].apply(clean_val)
-    df_mes[col_csi_final] = df_mes[col_csi_final].apply(clean_val)
-    df_mes[col_ambiente_J] = df_mes[col_ambiente_J].apply(clean_val)
-
     st.title("INDICADORES ENCUESTAS DE SATISFACCIÓN")
     tab1, tab2, tab3, tab4 = st.tabs(["🎯 INDICADORES", "👤 ASESORES", "📊 EVOLUCIÓN MENSUAL", "⚠️ ANÁLISIS DE RECLAMOS"])
 
-    # --- TAB 1: RECONSTRUIDA AL 100% (INFORMACIÓN RECUPERADA) ---
+    # --- TAB 1: INDICADORES ---
     with tab1:
         if len(df_mes) > 0:
             nps_val = df_mes[col_nps_puntaje].mean() * 10
@@ -180,14 +185,21 @@ if df_raw is not None:
                 df_res['¿RECIBIÓ SEGUIMIENTO?'] = df_res['Recibio_Seg_Count'].apply(lambda x: "Sí" if x > 0 else "No")
                 st.dataframe(df_res[[col_asesor, 'Total_Encuestas', '¿RECIBIÓ SEGUIMIENTO?', '% Cumplimiento']].sort_values('Total_Encuestas', ascending=False), use_container_width=True, hide_index=True)
 
-    # --- TAB 3: EVOLUCIÓN ---
+    # --- TAB 3: EVOLUCIÓN (FIXED) ---
     with tab3:
         st.subheader(f"Evolución Mensual {anio_sel}")
-        df_v = df_anio.groupby('Mes_Num').agg({col_fecha_nombre: 'count', col_csi_final: 'mean', col_nps_puntaje: lambda x: x.mean() * 10}).reset_index()
-        df_v.columns = ['Mes_Num', 'Cant', 'CSI', 'NPS']; df_v['Mes'] = df_v['Mes_Num'].map(meses_dict)
+        # El error ocurría aquí porque col_csi_final o col_nps_puntaje no eran numéricos en df_anio
+        df_v = df_anio.groupby('Mes_Num').agg({
+            col_fecha_nombre: 'count', 
+            col_csi_final: 'mean', 
+            col_nps_puntaje: 'mean'
+        }).reset_index()
+        df_v.columns = ['Mes_Num', 'Cant', 'CSI', 'NPS']
+        df_v['NPS'] = df_v['NPS'] * 10 # Normalizar a base 100
+        df_v['Mes'] = df_v['Mes_Num'].map(meses_dict)
         st.plotly_chart(px.bar(df_v, y='Mes', x='Cant', orientation='h', text='Cant', color='Cant', color_continuous_scale='Sunset'), use_container_width=True)
 
-    # --- TAB 4: RECLAMOS (AJUSTE DE ANCHO DE COMENTARIO) ---
+    # --- TAB 4: RECLAMOS ---
     with tab4:
         st.header("⚠️ Análisis de Reclamos vs. Promotores (NPS)")
         if len(df_mes) > 0:
@@ -226,7 +238,6 @@ if df_raw is not None:
             with col_der:
                 df_t = df_mes[df_mes['Grupo'] == "Promotores"] if st.session_state.tab4_filter == "Promotor" else (df_mes[df_mes['Grupo'] == "Reclamos"] if st.session_state.tab4_filter == "Reclamo" else df_mes[df_mes['Grupo'] != "Neutral"])
                 st.subheader("Auditoría de Feedback")
-                # LA TABLA AHORA MOSTRARÁ TODO EL TEXTO EN VARIAS LÍNEAS GRACIAS AL CSS SUPERIOR
                 st.dataframe(df_t[[col_cliente, 'Intención', col_nps_puntaje, col_t_concatenado]].rename(columns={col_t_concatenado: "Comentario Completo"}), 
                              use_container_width=True, 
                              hide_index=True, 
