@@ -41,13 +41,10 @@ st.markdown("""
     .stPlotlyChart { margin-bottom: -10px !important; }
     [data-testid="stMetricValue"] { font-size: 24px !important; text-align: center !important; }
     
-    /* Forzar que el texto de las tablas no se corte y use saltos de línea */
-    [data-testid="stTable"] td {
+    /* Configuración para que el texto haga wrap y no se corte */
+    [data-testid="stTable"] td, [data-testid="stDataFrame"] td {
         white-space: normal !important;
         word-break: break-word !important;
-    }
-    .stDataFrame div[data-testid="stTable"] div {
-        white-space: normal !important;
     }
     </style>
     """, unsafe_allow_html=True)
@@ -68,20 +65,6 @@ def load_data():
 df_raw, col_fecha_nombre = load_data()
 
 if df_raw is not None:
-    # Sidebar: Filtros de Tiempo
-    df_raw['Año'] = df_raw[col_fecha_nombre].dt.year
-    df_raw['Mes_Num'] = df_raw[col_fecha_nombre].dt.month
-    meses_dict = {1:"Enero", 2:"Febrero", 3:"Marzo", 4:"Abril", 5:"Mayo", 6:"Junio", 7:"Julio", 8:"Agosto", 9:"Septiembre", 10:"Octubre", 11:"Noviembre", 12:"Diciembre"}
-    
-    st.sidebar.header("FILTROS PERIODO")
-    anio_sel = st.sidebar.selectbox("Año", sorted(df_raw['Año'].dropna().unique().astype(int), reverse=True))
-    df_anio = df_raw[df_raw['Año'] == anio_sel].copy()
-    
-    meses_nros = sorted(df_anio['Mes_Num'].dropna().unique().astype(int))
-    mes_sel_nombre = st.sidebar.selectbox("Mes", [meses_dict[m] for m in meses_nros])
-    mes_sel_num = [k for k, v in meses_dict.items() if v == mes_sel_nombre][0]
-    df_mes = df_anio[df_anio['Mes_Num'] == mes_sel_num].copy()
-
     # Mapeado de Columnas
     col_comentario_K = df_raw.columns[10] 
     col_ambiente_J = df_raw.columns[9]    
@@ -92,7 +75,7 @@ if df_raw is not None:
     col_com_atencion = df_raw.columns[8]  
     col_com_calidad = df_raw.columns[12]  
     col_com_tiempo = df_raw.columns[14]   
-    col_t_concatenado = df_raw.columns[19] 
+    col_t_concatenated = df_raw.columns[19] 
     col_cliente = next((c for c in df_raw.columns if "nombre" in c.lower() and "apellido" in c.lower()), "Cliente")
     col_asesor = next((c for c in df_raw.columns if "asesor" in c.lower() or "recepcionista" in c.lower()), "Asesor")
 
@@ -104,8 +87,19 @@ if df_raw is not None:
     df_raw[col_nps_puntaje] = df_raw[col_nps_puntaje].apply(clean_val)
     df_raw[col_csi_final] = df_raw[col_csi_final].apply(clean_val)
     df_raw[col_ambiente_J] = df_raw[col_ambiente_J].apply(clean_val)
-    # Refrescar filtros con datos limpios
+
+    # Filtros de Tiempo
+    df_raw['Año'] = df_raw[col_fecha_nombre].dt.year
+    df_raw['Mes_Num'] = df_raw[col_fecha_nombre].dt.month
+    meses_dict = {1:"Enero", 2:"Febrero", 3:"Marzo", 4:"Abril", 5:"Mayo", 6:"Junio", 7:"Julio", 8:"Agosto", 9:"Septiembre", 10:"Octubre", 11:"Noviembre", 12:"Diciembre"}
+    
+    st.sidebar.header("FILTROS PERIODO")
+    anio_sel = st.sidebar.selectbox("Año", sorted(df_raw['Año'].dropna().unique().astype(int), reverse=True))
     df_anio = df_raw[df_raw['Año'] == anio_sel].copy()
+    
+    meses_nros = sorted(df_anio['Mes_Num'].dropna().unique().astype(int))
+    mes_sel_nombre = st.sidebar.selectbox("Mes", [meses_dict[m] for m in meses_nros])
+    mes_sel_num = [k for k, v in meses_dict.items() if v == mes_sel_nombre][0]
     df_mes = df_anio[df_anio['Mes_Num'] == mes_sel_num].copy()
 
     st.title("INDICADORES ENCUESTAS DE SATISFACCIÓN")
@@ -151,8 +145,7 @@ if df_raw is not None:
     with tab2:
         if len(df_mes) > 0:
             df_as = df_mes.groupby(col_asesor).size().reset_index(name='Encuestas')
-            fig_as = px.bar(df_as, x=col_asesor, y='Encuestas', text='Encuestas', color='Encuestas', color_continuous_scale='Blues')
-            st.plotly_chart(fig_as, use_container_width=True)
+            st.plotly_chart(px.bar(df_as, x=col_asesor, y='Encuestas', text='Encuestas', color='Encuestas', color_continuous_scale='Blues'), use_container_width=True)
             ca, cb = st.columns([1, 2])
             with ca:
                 res_p = df_mes[col_seguimiento].fillna("N/C").value_counts().reset_index()
@@ -173,17 +166,27 @@ if df_raw is not None:
         st.header("⚠️ Análisis de Calidad: Reclamos vs Promotores")
         if len(df_mes) > 0:
             def clasificar_intencion(row):
-                nota, texto = row[col_nps_puntaje], str(row[col_t_concatenado]).lower()
+                nota, texto = row[col_nps_puntaje], str(row[col_t_concatenated]).lower()
+                # 1. Limpieza de frases y símbolos automáticos
                 limpio = re.sub(r"sí, fue entregado en la fecha acordada ✔️|no, pero fui informado del retraso ⚠️|sí|no|nan|-+|\d+|✔️|⚠️", "", texto).strip()
-                elogios = ["atencion", "atención", "muy bien", "excelente", "conforme", "recomendable", "gracias", "buena", "todo bien", "perfecto", "impecable"]
+                
+                # 2. Palabras que indican un comentario positivo (Elogios)
+                elogios = ["atencion", "atención", "muy buena", "buena", "servicio", "excelente", "gracias", "recomendado", "conforme", "impecable", "bien", "todo bien", "perfecto"]
+                
+                # 3. Palabras que indican una sugerencia real (Dolores)
+                dolores = ["mejorar", "sala", "espera", "demora", "tardó", "baño", "baños", "falta", "anticipado", "diferencia", "color", "revisar", "alineado"]
+                
                 if nota <= 6: return "⚠️ Reclamo Crítico"
                 elif nota >= 9:
-                    if len(limpio) < 3 or any(e in limpio for e in elogios) and len(limpio) < 30:
-                        quejas = ["mejorar", "sala", "espera", "demora", "baño", "baños", "tardar", "tardo", "falta"]
-                        if any(q in limpio for q in quejas): return "💡 OPORTUNIDAD DE MEJORA"
+                    # Si detectamos palabras de "dolor", es oportunidad de mejora
+                    if any(d in limpio for d in dolores):
+                        return "💡 OPORTUNIDAD DE MEJORA"
+                    # Si después de limpiar el ruido no queda nada sustancial o solo hay elogios...
+                    if len(limpio) < 5 or any(e in limpio for e in elogios):
                         return "✅ CONFORME"
                     return "💡 OPORTUNIDAD DE MEJORA"
                 return "Neutral"
+
             df_mes['Intención'] = df_mes.apply(clasificar_intencion, axis=1)
             df_mes['Grupo_Grafico'] = df_mes['Intención'].apply(lambda x: "Reclamos" if "Reclamo" in x else ("Promotores" if x != "Neutral" else "Neutral"))
             cp, cr = len(df_mes[df_mes['Intención'].str.contains("CONFORME|OPORTUNIDAD")]), len(df_mes[df_mes['Intención'] == "⚠️ Reclamo Crítico"])
@@ -205,6 +208,6 @@ if df_raw is not None:
             with col_der:
                 df_t = df_mes[df_mes['Intención'].str.contains("CONFORME|OPORTUNIDAD")] if st.session_state.tab4_filter == "Promotor" else (df_mes[df_mes['Intención'] == "⚠️ Reclamo Crítico"] if st.session_state.tab4_filter == "Reclamo" else df_mes[df_mes['Intención'] != "Neutral"])
                 st.subheader("Auditoría de Feedback")
-                st.dataframe(df_t[[col_cliente, 'Intención', col_nps_puntaje, col_t_concatenado]].rename(columns={col_nps_puntaje: "Puntaje Rec.", col_t_concatenado: "Comentario Completo"}), use_container_width=True, hide_index=True, column_config={"Comentario Completo": st.column_config.TextColumn(width="large")}, height=600)
+                st.dataframe(df_t[[col_cliente, 'Intención', col_nps_puntaje, col_t_concatenated]].rename(columns={col_nps_puntaje: "Puntaje Rec.", col_t_concatenated: "Comentario Completo"}), use_container_width=True, hide_index=True, column_config={"Comentario Completo": st.column_config.TextColumn(width="large")}, height=600)
 else:
     st.error("Error al cargar los datos.")
