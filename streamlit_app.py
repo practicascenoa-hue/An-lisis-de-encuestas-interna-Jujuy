@@ -7,10 +7,14 @@ import plotly.express as px
 st.set_page_config(page_title="DASHBOARD POSTVENTA", layout="wide")
 
 # Inicializar estados de sesión para filtros y botones
-if "f_tipo" not in st.session_state: st.session_state.f_tipo = None
-if "f_val" not in st.session_state: st.session_state.f_val = None
-if "btn_active" not in st.session_state: st.session_state.btn_active = None
-if "tab4_filter" not in st.session_state: st.session_state.tab4_filter = None
+if "f_tipo" not in st.session_state:
+    st.session_state.f_tipo = None
+if "f_val" not in st.session_state:
+    st.session_state.f_val = None
+if "btn_active" not in st.session_state:
+    st.session_state.btn_active = None
+if "tab4_filter" not in st.session_state:
+    st.session_state.tab4_filter = None
 
 # --- CSS: ESTILO GLOBAL Y RESALTADO ---
 st.markdown("""
@@ -55,21 +59,7 @@ def load_data():
 df_raw, col_fecha_nombre = load_data()
 
 if df_raw is not None:
-    # Sidebar: Filtros de Tiempo
-    df_raw['Año'] = df_raw[col_fecha_nombre].dt.year
-    df_raw['Mes_Num'] = df_raw[col_fecha_nombre].dt.month
-    meses_dict = {1:"Enero", 2:"Febrero", 3:"Marzo", 4:"Abril", 5:"Mayo", 6:"Junio", 7:"Julio", 8:"Agosto", 9:"Septiembre", 10:"Octubre", 11:"Noviembre", 12:"Diciembre"}
-    
-    st.sidebar.header("FILTROS PERIODO")
-    anio_sel = st.sidebar.selectbox("Año", sorted(df_raw['Año'].dropna().unique().astype(int), reverse=True))
-    df_anio = df_raw[df_raw['Año'] == anio_sel].copy()
-    
-    meses_nros = sorted(df_anio['Mes_Num'].dropna().unique().astype(int))
-    mes_sel_nombre = st.sidebar.selectbox("Mes", [meses_dict[m] for m in meses_nros])
-    mes_sel_num = [k for k, v in meses_dict.items() if v == mes_sel_nombre][0]
-    df_mes = df_anio[df_anio['Mes_Num'] == mes_sel_num].copy()
-
-    # Mapeado de Columnas
+    # --- MAPEADO Y LIMPIEZA GLOBAL ---
     col_comentario_K = df_raw.columns[10] # K
     col_ambiente_J = df_raw.columns[9]    # J
     col_seguimiento = df_raw.columns[15]  # P
@@ -87,9 +77,24 @@ if df_raw is not None:
         try: return float(str(x).replace('%', '').replace(',', '.').strip())
         except: return 0.0
 
-    df_mes[col_nps_puntaje] = df_mes[col_nps_puntaje].apply(clean_val)
-    df_mes[col_csi_final] = df_mes[col_csi_final].apply(clean_val)
-    df_mes[col_ambiente_J] = df_mes[col_ambiente_J].apply(clean_val)
+    # Limpiamos df_raw completo para que la Tab 3 (Evolución) no falle
+    df_raw[col_nps_puntaje] = df_raw[col_nps_puntaje].apply(clean_val)
+    df_raw[col_csi_final] = df_raw[col_csi_final].apply(clean_val)
+    df_raw[col_ambiente_J] = df_raw[col_ambiente_J].apply(clean_val)
+
+    # Sidebar: Filtros de Tiempo
+    df_raw['Año'] = df_raw[col_fecha_nombre].dt.year
+    df_raw['Mes_Num'] = df_raw[col_fecha_nombre].dt.month
+    meses_dict = {1:"Enero", 2:"Febrero", 3:"Marzo", 4:"Abril", 5:"Mayo", 6:"Junio", 7:"Julio", 8:"Agosto", 9:"Septiembre", 10:"Octubre", 11:"Noviembre", 12:"Diciembre"}
+    
+    st.sidebar.header("FILTROS PERIODO")
+    anio_sel = st.sidebar.selectbox("Año", sorted(df_raw['Año'].dropna().unique().astype(int), reverse=True))
+    df_anio = df_raw[df_raw['Año'] == anio_sel].copy()
+    
+    meses_nros = sorted(df_anio['Mes_Num'].dropna().unique().astype(int))
+    mes_sel_nombre = st.sidebar.selectbox("Mes", [meses_dict[m] for m in meses_nros])
+    mes_sel_num = [k for k, v in meses_dict.items() if v == mes_sel_nombre][0]
+    df_mes = df_anio[df_anio['Mes_Num'] == mes_sel_num].copy()
 
     st.title("INDICADORES ENCUESTAS DE SATISFACCIÓN")
     tab1, tab2, tab3, tab4 = st.tabs(["🎯 INDICADORES", "👤 ASESORES", "📊 EVOLUCIÓN MENSUAL", "⚠️ ANÁLISIS DE RECLAMOS"])
@@ -162,16 +167,12 @@ if df_raw is not None:
                 st.divider()
                 st.subheader(f"Auditoría {st.session_state.f_tipo}: {st.session_state.f_val}")
                 if st.session_state.f_tipo == "NPS":
-                    if st.session_state.f_val == "Promotor": df_f = df_mes[df_mes[col_nps_puntaje] >= 9]
-                    elif st.session_state.f_val == "Detractor": df_f = df_mes[df_mes[col_nps_puntaje] <= 6]
-                    else: df_f = df_mes[(df_mes[col_nps_puntaje] > 6) & (df_mes[col_nps_puntaje] < 9)]
+                    df_f = df_mes[df_mes[col_nps_puntaje] >= 9] if st.session_state.f_val == "Promotor" else (df_mes[df_mes[col_nps_puntaje] <= 6] if st.session_state.f_val == "Detractor" else df_mes[(df_mes[col_nps_puntaje]>6) & (df_mes[col_nps_puntaje]<9)])
                     cols = [col_cliente, col_asesor, col_nps_puntaje, col_nps_comentario]
                 else:
-                    if st.session_state.f_val == "Excelente": df_f = df_mes[df_mes[col_csi_final] >= limit]
-                    elif st.session_state.f_val == "Malo": df_f = df_mes[df_mes[col_csi_final] <= (limit-30 if limit==90 else 6)]
-                    else: df_f = df_mes[(df_mes[col_csi_final] < limit) & (df_mes[col_csi_final] > (limit-30 if limit==90 else 6))]
+                    df_f = df_mes[df_mes[col_csi_final] >= limit] if st.session_state.f_val == "Excelente" else (df_mes[df_mes[col_csi_final] <= (limit-30 if limit==90 else 6)] if st.session_state.f_val == "Malo" else df_mes[(df_mes[col_csi_final]<limit) & (df_mes[col_csi_final]>(limit-30 if limit==90 else 6))])
                     cols = [col_cliente, col_asesor, col_csi_final, col_com_atencion, col_com_calidad, col_com_tiempo]
-                st.dataframe(df_f[cols].fillna("Sin comentario"), use_container_width=True, hide_index=True)
+                st.dataframe(df_f[cols].fillna("S/C"), use_container_width=True, hide_index=True)
 
     # --- TAB 2: ASESORES ---
     with tab2:
@@ -198,8 +199,6 @@ if df_raw is not None:
     # --- TAB 3: EVOLUCIÓN ---
     with tab3:
         st.subheader(f"Evolución Mensual {anio_sel}")
-        df_anio[col_csi_final] = df_anio[col_csi_final].apply(clean_val)
-        df_anio[col_nps_puntaje] = df_anio[col_nps_puntaje].apply(clean_val)
         df_v = df_anio.groupby('Mes_Num').agg({col_fecha_nombre: 'count', col_csi_final: 'mean', col_nps_puntaje: lambda x: x.mean() * 10}).reset_index()
         df_v.columns = ['Mes_Num', 'Cant', 'CSI', 'NPS']
         df_v['Mes'] = df_v['Mes_Num'].map(meses_dict)
@@ -207,42 +206,47 @@ if df_raw is not None:
         fig_bar.update_layout(yaxis={'categoryorder':'array', 'categoryarray':list(meses_dict.values())[::-1]}, height=500, coloraxis_showscale=False)
         st.plotly_chart(fig_bar, use_container_width=True)
 
-    # --- TAB 4: RECLAMOS ---
+    # --- TAB 4: RECLAMOS (MODIFICADO) ---
     with tab4:
-        st.header("⚠️ Análisis de Reclamos vs. Promotores (NPS)")
+        st.header("⚠️ Análisis de Calidad: Reclamos vs Promotores")
         if len(df_mes) > 0:
-            df_mes['Segmento_NPS'] = df_mes[col_nps_puntaje].apply(lambda x: 'Promotor' if x >= 9 else ('Reclamo' if x <= 6 else 'Pasivo'))
-            cp, cr = len(df_mes[df_mes['Segmento_NPS'] == 'Promotor']), len(df_mes[df_mes['Segmento_NPS'] == 'Reclamo'])
+            # Lógica Dicotomía Inteligente
+            def clasificar_intencion(row):
+                nota, texto = row[col_nps_puntaje], str(row[col_t_concatenado]).lower()
+                limpio = texto.replace("-", "").replace("sí, fue entregado en la fecha acordada ✔️", "").replace("sí", "").replace("no", "").replace("nan", "").strip()
+                if nota <= 6: return "⚠️ Reclamo Crítico"
+                elif nota >= 9: return "💡 Oportunidad de Mejora" if len(limpio) > 5 else "✅ Conforme"
+                return "Neutral"
+
+            df_mes['Intención'] = df_mes.apply(clasificar_intencion, axis=1)
+            df_mes['Grupo_Grafico'] = df_mes['Intención'].apply(lambda x: "Reclamos" if "Reclamo" in x else ("Promotores" if x != "Neutral" else "Neutral"))
+            cp, cr = len(df_mes[df_mes['Intención'].str.contains("Conforme|Oportunidad")]), len(df_mes[df_mes['Intención'] == "⚠️ Reclamo Crítico"])
 
             col_izq, col_der = st.columns([1, 2], gap="large")
             with col_izq:
-                c_btn1, c_btn2 = st.columns(2)
-                with c_btn1:
+                c1, c2 = st.columns(2)
+                with c1:
                     if st.button("🟢 PROMOTORES", key="t4_p", type="primary" if st.session_state.tab4_filter == "Promotor" else "secondary"):
                         st.session_state.tab4_filter = "Promotor"; st.rerun()
                     st.metric("", cp)
-                with c_btn2:
+                with c2:
                     if st.button("🔴 RECLAMOS", key="t4_r", type="primary" if st.session_state.tab4_filter == "Reclamo" else "secondary"):
                         st.session_state.tab4_filter = "Reclamo"; st.rerun()
                     st.metric("", cr)
                 if st.session_state.tab4_filter:
                     if st.button("🔄 Ver Todo", use_container_width=True): st.session_state.tab4_filter = None; st.rerun()
                 
-                df_p = df_mes[df_mes['Segmento_NPS'].isin(['Promotor', 'Reclamo'])]
-                if not df_p.empty:
-                    rp = df_p['Segmento_NPS'].value_counts().reset_index()
-                    rp.columns = ['Tipo', 'Cantidad']
-                    fig_t = px.pie(rp, values='Cantidad', names='Tipo', hole=0.5, color='Tipo', color_discrete_map={'Promotor': '#198754', 'Reclamo': '#dc3545'})
-                    fig_t.update_layout(showlegend=True, height=350, margin=dict(t=0,b=0,l=0,r=0)); fig_t.update_traces(textinfo='percent')
-                    st.plotly_chart(fig_t, use_container_width=True)
+                st.write("---")
+                df_pie = df_mes[df_mes['Grupo_Grafico'] != "Neutral"]
+                if not df_pie.empty:
+                    fig_t = px.pie(df_pie, names='Grupo_Grafico', hole=0.5, color='Grupo_Grafico', color_discrete_map={"Reclamos": "#dc3545", "Promotores": "#198754"}, title="Distribución de Clientes")
+                    fig_t.update_layout(showlegend=True, height=350, margin=dict(t=30,b=0,l=0,r=0)); st.plotly_chart(fig_t, use_container_width=True)
 
             with col_der:
-                if st.session_state.tab4_filter:
-                    st.subheader(f"Listado: {st.session_state.tab4_filter}es")
-                    df_t = df_mes[df_mes['Segmento_NPS'] == st.session_state.tab4_filter]
-                else:
-                    st.subheader("Listado General (Promotores y Reclamos)")
-                    df_t = df_mes[df_mes['Segmento_NPS'].isin(['Promotor', 'Reclamo'])]
-                st.dataframe(df_t[[col_cliente, col_asesor, col_nps_puntaje, col_t_concatenado]].rename(columns={col_t_concatenado: "Comentario / Concatenado (Col T)"}), use_container_width=True, hide_index=True, height=550)
-else:
-    st.error("No se pudieron cargar los datos.")
+                if st.session_state.tab4_filter == "Promotor": df_t = df_mes[df_mes['Intención'].str.contains("Conforme|Oportunidad")]
+                elif st.session_state.tab4_filter == "Reclamo": df_t = df_mes[df_mes['Intención'] == "⚠️ Reclamo Crítico"]
+                else: df_t = df_mes[df_mes['Intención'] != "Neutral"]
+                
+                st.subheader("Auditoría de Feedback")
+                st.dataframe(
+                    df_t[[col_cliente, 'Intención', col_nps_puntaje, col_t_concatenado]].rename(columns={col_nps_puntaje
