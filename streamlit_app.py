@@ -203,7 +203,7 @@ if df_raw is not None:
         df_v['Mes'] = df_v['Mes_Num'].map(meses_dict)
         st.plotly_chart(px.bar(df_v, y='Mes', x='Cant', orientation='h', text='Cant', color='Cant', color_continuous_scale='Sunset'), use_container_width=True)
  
-    # --- TAB 4: RECLAMOS (MODERNIZADA BICOLOR + TOOLTIPS) ---
+    # --- TAB 4: RECLAMOS (LÓGICA BICOLOR CORREGIDA) ---
     with tab4:
         st.header("⚠️ Reclamos y Oportunidades")
         if len(df_mes) > 0:
@@ -225,9 +225,9 @@ if df_raw is not None:
             
             col_izq, col_der = st.columns([1, 2], gap="large")
             with col_izq:
-                c_b1, c_b2 = st.columns(2)
-                if c_b1.button("🟢 PROMOTORES", key="t4_p_f"): st.session_state.tab4_filter = "Promotor"; st.rerun()
-                if c_b2.button("🔴 RECLAMOS", key="t4_r_f"): st.session_state.tab4_filter = "Reclamo"; st.rerun()
+                c1, c2 = st.columns(2)
+                if c1.button("🟢 PROMOTORES", key="t4_p_final"): st.session_state.tab4_filter = "Promotor"; st.rerun()
+                if c2.button("🔴 RECLAMOS", key="t4_r_final"): st.session_state.tab4_filter = "Reclamo"; st.rerun()
                 if st.session_state.tab4_filter:
                     if st.button("🔄 Ver Todo", key="res_t4"): st.session_state.tab4_filter = None; st.rerun()
                 st.write("---")
@@ -240,18 +240,25 @@ if df_raw is not None:
                 st.markdown("**🔍 Temas detectados por Gravedad:**")
                 temas_cfg = {"Acabado Estético": (["color", "brillo", "pintura", "mancha", "tono"], "Diferencias de color, manchas o falta de brillo."), "Alineación y Montaje": (["alineado", "luz", "encastre", "puerta"], "Piezas descuadradas o mal encastre."), "Limpieza Entrega": (["sucio", "polvillo", "lavado"], "Restos de masilla o suciedad."), "Plazos y Tiempos": (["demora", "tardó", "fecha"], "Incumplimiento de fecha o demora.")}
                 filas = []
+                # LÓGICA CORREGIDA: Solo cuenta si hay una coincidencia de palabra clave SEGÚN LA INTENCIÓN
                 for nom, (keys, defb) in temas_cfg.items():
-                    for idx, row in df_mes[df_mes['Intención'] != "Neutral"].iterrows():
-                        if any(p in str(row[col_t_concatenado]).lower() for p in keys):
-                            t = "Reclamo" if "Reclamo" in row['Intención'] else "Oportunidad"
-                            filas.append({"Tema": nom, "Tipo": t, "Detalle": f"<b>{t}</b>: {defb}"})
+                    for idx, row in df_mes.iterrows():
+                        texto_com = str(row[col_t_concatenado]).lower()
+                        # Solo procesamos si el comentario menciona una palabra clave
+                        if any(p in texto_com for p in keys):
+                            # Si es Reclamo Crítico (nota <=6) -> Barra Roja
+                            if row['Intención'] == "⚠️ Reclamo Crítico":
+                                filas.append({"Tema": nom, "Tipo": "Reclamo", "Detalle": f"<b>Reclamo</b>: {defb}"})
+                            # Si es Oportunidad de Mejora (nota >=9 pero con dolor) -> Barra Amarilla
+                            elif row['Intención'] == "💡 OPORTUNIDAD DE MEJORA":
+                                filas.append({"Tema": nom, "Tipo": "Oportunidad", "Detalle": f"<b>Oportunidad</b>: {defb}"})
                 if filas:
                     df_b = pd.DataFrame(filas).groupby(['Tema', 'Tipo', 'Detalle']).size().reset_index(name='Casos')
                     fig_b = px.bar(df_b, x='Casos', y='Tema', orientation='h', color='Tipo', color_discrete_map={"Reclamo": "#dc3545", "Oportunidad": "#FFD700"}, custom_data=['Detalle'])
                     fig_b.update_layout(showlegend=True, height=280, margin=dict(t=10,b=10,l=0,r=10), legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="right", x=1), xaxis=dict(showline=True, linecolor='rgba(0,0,0,0.2)'), yaxis=dict(showline=True, linecolor='rgba(0,0,0,0.2)'))
                     fig_b.update_traces(hovertemplate="<b>%{y}</b><br>Casos: %{x}<br>%{customdata[0]}<extra></extra>", width=0.5)
                     st.plotly_chart(fig_b, use_container_width=True)
- 
+
             with col_der:
                 df_t = df_mes[df_mes['Grupo'] == "Promotores"] if st.session_state.tab4_filter == "Promotor" else (df_mes[df_mes['Grupo'] == "Reclamos"] if st.session_state.tab4_filter == "Reclamo" else df_mes[df_mes['Grupo'] != "Neutral"])
                 st.subheader("Auditoría de Feedback Detallado")
