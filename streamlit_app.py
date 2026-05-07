@@ -203,9 +203,9 @@ if df_raw is not None:
         df_v['Mes'] = df_v['Mes_Num'].map(meses_dict)
         st.plotly_chart(px.bar(df_v, y='Mes', x='Cant', orientation='h', text='Cant', color='Cant', color_continuous_scale='Sunset'), use_container_width=True)
  
-    # --- TAB 4: RECLAMOS (MODERNIZADA BICOLOR + CONTEO RESTAURADO) ---
+    # --- TAB 4: RECLAMOS (LÓGICA BICOLOR + CORRECCIÓN DE CONTEO) ---
     with tab4:
-        st.header("⚠️ Reclamos y Oportunidades:")
+        st.header("⚠️ Análisis de Reclamos y Oportunidades")
         if len(df_mes) > 0:
             def clasificar_intencion(row):
                 nota, texto = row[col_nps_puntaje], str(row[col_t_concatenado]).lower()
@@ -242,12 +242,13 @@ if df_raw is not None:
                     fig_p.update_layout(height=250, margin=dict(t=0,b=0,l=0,r=0), showlegend=False)
                     st.plotly_chart(fig_p, use_container_width=True)
                 
-                st.markdown("**🔍 Categoría de eventos:**")
+                st.markdown("**🔍 Categorías de eventos:**")
                 temas_cfg = {"Acabado Estético": (["color", "brillo", "pintura", "mancha", "tono"], "Diferencias de color o falta de brillo."), "Alineación y Montaje": (["alineado", "luz", "encastre", "puerta"], "Piezas descuadradas o mal encastre."), "Limpieza Entrega": (["sucio", "polvillo", "lavado"], "Restos de masilla o suciedad."), "Plazos y Tiempos": (["demora", "tardó", "fecha"], "Incumplimiento de fecha o demora.")}
                 filas = []
                 for nom, (keys, defb) in temas_cfg.items():
                     for idx, row in df_mes.iterrows():
                         texto_com = str(row[col_t_concatenado]).lower()
+                        # FILTRO CRÍTICO: Solo cuenta si hay palabra clave Y LA INTENCIÓN ES LA CORRECTA
                         if any(p in texto_com for p in keys):
                             if row['Intención'] == "⚠️ RECLAMO CRÍTICO":
                                 filas.append({"Tema": nom, "Tipo": "Reclamo", "Detalle": f"<b>Reclamo</b>: {defb}"})
