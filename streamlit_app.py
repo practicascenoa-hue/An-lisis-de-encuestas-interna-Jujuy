@@ -202,7 +202,7 @@ if df_raw is not None:
         df_v.columns = ['Mes_Num', 'Cant', 'CSI', 'NPS']; df_v['NPS'] = df_v['NPS'] * 10; df_v['Mes'] = df_v['Mes_Num'].map(meses_dict)
         st.plotly_chart(px.bar(df_v, y='Mes', x='Cant', orientation='h', text='Cant', color='Cant', color_continuous_scale='Sunset'), use_container_width=True)
 
-    # --- TAB 4: RECLAMOS (MODERNIZADA CON CATEGORÍAS CHAPA Y PINTURA) ---
+  # --- TAB 4: RECLAMOS (VERSION BICOLOR Y TOOLTIPS DETALLADOS) ---
     with tab4:
         st.header("⚠️ Análisis de Reclamos")
         if len(df_mes) > 0:
@@ -225,45 +225,66 @@ if df_raw is not None:
             col_izq, col_der = st.columns([1, 2], gap="large")
             with col_izq:
                 c1, c2 = st.columns(2)
-                if c1.button("🟢 PROMOTORES", key="t4_p_f"): st.session_state.tab4_filter = "Promotor"; st.rerun()
-                if c2.button("🔴 RECLAMOS", key="t4_r_f"): st.session_state.tab4_filter = "Reclamo"; st.rerun()
-                if st.session_state.tab4_filter:
-                    if st.button("🔄 Ver Todo", key="res_t4"): st.session_state.tab4_filter = None; st.rerun()
+                if c1.button("🟢 PROMOTORES", key="t4_p_final"): st.session_state.tab4_filter = "Promotor"; st.rerun()
+                if c2.button("🔴 RECLAMOS", key="t4_r_final"): st.session_state.tab4_filter = "Reclamo"; st.rerun()
                 
                 st.write("---")
+                # Gráfico de Torta
                 df_p = df_mes[df_mes['Grupo'] != "Neutral"]
                 if not df_p.empty:
                     fig_p = px.pie(df_p, names='Grupo', hole=0.5, color='Grupo', color_discrete_map={"Reclamos": "#dc3545", "Promotores": "#198754"})
-                    fig_p.update_layout(height=280, margin=dict(t=0,b=0,l=0,r=0))
+                    fig_p.update_layout(height=250, margin=dict(t=0,b=0,l=0,r=0), showlegend=False)
                     st.plotly_chart(fig_p, use_container_width=True)
                 
-                st.markdown("**🔍 Temas detectados:**")
-                temas_data = {
-                    "Tema": ["Acabado Estético", "Alineación y Montaje", "Limpieza Entrega", "Plazos y Tiempos"],
-                    "Keywords": [["color", "brillo", "pintura", "mancha", "tono", "laca"], ["alineado", "luz", "encastre", "puerta", "ruido", "montaje"], ["sucio", "polvillo", "lavado", "limpieza", "masilla", "pasta"], ["demora", "tardó", "días", "espera", "fecha", "pactada"]],
-                    "Definicion": ["Diferencias de color, manchas, falta de brillo o motas de polvo en laca.", "Piezas descuadradas, luces irregulares entre paneles, ruidos o mal encastre.", "Polvillo de masilla, restos de pasta de pulir o interior sucio.", "Incumplimiento de fecha pactada o demora excesiva."]
+                st.markdown("**🔍 Temas detectados por Gravedad:**")
+                
+                # LÓGICA DE TEMAS CON DISTINCIÓN DE COLOR
+                temas_config = {
+                    "Acabado Estético": (["color", "brillo", "pintura", "mancha", "tono", "laca"], "Diferencias de color, manchas o falta de brillo."),
+                    "Alineación y Montaje": (["alineado", "luz", "encastre", "puerta", "ruido", "montaje"], "Piezas descuadradas o mal encastre."),
+                    "Limpieza Entrega": (["sucio", "polvillo", "lavado", "limpieza", "masilla", "pasta"], "Restos de masilla, pasta de pulir o suciedad."),
+                    "Plazos y Tiempos": (["demora", "tardó", "días", "espera", "fecha", "pactada"], "Incumplimiento de fecha o demora excesiva.")
                 }
-                
-                conteos = []
-                for keywords in temas_data["Keywords"]:
-                    c = sum(1 for t in df_mes[df_mes['Intención'] != "Neutral"][col_t_concatenado] if any(p in str(t).lower() for p in keywords))
-                    conteos.append(c)
-                
-                df_frec = pd.DataFrame({"Tema": temas_data["Tema"], "Casos": conteos, "Definición": temas_data["Definicion"]})
-                
-                if df_frec['Casos'].sum() > 0:
-                    fig_b = px.bar(df_frec, x='Casos', y='Tema', orientation='h', color='Casos', color_continuous_scale=["#FFEC8B", "#FFD700", "#DAA520"], custom_data=['Definición'])
-                    fig_b.update_layout(showlegend=False, coloraxis_showscale=False, height=250, margin=dict(t=10,b=10,l=0,r=10),
-                                        xaxis=dict(showgrid=True, gridcolor='rgba(0,0,0,0.1)', zeroline=True, zerolinecolor='rgba(0,0,0,0.5)', showline=True, linecolor='rgba(0,0,0,0.2)'),
-                                        yaxis=dict(showgrid=False, showline=True, linecolor='rgba(0,0,0,0.2)'))
-                    fig_b.update_traces(hovertemplate="<b>%{y}</b><br>Casos: %{x}<br><br><i>%{customdata[0]}</i><extra></extra>", width=0.5)
+
+                filas_frecuencia = []
+                for nombre_tema, (keywords, def_base) in temas_config.items():
+                    # Contamos cuántos de cada tipo hay para este tema
+                    for idx, row in df_mes[df_mes['Intención'] != "Neutral"].iterrows():
+                        if any(p in str(row[col_t_concatenado]).lower() for p in keywords):
+                            tipo = "Reclamo" if "Reclamo" in row['Intención'] else "Oportunidad"
+                            color = "#dc3545" if tipo == "Reclamo" else "#FFD700"
+                            filas_frecuencia.append({
+                                "Tema": nombre_tema, 
+                                "Tipo": tipo, 
+                                "Color": color, 
+                                "Detalle": f"{tipo}: {def_base}"
+                            })
+
+                if filas_frecuencia:
+                    df_barras = pd.DataFrame(filas_frecuencia)
+                    # Agrupamos para el gráfico
+                    df_plot = df_barras.groupby(['Tema', 'Tipo', 'Color', 'Detalle']).size().reset_index(name='Casos')
+                    
+                    fig_b = px.bar(df_plot, x='Casos', y='Tema', orientation='h',
+                                   color='Tipo', 
+                                   color_discrete_map={"Reclamo": "#dc3545", "Oportunidad": "#FFD700"},
+                                   custom_data=['Detalle'])
+                    
+                    fig_b.update_layout(showlegend=True, height=300, margin=dict(t=10,b=10,l=0,r=10),
+                                        legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="right", x=1),
+                                        xaxis=dict(showline=True, linecolor='rgba(0,0,0,0.2)'),
+                                        yaxis=dict(showline=True, linecolor='rgba(0,0,0,0.2)'))
+                    
+                    fig_b.update_traces(hovertemplate="<b>%{y}</b><br>Casos: %{x}<br><i>%{customdata[0]}</i><extra></extra>", width=0.6)
                     st.plotly_chart(fig_b, use_container_width=True)
 
             with col_der:
+                # El filtro de tarjetas se mantiene igual para no romper la navegación
                 df_t = df_mes[df_mes['Grupo'] == "Promotores"] if st.session_state.tab4_filter == "Promotor" else (df_mes[df_mes['Grupo'] == "Reclamos"] if st.session_state.tab4_filter == "Reclamo" else df_mes[df_mes['Grupo'] != "Neutral"])
                 st.subheader("Auditoría de Feedback Detallado")
                 for _, row in df_t.iterrows():
                     cls = "borde-conforme" if "CONFORME" in row['Intención'] else ("borde-oportunidad" if "OPORTUNIDAD" in row['Intención'] else "borde-critico")
                     st.markdown(f"""<div class="comentario-card {cls}"><div class="comentario-header">{row[col_cliente]} | {row['Intención']} | Nota: {row[col_nps_puntaje]}</div><div class="comentario-body">{row[col_t_concatenado]}</div></div>""", unsafe_allow_html=True)
+   
 else:
     st.error("No se pudieron cargar los datos.")
