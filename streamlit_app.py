@@ -17,7 +17,7 @@ if "btn_active" not in st.session_state:
 if "tab4_filter" not in st.session_state:
     st.session_state.tab4_filter = None
 
-# --- CSS: ESTILO GLOBAL Y RESALTADO ---
+# --- CSS: ESTILO GLOBAL Y TARJETAS DINÁMICAS ---
 st.markdown("""
     <style>
     div.stButton > button {
@@ -39,6 +39,22 @@ st.markdown("""
     }
     .stTabs [data-baseweb="tab"] { font-weight: bold; }
     
+    /* TARJETAS CON IDENTIDAD DE COLOR PARA LECTURA COMPLETA */
+    .comentario-card {
+        background-color: #ffffff;
+        padding: 15px;
+        border-radius: 8px;
+        margin-bottom: 10px;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+        border: 1px solid #eee;
+    }
+    .borde-conforme { border-left: 5px solid #28a745; }
+    .borde-oportunidad { border-left: 5px solid #ffc107; }
+    .borde-critico { border-left: 5px solid #dc3545; }
+    
+    .comentario-header { font-weight: bold; color: #333; margin-bottom: 5px; font-size: 14px; }
+    .comentario-body { color: #555; font-size: 13px; line-height: 1.5; }
+
     /* FORZAR SALTO DE LÍNEA EN TABLAS Y DATAFRAMES */
     [data-testid="stTable"] td, [data-testid="stDataFrame"] td {
         white-space: normal !important;
@@ -78,7 +94,7 @@ if df_raw is not None:
     col_cliente = next((c for c in df_raw.columns if "nombre" in c.lower() and "apellido" in c.lower()), "Cliente")
     col_asesor = next((c for c in df_raw.columns if "asesor" in c.lower() or "recepcionista" in c.lower()), "Asesor")
 
-    # --- LIMPIEZA DE DATOS (CRÍTICO PARA EVITAR TYPEERROR) ---
+    # --- LIMPIEZA DE DATOS ---
     def clean_val(x):
         if pd.isna(x): return 0.0
         try:
@@ -86,7 +102,6 @@ if df_raw is not None:
             return float(val)
         except: return 0.0
 
-    # Limpiamos df_raw antes de filtrar para que df_anio y df_mes ya sean numéricos
     df_raw[col_nps_puntaje] = df_raw[col_nps_puntaje].apply(clean_val)
     df_raw[col_csi_final] = df_raw[col_csi_final].apply(clean_val)
     df_raw[col_ambiente_J] = df_raw[col_ambiente_J].apply(clean_val)
@@ -115,7 +130,6 @@ if df_raw is not None:
             csi_raw = df_mes[col_csi_final].mean()
             csi_val = csi_raw * 100 if csi_raw <= 1.1 else csi_raw
             amb_val = df_mes[col_ambiente_J].mean() * 10
-
             c1, c2 = st.columns(2)
             def crear_gauge(valor, titulo):
                 fig = go.Figure(go.Indicator(mode="gauge+number", value=valor, title={'text': f"<b>{titulo}</b>", 'font': {'size': 18}},
@@ -124,7 +138,6 @@ if df_raw is not None:
                     'steps': [{'range': [0, 60], 'color': "#f8d7da"}, {'range': [60, 90], 'color': "#fff3cd"}, {'range': [90, 100], 'color': "#d1e7dd"}]}))
                 fig.update_layout(height=280, margin=dict(l=30, r=30, t=80, b=20), paper_bgcolor='rgba(0,0,0,0)')
                 return fig
-
             with c1:
                 st.plotly_chart(crear_gauge(nps_val, "NPS (Recomendación)"), use_container_width=True)
                 p_c, d_c, pas_c = len(df_mes[df_mes[col_nps_puntaje] >= 9]), len(df_mes[df_mes[col_nps_puntaje] <= 6]), len(df_mes[(df_mes[col_nps_puntaje] > 6) & (df_mes[col_nps_puntaje] < 9)])
@@ -135,7 +148,6 @@ if df_raw is not None:
                     st.session_state.update({"f_tipo":"NPS","f_val":"Pasivo", "btn_active":"btn2"}); st.rerun()
                 if b3.button(f"🔴 {d_c} Det", key="btn3", type="primary" if st.session_state.btn_active == "btn3" else "secondary"):
                     st.session_state.update({"f_tipo":"NPS","f_val":"Detractor", "btn_active":"btn3"}); st.rerun()
-
             with c2:
                 st.plotly_chart(crear_gauge(csi_val, "CSI (Satisfacción)"), use_container_width=True)
                 limit = 90 if csi_val > 15 else 9
@@ -148,14 +160,11 @@ if df_raw is not None:
                     st.session_state.update({"f_tipo":"CSI","f_val":"Regular", "btn_active":"btn5"}); st.rerun()
                 if b6.button(f"🔴 {mal_c} Mal", key="btn6", type="primary" if st.session_state.btn_active == "btn6" else "secondary"):
                     st.session_state.update({"f_tipo":"CSI","f_val":"Malo", "btn_active":"btn6"}); st.rerun()
-
             st.markdown(f"""<div style="background-color: #f8f9fa; padding: 12px; border-radius: 10px; border: 1px solid #dee2e6; text-align: center; width: 100%; margin-top: 35px;"><span style="color: #495057; font-size: 15px; font-weight: bold;">🏢 AMBIENTE TALLER: </span><span style="color: #2c3e50; font-size: 22px; font-weight: bold; margin-left: 8px;">{amb_val:.1f}%</span></div>""", unsafe_allow_html=True)
-            
             with st.expander(f"💬 Comentarios Generales de {mes_sel_nombre}"):
                 for _, row in df_mes.iterrows():
                     coment, nota = str(row[col_comentario_K]).strip(), row[col_ambiente_J]
                     if coment != "" and coment.lower() != "nan": st.markdown(f"- {coment} **({nota})**")
-
             if st.session_state.f_tipo:
                 st.divider()
                 st.subheader(f"Auditoría {st.session_state.f_tipo}: {st.session_state.f_val}")
@@ -188,27 +197,23 @@ if df_raw is not None:
     # --- TAB 3: EVOLUCIÓN (FIXED) ---
     with tab3:
         st.subheader(f"Evolución Mensual {anio_sel}")
-        # El error ocurría aquí porque col_csi_final o col_nps_puntaje no eran numéricos en df_anio
-        df_v = df_anio.groupby('Mes_Num').agg({
-            col_fecha_nombre: 'count', 
-            col_csi_final: 'mean', 
-            col_nps_puntaje: 'mean'
-        }).reset_index()
+        df_v = df_anio.groupby('Mes_Num').agg({col_fecha_nombre: 'count', col_csi_final: 'mean', col_nps_puntaje: 'mean'}).reset_index()
         df_v.columns = ['Mes_Num', 'Cant', 'CSI', 'NPS']
-        df_v['NPS'] = df_v['NPS'] * 10 # Normalizar a base 100
+        df_v['NPS'] = df_v['NPS'] * 10
         df_v['Mes'] = df_v['Mes_Num'].map(meses_dict)
         st.plotly_chart(px.bar(df_v, y='Mes', x='Cant', orientation='h', text='Cant', color='Cant', color_continuous_scale='Sunset'), use_container_width=True)
-               
-# --- TAB 4: RECLAMOS (GRÁFICO MODERNO + TARJETAS POR INTENCIÓN) ---
+
+    # --- TAB 4: RECLAMOS (MODERNIZADA) ---
     with tab4:
         st.header("⚠️ Análisis de Reclamos vs. Promotores")
         if len(df_mes) > 0:
             def clasificar_intencion(row):
                 nota, texto = row[col_nps_puntaje], str(row[col_t_concatenado]).lower()
                 limpio = re.sub(r"sí, fue entregado en la fecha acordada ✔️|no, pero fui informado del retraso ⚠️|sí|no|nan|-+|\d+|✔️|⚠️", "", texto).strip()
+                # Lista de elogios corregida (Incluye caso Mealla)
                 elogios = ["atencion", "atención", "muy buena", "buena", "servicio", "excelente", "gracias", "recomendado", "conforme", "impecable", "bien", "todo bien", "perfecto", "javier", "gutierrez", "andrea", "eficiente", "cumple", "forma", "novedad", "prometido"]
                 dolores = ["mejorar", "sala", "espera", "demora", "tardó", "baño", "baños", "falta", "anticipado", "diferencia", "color", "revisar", "alineado", "sucio"]
-                if nota <= 6: return "⚠️ RECLAMO CRÍTICO"
+                if nota <= 6: return "⚠️ Reclamo Crítico"
                 elif nota >= 9:
                     if any(d in limpio for d in dolores): return "💡 OPORTUNIDAD DE MEJORA"
                     if len(limpio) < 5 or any(e in limpio for e in elogios): return "✅ CONFORME"
@@ -216,37 +221,36 @@ if df_raw is not None:
                 return "Neutral"
             
             df_mes['Intención'] = df_mes.apply(clasificar_intencion, axis=1)
-            df_mes['Grupo'] = df_mes['Intención'].apply(lambda x: "Reclamos" if "RECLAMO" in x else ("Promotores" if x != "Neutral" else "Neutral"))
+            df_mes['Grupo'] = df_mes['Intención'].apply(lambda x: "Reclamos" if "Reclamo" in x else ("Promotores" if x != "Neutral" else "Neutral"))
             cp, cr = len(df_mes[df_mes['Grupo'] == 'Promotores']), len(df_mes[df_mes['Grupo'] == 'Reclamos'])
             
             col_izq, col_der = st.columns([1, 2], gap="large")
             with col_izq:
-                c_b1, c_b2 = st.columns(2)
-                with c_b1:
-                    if st.button("🟢 PROMOTORES", key="t4_p_f"): st.session_state.tab4_filter = "Promotor"; st.rerun()
+                c1, c2 = st.columns(2)
+                with c1:
+                    if st.button("🟢 PROMOTORES", key="t4_p_final"): st.session_state.tab4_filter = "Promotor"; st.rerun()
                     st.metric("", cp)
-                with c_b2:
-                    if st.button("🔴 RECLAMOS", key="t4_r_f"): st.session_state.tab4_filter = "Reclamo"; st.rerun()
+                with c2:
+                    if st.button("🔴 RECLAMOS", key="t4_r_final"): st.session_state.tab4_filter = "Reclamo"; st.rerun()
                     st.metric("", cr)
                 if st.session_state.tab4_filter:
                     if st.button("🔄 Ver Todo", key="res_t4"): st.session_state.tab4_filter = None; st.rerun()
-                
                 st.write("---")
-                df_pie = df_mes[df_mes['Grupo'] != "Neutral"]
-                if not df_pie.empty:
-                    st.plotly_chart(px.pie(df_pie, names='Grupo', hole=0.5, color='Grupo', color_discrete_map={"Reclamos": "#dc3545", "Promotores": "#198754"}), use_container_width=True)
+                # TORTA RESTAURADA
+                df_p = df_mes[df_mes['Grupo'] != "Neutral"]
+                if not df_p.empty:
+                    st.plotly_chart(px.pie(df_p, names='Grupo', hole=0.5, color='Grupo', color_discrete_map={"Reclamos": "#dc3545", "Promotores": "#198754"}), use_container_width=True)
                 
-                st.markdown("**🔍 Análisis de Temas:**")
-                temas = {"Sala/Espera": ["sala", "espera"], "Demora/Tiempo": ["demora", "tardó", "tarde"], "Limpieza": ["sucio", "lavado", "limpieza"], "Técnico": ["color", "diferencia", "alineado", "revisar"]}
+                # GRÁFICO DE BARRAS MODERNIZADO (GAMA AMARILLOS + PISO)
+                st.markdown("**🔍 Temas detectados en Oportunidades:**")
+                temas = {"Sala/Espera": ["sala", "espera"], "Demora/Tiempo": ["demora", "tardó", "tarde"], "Limpieza": ["sucio", "lavado", "limpieza"], "Taller/Técnico": ["color", "diferencia", "alineado", "revisar"]}
                 frec = {k: sum(1 for t in df_mes[df_mes['Intención'] == "💡 OPORTUNIDAD DE MEJORA"][col_t_concatenado] if any(p in str(t).lower() for p in v)) for k, v in temas.items()}
                 df_frec = pd.DataFrame(list(frec.items()), columns=['Tema', 'Casos'])
-                
                 if df_frec['Casos'].sum() > 0:
-                    # Gráfico Moderno con Amarillos
                     fig_b = px.bar(df_frec, x='Casos', y='Tema', orientation='h', color='Casos', color_continuous_scale=["#FFEC8B", "#FFD700", "#DAA520"])
-                    fig_b.update_layout(showlegend=False, coloraxis_showscale=False, height=250, margin=dict(t=0,b=0,l=0,r=10),
-                                        xaxis=dict(showgrid=True, gridcolor='rgba(0,0,0,0.1)', zeroline=True, zerolinecolor='rgba(0,0,0,0.5)'),
-                                        yaxis=dict(showgrid=False))
+                    fig_b.update_layout(showlegend=False, coloraxis_showscale=False, height=250, margin=dict(t=10,b=10,l=0,r=10),
+                                        xaxis=dict(showgrid=True, gridcolor='rgba(0,0,0,0.1)', zeroline=True, zerolinecolor='rgba(0,0,0,0.5)', showline=True, linecolor='black'),
+                                        yaxis=dict(showgrid=False, showline=True, linecolor='black'))
                     fig_b.update_traces(marker_line_width=0, width=0.5); st.plotly_chart(fig_b, use_container_width=True)
 
             with col_der:
@@ -254,6 +258,6 @@ if df_raw is not None:
                 st.subheader("Auditoría de Feedback Detallado")
                 for _, row in df_t.iterrows():
                     cls = "borde-conforme" if "CONFORME" in row['Intención'] else ("borde-oportunidad" if "OPORTUNIDAD" in row['Intención'] else "borde-critico")
-                    st.markdown(f"""<div class="comentario-card {cls}"><div class="comentario-header">{row[col_cliente]} | {row['Intención']}</div><div class="comentario-body">{row[col_t_concatenado]}</div></div>""", unsafe_allow_html=True)
+                    st.markdown(f"""<div class="comentario-card {cls}"><div class="comentario-header">{row[col_cliente]} | {row['Intención']} | Nota: {row[col_nps_puntaje]}</div><div class="comentario-body">{row[col_t_concatenado]}</div></div>""", unsafe_allow_html=True)
 else:
     st.error("No se pudieron cargar los datos.")
