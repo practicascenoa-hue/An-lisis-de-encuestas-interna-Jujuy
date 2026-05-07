@@ -120,7 +120,6 @@ if df_raw is not None:
     st.title("INDICADORES ENCUESTAS DE SATISFACCIÓN")
     tab1, tab2, tab3, tab4 = st.tabs(["🎯 INDICADORES", "👤 ASESORES", "📊 EVOLUCIÓN MENSUAL", "⚠️ ANÁLISIS DE RECLAMOS"])
 
-    # --- TAB 1: INDICADORES ---
     with tab1:
         if len(df_mes) > 0:
             nps_val = df_mes[col_nps_puntaje].mean() * 10
@@ -168,7 +167,6 @@ if df_raw is not None:
                     cols = [col_cliente, col_asesor, col_csi_final, col_com_atencion, col_com_calidad, col_com_tiempo]
                 st.dataframe(df_f[cols].fillna("S/C"), use_container_width=True, hide_index=True)
 
-    # --- TAB 2: ASESORES ---
     with tab2:
         st.subheader(f"Desempeño de Asesores - {mes_sel_nombre}")
         if len(df_mes) > 0:
@@ -185,7 +183,6 @@ if df_raw is not None:
                 df_res['% Cumplimiento'] = (df_res['Recibio_Seg_Count'] / df_res['Total_Encuestas'] * 100).round(1).astype(str) + "%"
                 st.dataframe(df_res[[col_asesor, 'Total_Encuestas', 'Recibio_Seg_Count', '% Cumplimiento']].sort_values('Total_Encuestas', ascending=False), use_container_width=True, hide_index=True)
 
-    # --- TAB 3: EVOLUCIÓN ---
     with tab3:
         st.subheader(f"Evolución Mensual {anio_sel}")
         df_v = df_anio.groupby('Mes_Num').agg({col_fecha_nombre: 'count', col_csi_final: 'mean', col_nps_puntaje: 'mean'}).reset_index()
@@ -194,7 +191,6 @@ if df_raw is not None:
         df_v['Mes'] = df_v['Mes_Num'].map(meses_dict)
         st.plotly_chart(px.bar(df_v, y='Mes', x='Cant', orientation='h', text='Cant', color='Cant', color_continuous_scale='Sunset'), use_container_width=True)
 
-    # --- TAB 4: RECLAMOS (LOGICA MEALLA + TORTA + TEMAS + TARJETAS) ---
     with tab4:
         st.header("⚠️ Análisis de Reclamos vs. Promotores")
         if len(df_mes) > 0:
@@ -227,24 +223,34 @@ if df_raw is not None:
                     if st.button("🔄 Ver Todo", key="res_t4"): st.session_state.tab4_filter = None; st.rerun()
                 
                 st.write("---")
-                # TORTA RESTAURADA
                 df_pie = df_mes[df_mes['Grupo'] != "Neutral"]
                 if not df_pie.empty:
                     st.plotly_chart(px.pie(df_pie, names='Grupo', hole=0.5, color='Grupo', color_discrete_map={"Reclamos": "#dc3545", "Promotores": "#198754"}), use_container_width=True)
                 
-                # TEMAS DE OPORTUNIDAD
                 st.markdown("**🔍 Temas en Oportunidades:**")
                 temas = {"Sala/Espera": ["sala", "espera"], "Demora/Tiempo": ["demora", "tardó", "tarde"], "Limpieza": ["sucio", "lavado", "limpieza"], "Taller/Técnico": ["color", "diferencia", "alineado", "revisar"]}
                 frec = {k: sum(1 for t in df_mes[df_mes['Intención'] == "💡 OPORTUNIDAD DE MEJORA"][col_t_concatenado] if any(p in str(t).lower() for p in v)) for k, v in temas.items()}
                 df_frec = pd.DataFrame(list(frec.items()), columns=['Tema', 'Casos'])
+                
                 if df_frec['Casos'].sum() > 0:
-                    st.plotly_chart(px.bar(df_frec, x='Casos', y='Tema', orientation='h', color='Tema', color_discrete_sequence=px.colors.qualitative.Safe), use_container_width=True)
+                    fig_b = px.bar(df_frec, x='Casos', y='Tema', orientation='h', color='Tema', color_discrete_sequence=px.colors.qualitative.Safe)
+                    fig_b.update_layout(
+                        showlegend=False, height=300, margin=dict(t=10, b=10, l=10, r=10),
+                        xaxis=dict(showline=True, linewidth=1, linecolor='black', mirror=True, zeroline=True, zerolinecolor='black'),
+                        yaxis=dict(showline=True, linewidth=1, linecolor='black', mirror=True)
+                    )
+                    fig_b.update_traces(width=0.5)
+                    st.plotly_chart(fig_b, use_container_width=True)
 
             with col_der:
                 df_t = df_mes[df_mes['Grupo'] == "Promotores"] if st.session_state.tab4_filter == "Promotor" else (df_mes[df_mes['Grupo'] == "Reclamos"] if st.session_state.tab4_filter == "Reclamo" else df_mes[df_mes['Grupo'] != "Neutral"])
                 st.subheader("Auditoría de Feedback Detallado")
-                st.info("Deslice para leer completo.")
                 for _, row in df_t.iterrows():
-                    st.markdown(f"""<div class="comentario-card"><div class="comentario-header">{row[col_cliente]} | {row['Intención']} | Nota: {row[col_nps_puntaje]}</div><div class="comentario-body">{row[col_t_concatenado]}</div></div>""", unsafe_allow_html=True)
+                    st.markdown(f"""
+                    <div class="comentario-card">
+                        <div class="comentario-header">{row[col_cliente]} | {row['Intención']} | Nota: {row[col_nps_puntaje]}</div>
+                        <div class="comentario-body">{row[col_t_concatenado]}</div>
+                    </div>
+                    """, unsafe_allow_html=True)
 else:
     st.error("No se pudieron cargar los datos.")
