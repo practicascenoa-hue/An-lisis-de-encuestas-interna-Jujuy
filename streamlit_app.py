@@ -203,13 +203,13 @@ if df_raw is not None:
         df_v['Mes'] = df_v['Mes_Num'].map(meses_dict)
         st.plotly_chart(px.bar(df_v, y='Mes', x='Cant', orientation='h', text='Cant', color='Cant', color_continuous_scale='Sunset'), use_container_width=True)
  
-  # --- TAB 4: RECLAMOS (LÓGICA NPS ESTRICTA) ---
+# --- TAB 4: RECLAMOS (LÓGICA NPS ESTRICTA) ---
     with tab4:
         st.header("⚠️ Análisis de Reclamos y Oportunidades")
         if len(df_mes) > 0:
             def clasificar_intencion(row):
-                nota, texto = row[col_nps_puntaje], str(row[col_t_concatenado]).lower()
-                dolores = ["mejorar", "sala", "espera", "demora", "tardó", "baño", "baños", "sucio", "polvillo", "color", "alineado", "trato", "explicación"]
+                nota, texto = row[col_nps_puntaje], str(row[col_t_concatenated]).lower()
+                dolores = ["mejorar", "sala", "espera", "demora", "tardó", "baño", "baños", "sucio", "polvillo", "color", "alineado", "ruido", "atencion", "trato", "explicación"]
                 if nota <= 6: return "⚠️ RECLAMO CRÍTICO"
                 elif nota >= 9:
                     if any(d in texto for d in dolores): return "💡 OPORTUNIDAD DE MEJORA"
@@ -234,14 +234,13 @@ if df_raw is not None:
                 if not df_p.empty:
                     st.plotly_chart(px.pie(df_p, names='Grupo', hole=0.5, color='Grupo', color_discrete_map={"Reclamos": "#dc3545", "Promotores": "#198754"}), use_container_width=True)
                 
-                st.markdown("**🔍 Temas detectados por Gravedad:**")
+                st.markdown("**🔍 Temas detectados:**")
                 temas_cfg = {
-                    "Plazos y Tiempos": (["demora", "tardó", "fecha", "espera"], "Retrasos en entrega."),
-                    "Infraestructura": (["sala", "baño", "café", "comodidad"], "Estado de las instalaciones."),
+                    "Plazos y Tiempos": (["demora", "tardó", "fecha", "espera"], "Retrasos entrega."),
+                    "Infraestructura": (["sala", "baño", "café", "comodidad"], "Instalaciones."),
                     "Atención": (["atencion", "trato", "explicación"], "Servicio al cliente."),
-                    "Calidad Técnica": (["color", "alineado", "ruido", "pintura", "sucio"], "Trabajo de taller.")
+                    "Calidad Técnica": (["color", "alineado", "ruido", "pintura", "sucio"], "Taller/Limpieza.")
                 }
-                
                 filas_b = []
                 for nom, (keys, defb) in temas_cfg.items():
                     for _, row in df_mes.iterrows():
@@ -250,7 +249,6 @@ if df_raw is not None:
                                 filas_b.append({"Tema": nom, "Tipo": "Reclamo", "Det": f"Reclamo: {defb}"})
                             elif row['Intención'] == "💡 OPORTUNIDAD DE MEJORA":
                                 filas_b.append({"Tema": nom, "Tipo": "Oportunidad", "Det": f"Oportunidad: {defb}"})
-                
                 if filas_b:
                     df_b = pd.DataFrame(filas_b).groupby(['Tema', 'Tipo', 'Det']).size().reset_index(name='Casos')
                     fig_b = px.bar(df_b, x='Casos', y='Tema', orientation='h', color='Tipo', color_discrete_map={"Reclamo": "#dc3545", "Oportunidad": "#FFD700"}, custom_data=['Det'])
