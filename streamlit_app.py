@@ -168,13 +168,13 @@ if df_raw is not None:
             if st.session_state.f_tipo:
                st.divider()
                st.subheader(f"Auditoría {st.session_state.f_tipo}: {st.session_state.f_val}")
-                if st.session_state.f_tipo == "NPS":
-                   df_f = df_mes[df_mes[col_nps_puntaje] >= 9] if st.session_state.f_val == "Promotor" else (df_mes[df_mes[col_nps_puntaje] <= 6] if st.session_state.f_val == "Detractor" else df_mes[(df_mes[col_nps_puntaje] > 6) & (df_mes[col_nps_puntaje] < 9)])
-                   cols = [col_cliente, col_asesor, col_nps_puntaje, col_nps_comentario]
-                else:
-                   df_f = df_mes[df_mes[col_csi_final] >= limit] if st.session_state.f_val == "Excelente" else (df_mes[df_mes[col_csi_final] <= (limit-30 if limit==90 else 6)] if st.session_state.f_val == "Malo" else df_mes[(df_mes[col_csi_final] < limit) & (df_mes[col_csi_final] > (limit-30 if limit==90 else 6))])
-                   cols = [col_cliente, col_asesor, col_csi_final, col_com_atencion, col_com_calidad, col_com_tiempo]
-                st.dataframe(df_f[cols].fillna("Sin comentario"), use_container_width=True, hide_index=True)
+               if st.session_state.f_tipo == "NPS":
+                  df_f = df_mes[df_mes[col_nps_puntaje] >= 9] if st.session_state.f_val == "Promotor" else (df_mes[df_mes[col_nps_puntaje] <= 6] if st.session_state.f_val == "Detractor" else df_mes[(df_mes[col_nps_puntaje] > 6) & (df_mes[col_nps_puntaje] < 9)])
+                  cols = [col_cliente, col_asesor, col_nps_puntaje, col_nps_comentario]
+               else:
+                  df_f = df_mes[df_mes[col_csi_final] >= limit] if st.session_state.f_val == "Excelente" else (df_mes[df_mes[col_csi_final] <= (limit-30 if limit==90 else 6)] if st.session_state.f_val == "Malo" else df_mes[(df_mes[col_csi_final] < limit) & (df_mes[col_csi_final] > (limit-30 if limit==90 else 6))])
+                  cols = [col_cliente, col_asesor, col_csi_final, col_com_atencion, col_com_calidad, col_com_tiempo]
+               st.dataframe(df_f[cols].fillna("Sin comentario"), use_container_width=True, hide_index=True)
  
     # --- TAB 2: ASESORES ---
     with tab2:
@@ -203,9 +203,9 @@ if df_raw is not None:
         df_v['Mes'] = df_v['Mes_Num'].map(meses_dict)
         st.plotly_chart(px.bar(df_v, y='Mes', x='Cant', orientation='h', text='Cant', color='Cant', color_continuous_scale='Sunset'), use_container_width=True)
  
-    # --- TAB 4: RECLAMOS (VERSÍON BICOLOR + TOOLTIPS) ---
+    # --- TAB 4: RECLAMOS (MODERNIZADA BICOLOR + TOOLTIPS) ---
     with tab4:
-        st.header("⚠️ Análisis de Reclamos vs. Promotores")
+        st.header("⚠️ Reclamos y Oportunidades")
         if len(df_mes) > 0:
             def clasificar_intencion(row):
                 nota, texto = row[col_nps_puntaje], str(row[col_t_concatenado]).lower()
@@ -220,14 +220,14 @@ if df_raw is not None:
                 return "Neutral"
             
             df_mes['Intención'] = df_mes.apply(clasificar_intencion, axis=1)
-            df_mes['Grupo'] = df_mes['Intención'].apply(lambda x: "Reclamos" if "RECLAMO" in x else ("Promotores" if x != "Neutral" else "Neutral"))
+            df_mes['Grupo'] = df_mes['Intención'].apply(lambda x: "Reclamos" if "Reclamo" in x else ("Promotores" if x != "Neutral" else "Neutral"))
             cp, cr = len(df_mes[df_mes['Grupo'] == 'Promotores']), len(df_mes[df_mes['Grupo'] == 'Reclamos'])
             
             col_izq, col_der = st.columns([1, 2], gap="large")
             with col_izq:
-                c1, c2 = st.columns(2)
-                if c1.button("🟢 PROMOTORES", key="t4_p_final"): st.session_state.tab4_filter = "Promotor"; st.rerun()
-                if c2.button("🔴 RECLAMOS", key="t4_r_final"): st.session_state.tab4_filter = "Reclamo"; st.rerun()
+                c_b1, c_b2 = st.columns(2)
+                if c_b1.button("🟢 PROMOTORES", key="t4_p_f"): st.session_state.tab4_filter = "Promotor"; st.rerun()
+                if c_b2.button("🔴 RECLAMOS", key="t4_r_f"): st.session_state.tab4_filter = "Reclamo"; st.rerun()
                 if st.session_state.tab4_filter:
                     if st.button("🔄 Ver Todo", key="res_t4"): st.session_state.tab4_filter = None; st.rerun()
                 st.write("---")
@@ -238,12 +238,7 @@ if df_raw is not None:
                     st.plotly_chart(fig_p, use_container_width=True)
                 
                 st.markdown("**🔍 Temas detectados por Gravedad:**")
-                temas_cfg = {
-                    "Acabado Estético": (["color", "brillo", "pintura", "mancha", "tono", "laca"], "Diferencias de color, manchas o falta de brillo."),
-                    "Alineación y Montaje": (["alineado", "luz", "encastre", "puerta", "ruido"], "Piezas descuadradas o mal encastre."),
-                    "Limpieza Entrega": (["sucio", "polvillo", "lavado", "limpieza"], "Restos de masilla o suciedad."),
-                    "Plazos y Tiempos": (["demora", "tardó", "días", "espera", "fecha"], "Incumplimiento de fecha o demora excesiva.")
-                }
+                temas_cfg = {"Acabado Estético": (["color", "brillo", "pintura", "mancha", "tono"], "Diferencias de color, manchas o falta de brillo."), "Alineación y Montaje": (["alineado", "luz", "encastre", "puerta"], "Piezas descuadradas o mal encastre."), "Limpieza Entrega": (["sucio", "polvillo", "lavado"], "Restos de masilla o suciedad."), "Plazos y Tiempos": (["demora", "tardó", "fecha"], "Incumplimiento de fecha o demora.")}
                 filas = []
                 for nom, (keys, defb) in temas_cfg.items():
                     for idx, row in df_mes[df_mes['Intención'] != "Neutral"].iterrows():
