@@ -39,8 +39,8 @@ st.markdown("""
     }
     .stTabs [data-baseweb="tab"] { font-weight: bold; }
     
-    /* FORZAR SALTO DE LÍNEA EN TABLAS Y DATAFRAMES */
-    [data-testid="stTable"] td, [data-testid="stDataFrame"] td {
+    /* MODIFICACIÓN: FORZAR SALTO DE LÍNEA EN TABLAS Y DATAFRAMES */
+    [data-testid="stTable"] td, [data-testid="stDataFrame"] td, .stDataFrame div[data-testid="stTable"] div {
         white-space: normal !important;
         word-break: break-word !important;
         line-height: 1.4 !important;
@@ -188,12 +188,7 @@ if df_raw is not None:
     # --- TAB 3: EVOLUCIÓN (FIXED) ---
     with tab3:
         st.subheader(f"Evolución Mensual {anio_sel}")
-        # El error ocurría aquí porque col_csi_final o col_nps_puntaje no eran numéricos en df_anio
-        df_v = df_anio.groupby('Mes_Num').agg({
-            col_fecha_nombre: 'count', 
-            col_csi_final: 'mean', 
-            col_nps_puntaje: 'mean'
-        }).reset_index()
+        df_v = df_anio.groupby('Mes_Num').agg({col_fecha_nombre: 'count', col_csi_final: 'mean', col_nps_puntaje: 'mean'}).reset_index()
         df_v.columns = ['Mes_Num', 'Cant', 'CSI', 'NPS']
         df_v['NPS'] = df_v['NPS'] * 10 # Normalizar a base 100
         df_v['Mes'] = df_v['Mes_Num'].map(meses_dict)
@@ -201,16 +196,21 @@ if df_raw is not None:
 
     # --- TAB 4: RECLAMOS ---
     with tab4:
-        st.header("⚠️ Análisis de Reclamos vs. Promotores (NPS)")
+        st.header("⚠️ Análisis de Calidad: Reclamos vs Promotores")
         if len(df_mes) > 0:
             def clasificar_intencion(row):
                 nota, texto = row[col_nps_puntaje], str(row[col_t_concatenado]).lower()
                 limpio = re.sub(r"sí, fue entregado en la fecha acordada ✔️|no, pero fui informado del retraso ⚠️|sí|no|nan|-+|\d+|✔️|⚠️", "", texto).strip()
-                elogios = ["atencion", "atención", "muy buena", "buena", "servicio", "excelente", "gracias", "recomendado", "conforme", "impecable", "bien", "todo bien", "perfecto", "javier", "gutierrez", "andrea"]
+                # Lista de elogios y palabras que no indican queja
+                elogios = ["atencion", "atención", "muy buena", "buena", "servicio", "excelente", "gracias", "recomendado", "conforme", "impecable", "bien", "todo bien", "perfecto", "javier", "gutierrez", "andrea", "gutuerrez"]
+                # Lista de palabras de dolor o queja real
                 dolores = ["mejorar", "sala", "espera", "demora", "tardó", "baño", "baños", "falta", "anticipado", "diferencia", "color", "revisar", "alineado"]
+                
                 if nota <= 6: return "⚠️ Reclamo Crítico"
                 elif nota >= 9:
+                    # Si detectamos dolor real, es oportunidad
                     if any(d in limpio for d in dolores): return "💡 OPORTUNIDAD DE MEJORA"
+                    # Si el residuo es corto o solo elogios, es Conforme
                     if len(limpio) < 5 or any(e in limpio for e in elogios): return "✅ CONFORME"
                     return "💡 OPORTUNIDAD DE MEJORA"
                 return "Neutral"
@@ -238,9 +238,15 @@ if df_raw is not None:
             with col_der:
                 df_t = df_mes[df_mes['Grupo'] == "Promotores"] if st.session_state.tab4_filter == "Promotor" else (df_mes[df_mes['Grupo'] == "Reclamos"] if st.session_state.tab4_filter == "Reclamo" else df_mes[df_mes['Grupo'] != "Neutral"])
                 st.subheader("Auditoría de Feedback")
-                st.dataframe(df_t[[col_cliente, 'Intención', col_nps_puntaje, col_t_concatenado]].rename(columns={col_t_concatenado: "Comentario Completo"}), 
+                # AJUSTE DE COLUMNAS PARA VER TEXTO COMPLETO
+                st.dataframe(df_t[[col_cliente, 'Intención', col_nps_puntaje, col_t_concatenado]].rename(columns={col_nps_puntaje: "Nota NPS", col_t_concatenado: "Comentario Completo"}), 
                              use_container_width=True, 
                              hide_index=True, 
-                             height=600)
+                             height=600,
+                             column_config={
+                                 "Nota NPS": st.column_config.NumberColumn(width="small"),
+                                 "Intención": st.column_config.TextColumn(width="medium"),
+                                 "Comentario Completo": st.column_config.TextColumn(width="large")
+                             })
 else:
     st.error("No se pudieron cargar los datos.")
