@@ -39,11 +39,25 @@ st.markdown("""
     }
     .stTabs [data-baseweb="tab"] { font-weight: bold; }
     
-    /* MODIFICACIÓN: FORZAR SALTO DE LÍNEA EN TABLAS Y DATAFRAMES */
-    [data-testid="stTable"] td, [data-testid="stDataFrame"] td, .stDataFrame div[data-testid="stTable"] div {
-        white-space: normal !important;
-        word-break: break-word !important;
-        line-height: 1.4 !important;
+    /* ESTILO PARA TARJETAS DE LECTURA COMPLETA */
+    .comentario-card {
+        background-color: #ffffff;
+        padding: 15px;
+        border-radius: 8px;
+        border-left: 5px solid #007bff;
+        margin-bottom: 10px;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+    }
+    .comentario-header {
+        font-weight: bold;
+        color: #333;
+        margin-bottom: 5px;
+        font-size: 14px;
+    }
+    .comentario-body {
+        color: #555;
+        font-size: 13px;
+        line-height: 1.5;
     }
     </style>
     """, unsafe_allow_html=True)
@@ -78,7 +92,6 @@ if df_raw is not None:
     col_cliente = next((c for c in df_raw.columns if "nombre" in c.lower() and "apellido" in c.lower()), "Cliente")
     col_asesor = next((c for c in df_raw.columns if "asesor" in c.lower() or "recepcionista" in c.lower()), "Asesor")
 
-    # --- LIMPIEZA DE DATOS (CRÍTICO PARA EVITAR TYPEERROR) ---
     def clean_val(x):
         if pd.isna(x): return 0.0
         try:
@@ -86,7 +99,6 @@ if df_raw is not None:
             return float(val)
         except: return 0.0
 
-    # Limpiamos df_raw antes de filtrar para que df_anio y df_mes ya sean numéricos
     df_raw[col_nps_puntaje] = df_raw[col_nps_puntaje].apply(clean_val)
     df_raw[col_csi_final] = df_raw[col_csi_final].apply(clean_val)
     df_raw[col_ambiente_J] = df_raw[col_ambiente_J].apply(clean_val)
@@ -126,7 +138,7 @@ if df_raw is not None:
                 return fig
 
             with c1:
-                st.plotly_chart(crear_gauge(nps_val, "NPS (Recomendación)"), use_container_width=True)
+                st.plotly_chart(crear_gauge(nps_val, "NPS"), use_container_width=True)
                 p_c, d_c, pas_c = len(df_mes[df_mes[col_nps_puntaje] >= 9]), len(df_mes[df_mes[col_nps_puntaje] <= 6]), len(df_mes[(df_mes[col_nps_puntaje] > 6) & (df_mes[col_nps_puntaje] < 9)])
                 _, b1, b2, b3 = st.columns([0.1, 1, 1, 1])
                 if b1.button(f"🟢 {p_c} Prom", key="btn1", type="primary" if st.session_state.btn_active == "btn1" else "secondary"):
@@ -137,9 +149,9 @@ if df_raw is not None:
                     st.session_state.update({"f_tipo":"NPS","f_val":"Detractor", "btn_active":"btn3"}); st.rerun()
 
             with c2:
-                st.plotly_chart(crear_gauge(csi_val, "CSI (Satisfacción)"), use_container_width=True)
+                st.plotly_chart(crear_gauge(csi_val, "CSI"), use_container_width=True)
                 limit = 90 if csi_val > 15 else 9
-                exc_c, mal_c = len(df_mes[df_mes[col_csi_final] >= limit]), len(df_mes[df_mes[col_csi_final] <= (limit-30 if limit==90 else 6)])
+                exc_c, mal_c = len(df_mes[df_mes[col_csi_final] >= limit]), len(df_mes[df_mes[col_csi_final] <= 6])
                 reg_c = len(df_mes) - exc_c - mal_c
                 _, b4, b5, b6 = st.columns([0.1, 1, 1, 1])
                 if b4.button(f"🟢 {exc_c} Exc", key="btn4", type="primary" if st.session_state.btn_active == "btn4" else "secondary"):
@@ -151,21 +163,15 @@ if df_raw is not None:
 
             st.markdown(f"""<div style="background-color: #f8f9fa; padding: 12px; border-radius: 10px; border: 1px solid #dee2e6; text-align: center; width: 100%; margin-top: 35px;"><span style="color: #495057; font-size: 15px; font-weight: bold;">🏢 AMBIENTE TALLER: </span><span style="color: #2c3e50; font-size: 22px; font-weight: bold; margin-left: 8px;">{amb_val:.1f}%</span></div>""", unsafe_allow_html=True)
             
-            with st.expander(f"💬 Comentarios Generales de {mes_sel_nombre}"):
-                for _, row in df_mes.iterrows():
-                    coment, nota = str(row[col_comentario_K]).strip(), row[col_ambiente_J]
-                    if coment != "" and coment.lower() != "nan": st.markdown(f"- {coment} **({nota})**")
-
             if st.session_state.f_tipo:
                 st.divider()
-                st.subheader(f"Auditoría {st.session_state.f_tipo}: {st.session_state.f_val}")
                 if st.session_state.f_tipo == "NPS":
                     df_f = df_mes[df_mes[col_nps_puntaje] >= 9] if st.session_state.f_val == "Promotor" else (df_mes[df_mes[col_nps_puntaje] <= 6] if st.session_state.f_val == "Detractor" else df_mes[(df_mes[col_nps_puntaje] > 6) & (df_mes[col_nps_puntaje] < 9)])
                     cols = [col_cliente, col_asesor, col_nps_puntaje, col_nps_comentario]
                 else:
-                    df_f = df_mes[df_mes[col_csi_final] >= limit] if st.session_state.f_val == "Excelente" else (df_mes[df_mes[col_csi_final] <= (limit-30 if limit==90 else 6)] if st.session_state.f_val == "Malo" else df_mes[(df_mes[col_csi_final] < limit) & (df_mes[col_csi_final] > (limit-30 if limit==90 else 6))])
+                    df_f = df_mes[df_mes[col_csi_final] >= limit] if st.session_state.f_val == "Excelente" else (df_mes[df_mes[col_csi_final] <= 6] if st.session_state.f_val == "Malo" else df_mes[(df_mes[col_csi_final] < limit) & (df_mes[col_csi_final] > 6)])
                     cols = [col_cliente, col_asesor, col_csi_final, col_com_atencion, col_com_calidad, col_com_tiempo]
-                st.dataframe(df_f[cols].fillna("Sin comentario"), use_container_width=True, hide_index=True)
+                st.dataframe(df_f[cols].fillna("S/C"), use_container_width=True, hide_index=True)
 
     # --- TAB 2: ASESORES ---
     with tab2:
@@ -182,51 +188,45 @@ if df_raw is not None:
                 df_mes['Sigue_Num'] = df_mes[col_seguimiento].apply(lambda x: 1 if str(x).lower().strip() == 'sí' else 0)
                 df_res = df_mes.groupby(col_asesor).agg(Total_Encuestas=(col_asesor, 'size'), Recibio_Seg_Count=('Sigue_Num', 'sum')).reset_index()
                 df_res['% Cumplimiento'] = (df_res['Recibio_Seg_Count'] / df_res['Total_Encuestas'] * 100).round(1).astype(str) + "%"
-                df_res['¿RECIBIÓ SEGUIMIENTO?'] = df_res['Recibio_Seg_Count'].apply(lambda x: "Sí" if x > 0 else "No")
-                st.dataframe(df_res[[col_asesor, 'Total_Encuestas', '¿RECIBIÓ SEGUIMIENTO?', '% Cumplimiento']].sort_values('Total_Encuestas', ascending=False), use_container_width=True, hide_index=True)
+                st.dataframe(df_res[[col_asesor, 'Total_Encuestas', 'Recibio_Seg_Count', '% Cumplimiento']].sort_values('Total_Encuestas', ascending=False), use_container_width=True, hide_index=True)
 
-    # --- TAB 3: EVOLUCIÓN (FIXED) ---
+    # --- TAB 3: EVOLUCIÓN ---
     with tab3:
         st.subheader(f"Evolución Mensual {anio_sel}")
         df_v = df_anio.groupby('Mes_Num').agg({col_fecha_nombre: 'count', col_csi_final: 'mean', col_nps_puntaje: 'mean'}).reset_index()
         df_v.columns = ['Mes_Num', 'Cant', 'CSI', 'NPS']
-        df_v['NPS'] = df_v['NPS'] * 10 # Normalizar a base 100
+        df_v['NPS'] = df_v['NPS'] * 10
         df_v['Mes'] = df_v['Mes_Num'].map(meses_dict)
         st.plotly_chart(px.bar(df_v, y='Mes', x='Cant', orientation='h', text='Cant', color='Cant', color_continuous_scale='Sunset'), use_container_width=True)
 
-    # --- TAB 4: RECLAMOS ---
+    # --- TAB 4: RECLAMOS (LOGICA MEJORADA Y LECTURA COMPLETA) ---
     with tab4:
-        st.header("⚠️ Análisis de Calidad: Reclamos vs Promotores")
+        st.header("⚠️ Análisis de Reclamos vs. Promotores")
         if len(df_mes) > 0:
             def clasificar_intencion(row):
                 nota, texto = row[col_nps_puntaje], str(row[col_t_concatenado]).lower()
                 limpio = re.sub(r"sí, fue entregado en la fecha acordada ✔️|no, pero fui informado del retraso ⚠️|sí|no|nan|-+|\d+|✔️|⚠️", "", texto).strip()
-                # Lista de elogios y palabras que no indican queja
                 elogios = ["atencion", "atención", "muy buena", "buena", "servicio", "excelente", "gracias", "recomendado", "conforme", "impecable", "bien", "todo bien", "perfecto", "javier", "gutierrez", "andrea", "gutuerrez"]
-                # Lista de palabras de dolor o queja real
                 dolores = ["mejorar", "sala", "espera", "demora", "tardó", "baño", "baños", "falta", "anticipado", "diferencia", "color", "revisar", "alineado"]
-                
-                if nota <= 6: return "⚠️ Reclamo Crítico"
+                if nota <= 6: return "⚠️ RECLAMO CRÍTICO"
                 elif nota >= 9:
-                    # Si detectamos dolor real, es oportunidad
                     if any(d in limpio for d in dolores): return "💡 OPORTUNIDAD DE MEJORA"
-                    # Si el residuo es corto o solo elogios, es Conforme
                     if len(limpio) < 5 or any(e in limpio for e in elogios): return "✅ CONFORME"
                     return "💡 OPORTUNIDAD DE MEJORA"
                 return "Neutral"
             
             df_mes['Intención'] = df_mes.apply(clasificar_intencion, axis=1)
-            df_mes['Grupo'] = df_mes['Intención'].apply(lambda x: "Reclamos" if "Reclamo" in x else ("Promotores" if x != "Neutral" else "Neutral"))
+            df_mes['Grupo'] = df_mes['Intención'].apply(lambda x: "Reclamos" if "RECLAMO" in x else ("Promotores" if x != "Neutral" else "Neutral"))
             cp, cr = len(df_mes[df_mes['Grupo'] == 'Promotores']), len(df_mes[df_mes['Grupo'] == 'Reclamos'])
             
             col_izq, col_der = st.columns([1, 2], gap="large")
             with col_izq:
                 c1, c2 = st.columns(2)
                 with c1:
-                    if st.button("🟢 PROMOTORES", key="t4_p_final"): st.session_state.tab4_filter = "Promotor"; st.rerun()
+                    if st.button("🟢 PROMOTORES", key="t4_p_f"): st.session_state.tab4_filter = "Promotor"; st.rerun()
                     st.metric("", cp)
                 with c2:
-                    if st.button("🔴 RECLAMOS", key="t4_r_final"): st.session_state.tab4_filter = "Reclamo"; st.rerun()
+                    if st.button("🔴 RECLAMOS", key="t4_r_f"): st.session_state.tab4_filter = "Reclamo"; st.rerun()
                     st.metric("", cr)
                 if st.session_state.tab4_filter:
                     if st.button("🔄 Ver Todo", key="res_t4"): st.session_state.tab4_filter = None; st.rerun()
@@ -237,16 +237,16 @@ if df_raw is not None:
             
             with col_der:
                 df_t = df_mes[df_mes['Grupo'] == "Promotores"] if st.session_state.tab4_filter == "Promotor" else (df_mes[df_mes['Grupo'] == "Reclamos"] if st.session_state.tab4_filter == "Reclamo" else df_mes[df_mes['Grupo'] != "Neutral"])
-                st.subheader("Auditoría de Feedback")
-                # AJUSTE DE COLUMNAS PARA VER TEXTO COMPLETO
-                st.dataframe(df_t[[col_cliente, 'Intención', col_nps_puntaje, col_t_concatenado]].rename(columns={col_nps_puntaje: "Nota NPS", col_t_concatenado: "Comentario Completo"}), 
-                             use_container_width=True, 
-                             hide_index=True, 
-                             height=600,
-                             column_config={
-                                 "Nota NPS": st.column_config.NumberColumn(width="small"),
-                                 "Intención": st.column_config.TextColumn(width="medium"),
-                                 "Comentario Completo": st.column_config.TextColumn(width="large")
-                             })
+                st.subheader("Auditoría de Feedback Detallado")
+                
+                # PARTE NUEVA: LECTURA COMPLETA FUERA DE LA TABLA
+                st.info("Deslice hacia abajo para leer los comentarios completos sin cortes.")
+                for _, row in df_t.iterrows():
+                    st.markdown(f"""
+                    <div class="comentario-card">
+                        <div class="comentario-header">{row[col_cliente]} | {row['Intención']} | Nota: {row[col_nps_puntaje]}</div>
+                        <div class="comentario-body">{row[col_t_concatenado]}</div>
+                    </div>
+                    """, unsafe_allow_html=True)
 else:
     st.error("No se pudieron cargar los datos.")
