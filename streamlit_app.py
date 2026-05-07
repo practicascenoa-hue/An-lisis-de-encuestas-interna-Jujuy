@@ -203,16 +203,16 @@ if df_raw is not None:
         df_v['Mes'] = df_v['Mes_Num'].map(meses_dict)
         st.plotly_chart(px.bar(df_v, y='Mes', x='Cant', orientation='h', text='Cant', color='Cant', color_continuous_scale='Sunset'), use_container_width=True)
  
-    # --- TAB 4: RECLAMOS (LÓGICA BICOLOR CORREGIDA) ---
+    # --- TAB 4: RECLAMOS (MODERNIZADA BICOLOR + CONTEO RESTAURADO) ---
     with tab4:
-        st.header("⚠️ Reclamos y Oportunidades")
+        st.header("⚠️ Reclamos y Oportunidades:")
         if len(df_mes) > 0:
             def clasificar_intencion(row):
                 nota, texto = row[col_nps_puntaje], str(row[col_t_concatenado]).lower()
                 limpio = re.sub(r"sí, fue entregado en la fecha acordada ✔️|no, pero fui informado del retraso ⚠️|sí|no|nan|-+|\d+|✔️|⚠️", "", texto).strip()
                 elogios = ["atencion", "atención", "muy buena", "buena", "servicio", "excelente", "gracias", "recomendado", "conforme", "impecable", "bien", "todo bien", "perfecto", "javier", "gutierrez", "andrea", "eficiente", "cumple", "forma", "novedad", "prometido"]
                 dolores = ["mejorar", "sala", "espera", "demora", "tardó", "baño", "baños", "falta", "anticipado", "diferencia", "color", "revisar", "alineado", "sucio", "lavado"]
-                if nota <= 6: return "⚠️ Reclamo Crítico"
+                if nota <= 6: return "⚠️ RECLAMO CRÍTICO"
                 elif nota >= 9:
                     if any(d in limpio for d in dolores): return "💡 OPORTUNIDAD DE MEJORA"
                     if len(limpio) < 5 or any(e in limpio for e in elogios): return "✅ CONFORME"
@@ -220,14 +220,19 @@ if df_raw is not None:
                 return "Neutral"
             
             df_mes['Intención'] = df_mes.apply(clasificar_intencion, axis=1)
-            df_mes['Grupo'] = df_mes['Intención'].apply(lambda x: "Reclamos" if "Reclamo" in x else ("Promotores" if x != "Neutral" else "Neutral"))
+            df_mes['Grupo'] = df_mes['Intención'].apply(lambda x: "Reclamos" if "RECLAMO" in x else ("Promotores" if x != "Neutral" else "Neutral"))
             cp, cr = len(df_mes[df_mes['Grupo'] == 'Promotores']), len(df_mes[df_mes['Grupo'] == 'Reclamos'])
             
             col_izq, col_der = st.columns([1, 2], gap="large")
             with col_izq:
-                c1, c2 = st.columns(2)
-                if c1.button("🟢 PROMOTORES", key="t4_p_final"): st.session_state.tab4_filter = "Promotor"; st.rerun()
-                if c2.button("🔴 RECLAMOS", key="t4_r_final"): st.session_state.tab4_filter = "Reclamo"; st.rerun()
+                c_b1, c_b2 = st.columns(2)
+                with c_b1:
+                   if st.button("🟢 PROMOTORES", key="t4_p_final"): st.session_state.tab4_filter = "Promotor"; st.rerun()
+                   st.metric("", cp)
+                with c_b2:
+                   if st.button("🔴 RECLAMOS", key="t4_r_final"): st.session_state.tab4_filter = "Reclamo"; st.rerun()
+                   st.metric("", cr)
+                
                 if st.session_state.tab4_filter:
                     if st.button("🔄 Ver Todo", key="res_t4"): st.session_state.tab4_filter = None; st.rerun()
                 st.write("---")
@@ -237,19 +242,15 @@ if df_raw is not None:
                     fig_p.update_layout(height=250, margin=dict(t=0,b=0,l=0,r=0), showlegend=False)
                     st.plotly_chart(fig_p, use_container_width=True)
                 
-                st.markdown("**🔍 Temas detectados por Gravedad:**")
-                temas_cfg = {"Acabado Estético": (["color", "brillo", "pintura", "mancha", "tono"], "Diferencias de color, manchas o falta de brillo."), "Alineación y Montaje": (["alineado", "luz", "encastre", "puerta"], "Piezas descuadradas o mal encastre."), "Limpieza Entrega": (["sucio", "polvillo", "lavado"], "Restos de masilla o suciedad."), "Plazos y Tiempos": (["demora", "tardó", "fecha"], "Incumplimiento de fecha o demora.")}
+                st.markdown("**🔍 Categoría de eventos:**")
+                temas_cfg = {"Acabado Estético": (["color", "brillo", "pintura", "mancha", "tono"], "Diferencias de color o falta de brillo."), "Alineación y Montaje": (["alineado", "luz", "encastre", "puerta"], "Piezas descuadradas o mal encastre."), "Limpieza Entrega": (["sucio", "polvillo", "lavado"], "Restos de masilla o suciedad."), "Plazos y Tiempos": (["demora", "tardó", "fecha"], "Incumplimiento de fecha o demora.")}
                 filas = []
-                # LÓGICA CORREGIDA: Solo cuenta si hay una coincidencia de palabra clave SEGÚN LA INTENCIÓN
                 for nom, (keys, defb) in temas_cfg.items():
                     for idx, row in df_mes.iterrows():
                         texto_com = str(row[col_t_concatenado]).lower()
-                        # Solo procesamos si el comentario menciona una palabra clave
                         if any(p in texto_com for p in keys):
-                            # Si es Reclamo Crítico (nota <=6) -> Barra Roja
-                            if row['Intención'] == "⚠️ Reclamo Crítico":
+                            if row['Intención'] == "⚠️ RECLAMO CRÍTICO":
                                 filas.append({"Tema": nom, "Tipo": "Reclamo", "Detalle": f"<b>Reclamo</b>: {defb}"})
-                            # Si es Oportunidad de Mejora (nota >=9 pero con dolor) -> Barra Amarilla
                             elif row['Intención'] == "💡 OPORTUNIDAD DE MEJORA":
                                 filas.append({"Tema": nom, "Tipo": "Oportunidad", "Detalle": f"<b>Oportunidad</b>: {defb}"})
                 if filas:
