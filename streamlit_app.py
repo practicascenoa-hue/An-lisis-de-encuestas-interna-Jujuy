@@ -190,7 +190,7 @@ if df_raw is not None:
                 df_res['% Cumplimiento'] = (df_res['Recibio_Seg_Count'] / df_res['Total_Encuestas'] * 100).round(1).astype(str) + "%"
                 st.dataframe(df_res[[col_asesor, 'Total_Encuestas', 'Recibio_Seg_Count', '% Cumplimiento']].sort_values('Total_Encuestas', ascending=False), use_container_width=True, hide_index=True)
 
-    # --- TAB 3: EVOLUCIÓN ---
+    # --- TAB 3: EVOLUCIÓN (FIXED) ---
     with tab3:
         st.subheader(f"Evolución Mensual {anio_sel}")
         df_v = df_anio.groupby('Mes_Num').agg({col_fecha_nombre: 'count', col_csi_final: 'mean', col_nps_puntaje: 'mean'}).reset_index()
@@ -199,15 +199,17 @@ if df_raw is not None:
         df_v['Mes'] = df_v['Mes_Num'].map(meses_dict)
         st.plotly_chart(px.bar(df_v, y='Mes', x='Cant', orientation='h', text='Cant', color='Cant', color_continuous_scale='Sunset'), use_container_width=True)
 
-    # --- TAB 4: RECLAMOS (LOGICA MEJORADA Y LECTURA COMPLETA) ---
+    # --- TAB 4: RECLAMOS (LÓGICA MEJORADA Y LECTURA COMPLETA) ---
     with tab4:
         st.header("⚠️ Análisis de Reclamos vs. Promotores")
         if len(df_mes) > 0:
             def clasificar_intencion(row):
                 nota, texto = row[col_nps_puntaje], str(row[col_t_concatenado]).lower()
                 limpio = re.sub(r"sí, fue entregado en la fecha acordada ✔️|no, pero fui informado del retraso ⚠️|sí|no|nan|-+|\d+|✔️|⚠️", "", texto).strip()
-                elogios = ["atencion", "atención", "muy buena", "buena", "servicio", "excelente", "gracias", "recomendado", "conforme", "impecable", "bien", "todo bien", "perfecto", "javier", "gutierrez", "andrea", "gutuerrez"]
-                dolores = ["mejorar", "sala", "espera", "demora", "tardó", "baño", "baños", "falta", "anticipado", "diferencia", "color", "revisar", "alineado"]
+                # Lista de elogios ampliada (Incluye el caso Mealla)
+                elogios = ["atencion", "atención", "muy buena", "buena", "servicio", "excelente", "gracias", "recomendado", "conforme", "impecable", "bien", "todo bien", "perfecto", "javier", "gutierrez", "andrea", "eficiente", "cumple", "forma", "novedad"]
+                dolores = ["mejorar", "sala", "espera", "demora", "tardó", "baño", "baños", "falta", "anticipado", "diferencia", "color", "revisar", "alineado", "lavado", "sucio"]
+                
                 if nota <= 6: return "⚠️ RECLAMO CRÍTICO"
                 elif nota >= 9:
                     if any(d in limpio for d in dolores): return "💡 OPORTUNIDAD DE MEJORA"
@@ -230,17 +232,22 @@ if df_raw is not None:
                     st.metric("", cr)
                 if st.session_state.tab4_filter:
                     if st.button("🔄 Ver Todo", key="res_t4"): st.session_state.tab4_filter = None; st.rerun()
+                
                 st.write("---")
-                df_p = df_mes[df_mes['Grupo'] != "Neutral"]
-                if not df_p.empty:
-                    st.plotly_chart(px.pie(df_p, names='Grupo', hole=0.5, color='Grupo', color_discrete_map={"Reclamos": "#dc3545", "Promotores": "#198754"}), use_container_width=True)
-            
+                # NUEVO GRÁFICO DE TEMAS (Sugerencia de visualización)
+                st.markdown("**🔍 Temas detectados en Oportunidades:**")
+                temas = {"Sala/Espera": ["sala", "espera"], "Demora/Tiempo": ["demora", "tardó", "tarde"], "Limpieza": ["sucio", "lavado", "limpieza"], "Taller/Técnico": ["color", "diferencia", "alineado", "revisar"]}
+                frecuencia = {k: sum(1 for t in df_mes[df_mes['Intención'] == "💡 OPORTUNIDAD DE MEJORA"][col_t_concatenado] if any(p in str(t).lower() for p in v)) for k, v in temas.items()}
+                df_temas = pd.DataFrame(list(frecuencia.items()), columns=['Tema', 'Casos'])
+                if df_temas['Casos'].sum() > 0:
+                    st.plotly_chart(px.bar(df_temas, x='Casos', y='Tema', orientation='h', color='Tema', color_discrete_sequence=px.colors.qualitative.Safe), use_container_width=True)
+                else:
+                    st.write("No hay temas recurrentes este mes.")
+
             with col_der:
                 df_t = df_mes[df_mes['Grupo'] == "Promotores"] if st.session_state.tab4_filter == "Promotor" else (df_mes[df_mes['Grupo'] == "Reclamos"] if st.session_state.tab4_filter == "Reclamo" else df_mes[df_mes['Grupo'] != "Neutral"])
                 st.subheader("Auditoría de Feedback Detallado")
-                
-                # PARTE NUEVA: LECTURA COMPLETA FUERA DE LA TABLA
-                st.info("Deslice hacia abajo para leer los comentarios completos sin cortes.")
+                st.info("Deslice hacia abajo para leer los comentarios completos.")
                 for _, row in df_t.iterrows():
                     st.markdown(f"""
                     <div class="comentario-card">
