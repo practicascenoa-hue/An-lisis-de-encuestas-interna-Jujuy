@@ -203,9 +203,9 @@ if df_raw is not None:
         df_v['Mes'] = df_v['Mes_Num'].map(meses_dict)
         st.plotly_chart(px.bar(df_v, y='Mes', x='Cant', orientation='h', text='Cant', color='Cant', color_continuous_scale='Sunset'), use_container_width=True)
  
-    # --- TAB 4: RECLAMOS (MODERNIZADA BICOLOR + TOOLTIPS) ---
+    # --- TAB 4: RECLAMOS (VERSÍON BICOLOR + TOOLTIPS) ---
     with tab4:
-        st.header("⚠️ Reclamos y Oportunidades")
+        st.header("⚠️ Análisis de Reclamos vs. Promotores")
         if len(df_mes) > 0:
             def clasificar_intencion(row):
                 nota, texto = row[col_nps_puntaje], str(row[col_t_concatenado]).lower()
@@ -220,14 +220,14 @@ if df_raw is not None:
                 return "Neutral"
             
             df_mes['Intención'] = df_mes.apply(clasificar_intencion, axis=1)
-            df_mes['Grupo'] = df_mes['Intención'].apply(lambda x: "Reclamos" if "Reclamo" in x else ("Promotores" if x != "Neutral" else "Neutral"))
+            df_mes['Grupo'] = df_mes['Intención'].apply(lambda x: "Reclamos" if "RECLAMO" in x else ("Promotores" if x != "Neutral" else "Neutral"))
             cp, cr = len(df_mes[df_mes['Grupo'] == 'Promotores']), len(df_mes[df_mes['Grupo'] == 'Reclamos'])
             
             col_izq, col_der = st.columns([1, 2], gap="large")
             with col_izq:
-                c_b1, c_b2 = st.columns(2)
-                if c_b1.button("🟢 PROMOTORES", key="t4_p_final"): st.session_state.tab4_filter = "Promotor"; st.rerun()
-                if c_b2.button("🔴 RECLAMOS", key="t4_r_final"): st.session_state.tab4_filter = "Reclamo"; st.rerun()
+                c1, c2 = st.columns(2)
+                if c1.button("🟢 PROMOTORES", key="t4_p_final"): st.session_state.tab4_filter = "Promotor"; st.rerun()
+                if c2.button("🔴 RECLAMOS", key="t4_r_final"): st.session_state.tab4_filter = "Reclamo"; st.rerun()
                 if st.session_state.tab4_filter:
                     if st.button("🔄 Ver Todo", key="res_t4"): st.session_state.tab4_filter = None; st.rerun()
                 st.write("---")
@@ -264,4 +264,4 @@ if df_raw is not None:
                     cls = "borde-conforme" if "CONFORME" in row['Intención'] else ("borde-oportunidad" if "OPORTUNIDAD" in row['Intención'] else "borde-critico")
                     st.markdown(f"""<div class="comentario-card {cls}"><div class="comentario-header">{row[col_cliente]} | {row['Intención']} | Nota: {row[col_nps_puntaje]}</div><div class="comentario-body">{row[col_t_concatenado]}</div></div>""", unsafe_allow_html=True)
 else:
-   st.error("No se pudieron cargar los datos.")
+    st.error("No se pudieron cargar los datos.")
