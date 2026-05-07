@@ -117,10 +117,9 @@ if df_raw is not None:
     mes_sel_num = [k for k, v in meses_dict.items() if v == mes_sel_nombre][0]
     df_mes = df_anio[df_anio['Mes_Num'] == mes_sel_num].copy()
 
-    st.title("📊 INDICADORES ENCUESTAS DE SATISFACCIÓN")
+    st.title("INDICADORES ENCUESTAS DE SATISFACCIÓN")
     tab1, tab2, tab3, tab4 = st.tabs(["🎯 INDICADORES", "👤 ASESORES", "📊 EVOLUCIÓN MENSUAL", "⚠️ ANÁLISIS DE RECLAMOS"])
 
-    # --- TAB 1: INDICADORES ---
     with tab1:
         if len(df_mes) > 0:
             nps_val = df_mes[col_nps_puntaje].mean() * 10
@@ -168,26 +167,32 @@ if df_raw is not None:
                     cols = [col_cliente, col_asesor, col_csi_final, col_com_atencion, col_com_calidad, col_com_tiempo]
                 st.dataframe(df_f[cols].fillna("S/C"), use_container_width=True, hide_index=True)
 
-    # --- TAB 2, 3 ---
     with tab2:
+        st.subheader(f"Desempeño de Asesores - {mes_sel_nombre}")
         if len(df_mes) > 0:
             df_as = df_mes.groupby(col_asesor).size().reset_index(name='Encuestas')
             st.plotly_chart(px.bar(df_as, x=col_asesor, y='Encuestas', text='Encuestas', color='Encuestas', color_continuous_scale='Blues'), use_container_width=True)
+            st.markdown("---")
             ca, cb = st.columns([1, 2])
+            with ca:
+                res_p = df_mes[col_seguimiento].fillna("N/C").value_counts().reset_index()
+                st.plotly_chart(px.pie(res_p, names=res_p.columns[0], values='count', hole=0.4), use_container_width=True)
             with cb:
-                df_res = df_mes.groupby(col_asesor).size().reset_index(name='TOTAL')
-                st.dataframe(df_res, use_container_width=True, hide_index=True)
+                df_mes['Sigue_Num'] = df_mes[col_seguimiento].apply(lambda x: 1 if str(x).lower().strip() == 'sí' else 0)
+                df_res = df_mes.groupby(col_asesor).agg(Total_Encuestas=(col_asesor, 'size'), Recibio_Seg_Count=('Sigue_Num', 'sum')).reset_index()
+                df_res['% Cumplimiento'] = (df_res['Recibio_Seg_Count'] / df_res['Total_Encuestas'] * 100).round(1).astype(str) + "%"
+                st.dataframe(df_res[[col_asesor, 'Total_Encuestas', 'Recibio_Seg_Count', '% Cumplimiento']].sort_values('Total_Encuestas', ascending=False), use_container_width=True, hide_index=True)
 
     with tab3:
+        st.subheader(f"Evolución Mensual {anio_sel}")
         df_v = df_anio.groupby('Mes_Num').agg({col_fecha_nombre: 'count', col_csi_final: 'mean', col_nps_puntaje: 'mean'}).reset_index()
         df_v.columns = ['Mes_Num', 'Cant', 'CSI', 'NPS']
         df_v['NPS'] = df_v['NPS'] * 10
         df_v['Mes'] = df_v['Mes_Num'].map(meses_dict)
         st.plotly_chart(px.bar(df_v, y='Mes', x='Cant', orientation='h', text='Cant', color='Cant', color_continuous_scale='Sunset'), use_container_width=True)
 
-    # --- TAB 4: RECLAMOS (GAMA DE AMARILLOS APLICADA) ---
     with tab4:
-        st.header("⚠️ Análisis de Reclamos")
+        st.header("⚠️ Análisis de Reclamos vs. Promotores")
         if len(df_mes) > 0:
             def clasificar_intencion(row):
                 nota, texto = row[col_nps_puntaje], str(row[col_t_concatenado]).lower()
@@ -228,9 +233,7 @@ if df_raw is not None:
                 df_frec = pd.DataFrame(list(frec.items()), columns=['Tema', 'Casos'])
                 
                 if df_frec['Casos'].sum() > 0:
-                    # GAMA DE AMARILLOS: Usamos una secuencia manual de amarillos/dorados
-                    amarillos = ["#FFD700", "#FFEC8B", "#EEEE00", "#FFD700"]
-                    fig_b = px.bar(df_frec, x='Casos', y='Tema', orientation='h', color='Tema', color_discrete_sequence=amarillos)
+                    fig_b = px.bar(df_frec, x='Casos', y='Tema', orientation='h', color='Tema', color_discrete_sequence=px.colors.qualitative.Safe)
                     fig_b.update_layout(
                         showlegend=False, height=300, margin=dict(t=10, b=10, l=10, r=10),
                         xaxis=dict(showline=True, linewidth=1, linecolor='black', mirror=True, zeroline=True, zerolinecolor='black'),
