@@ -200,7 +200,7 @@ if df_raw is not None:
 
     # --- TAB 4: RECLAMOS (LÓGICA SUPERIOR + DISEÑO MODERNO) ---
     with tab4:
-        st.header("⚠️ Análisis de Reclamos vs. Promotores")
+        st.header("⚠️ Análisis de Reclamos")
         if len(df_mes) > 0:
             def clasificar_intencion(row):
                 nota, texto = row[col_nps_puntaje], str(row[col_t_concatenado]).lower()
