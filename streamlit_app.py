@@ -307,20 +307,20 @@ if df_raw is not None:
                 for _, row in df_t.iterrows():
                     cls = "borde-conforme" if row['Intención'] == "✅ CONFORME" else ("borde-oportunidad" if row['Intención'] == "💡 OPORTUNIDAD DE MEJORA" else "borde-critico")
                     st.markdown(f"""<div class="comentario-card {cls}"><div class="comentario-header">{row[col_cliente]} | {row['Intención']} | Nota: {row[col_nps_puntaje]}</div><div class="comentario-body">{row[col_t_concatenado]}</div></div>""", unsafe_allow_html=True)
-st.markdown("---")
-st.subheader("📋 Protocolo de Tratamiento sugerido")
-col1, col2 = st.columns(2)
-with col1:
-    st.info("""
-    **🔴 RECLAMOS CRÍTICOS (Contención)**
-    1. **Contacto:** Llamada del Líder/Jefe de Servicio en < 24hs.
-    2. **Solución:** Ofrecer solución técnica o algun tipo de compensación o beneficio futuro.
-    3. **Causa Raíz:** Identificar por qué falló el proceso.
-    """)
-with col2:
-    st.warning("""
-    **🟡 OPORTUNIDADES (Mejora Continua)**
-    1. **Análisis:** Revisar en reunión semanal de equipo.
-    2. **Ajuste:** Modificar procesos internos o infraestructura.
-    3. **Feedback:** Capacitación necesaria basada en la sugerencia.
-    """)
+             st.markdown("---")
+             st.subheader("📋 Protocolo de Tratamiento sugerido")
+             col1, col2 = st.columns(2)
+             with col1:
+                 st.info("""
+                 **🔴 RECLAMOS CRÍTICOS (Contención)**
+                 1. **Contacto:** Llamada del Líder/Jefe de Servicio en < 24hs.
+                 2. **Solución:** Ofrecer solución técnica o algun tipo de compensación o beneficio futuro.
+                 3. **Causa Raíz:** Identificar por qué falló el proceso.
+                 """)
+             with col2:
+                  st.warning("""
+                  **🟡 OPORTUNIDADES (Mejora Continua)**
+                  1. **Análisis:** Revisar en reunión semanal de equipo.
+                  2. **Ajuste:** Modificar procesos internos o infraestructura.
+                  3. **Feedback:** Capacitación necesaria basada en la sugerencia.
+                  """)
