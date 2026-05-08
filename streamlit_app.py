@@ -313,8 +313,8 @@ col1, col2 = st.columns(2)
 with col1:
     st.info("""
     **🔴 RECLAMOS CRÍTICOS (Contención)**
-    1. **Contacto:** Llamada del Jefe de Servicio en < 24hs.
-    2. **Solución:** Ofrecer solución técnica o compensación.
+    1. **Contacto:** Llamada del Líder/Jefe de Servicio en < 24hs.
+    2. **Solución:** Ofrecer solución técnica o algun tipo de compensación o beneficio futuro.
     3. **Causa Raíz:** Identificar por qué falló el proceso.
     """)
 with col2:
@@ -322,5 +322,5 @@ with col2:
     **🟡 OPORTUNIDADES (Mejora Continua)**
     1. **Análisis:** Revisar en reunión semanal de equipo.
     2. **Ajuste:** Modificar procesos internos o infraestructura.
-    3. **Feedback:** Capacitación grupal basada en la sugerencia.
+    3. **Feedback:** Capacitación necesaria basada en la sugerencia.
     """)
