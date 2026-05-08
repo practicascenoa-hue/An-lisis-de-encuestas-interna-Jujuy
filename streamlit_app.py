@@ -205,6 +205,7 @@ if df_raw is not None:
  
 # --- TAB 4: RECLAMOS (LÓGICA NPS ESTRICTA + CATEGORIZACIÓN ÚNICA) ---
     with tab4:
+        # 1. Expander Informativo
         with st.expander("ℹ️ PROTOCOLO VOC (voz del cliente)"):
             st.markdown("""
             **Este panel clasifica las encuestas mediante un algoritmo de detección de palabras clave y jerarquía de NPS.**
@@ -224,20 +225,18 @@ if df_raw is not None:
             Para evitar duplicar datos en el gráfico de barras, si un cliente menciona varios temas, el sistema prioriza el impacto operativo en este orden: 
             **1. Técnico > 2. Tiempos > 3. Infraestructura > 4. Atención.**
             """)
-  
-    with tab4:
+
         st.header("⚠️ Análisis de Reclamos y Oportunidades")
+        
         if len(df_mes) > 0:
             def clasificar_intencion(row):
                 nota, texto = row[col_nps_puntaje], str(row[col_t_concatenado]).lower()
-                # Elogios clave para Franco Alarcón, Rosalía Chambi y otros conformes
                 elogios_fuertes = ["excelente", "muy buena", "impecable", "satisfecho", "gracias", "recomendadisimo", "perfecto", "todo bien", "todo el tiempo"]
                 dolores = ["mejorar", "demora", "tardó", "falta", "sucio", "polvillo", "color", "alineado", "baño", "baños", "espera", "anticipado", "pero"]
                 
                 if nota <= 6: 
                     return "⚠️ RECLAMO CRÍTICO"
                 elif nota >= 9:
-                    # Si menciona palabras de dolor pero el tono general es de elogio fuerte sin un "pero", es CONFORME
                     if any(d in texto for d in dolores):
                         if any(e in texto for e in elogios_fuertes) and "pero" not in texto and "demoraron" not in texto:
                             return "✅ CONFORME"
@@ -250,16 +249,25 @@ if df_raw is not None:
             cp, cr = len(df_mes[df_mes['Grupo'] == 'Promotores']), len(df_mes[df_mes['Grupo'] == 'Reclamos'])
             
             col_izq, col_der = st.columns([1, 2], gap="large")
+            
             with col_izq:
                 c_b1, c_b2 = st.columns(2)
                 with c_b1:
-                    if st.button("🟢 PROMOTORES", key="t4_p_final"): st.session_state.tab4_filter = "Promotor"; st.rerun()
+                    if st.button("🟢 PROMOTORES", key="t4_p_final"):
+                        st.session_state.tab4_filter = "Promotor"
+                        st.rerun()
                     st.metric("", cp)
                 with c_b2:
-                    if st.button("🔴 RECLAMOS", key="t4_r_final"): st.session_state.tab4_filter = "Reclamo"; st.rerun()
+                    if st.button("🔴 RECLAMOS", key="t4_r_final"):
+                        st.session_state.tab4_filter = "Reclamo"
+                        st.rerun()
                     st.metric("", cr)
+                
                 if st.session_state.tab4_filter:
-                    if st.button("🔄 Ver Todo", key="res_t4"): st.session_state.tab4_filter = None; st.rerun()
+                    if st.button("🔄 Ver Todo", key="res_t4"):
+                        st.session_state.tab4_filter = None
+                        st.rerun()
+                
                 st.write("---")
                 
                 df_p = df_mes[df_mes['Grupo'] != "Neutral"]
@@ -269,7 +277,6 @@ if df_raw is not None:
                     st.plotly_chart(fig_p, use_container_width=True)
                 
                 st.markdown("**🔍 Temas detectados por Gravedad:**")
-                # Prioridad de temas para evitar que un caso sume en dos barras
                 temas_prioridad = [
                     ("Calidad Técnica", ["color", "alineado", "ruido", "pintura", "sucio", "lavado"]),
                     ("Plazos y Tiempos", ["demora", "tardó", "fecha", "espera", "tiempo"]),
@@ -282,11 +289,10 @@ if df_raw is not None:
                     if row['Intención'] in ["⚠️ RECLAMO CRÍTICO", "💡 OPORTUNIDAD DE MEJORA"]:
                         texto_com = str(row[col_t_concatenado]).lower()
                         tema_asignado = None
-                        # Buscamos solo el primer tema que coincida (Prioridad)
                         for nom, keys in temas_prioridad:
                             if any(p in texto_com for p in keys):
                                 tema_asignado = nom
-                                break # Rompe el bucle de temas: solo asigna el primero que encuentra
+                                break 
                         
                         if tema_asignado:
                             t = "Reclamo" if row['Intención'] == "⚠️ RECLAMO CRÍTICO" else "Oportunidad"
@@ -307,20 +313,22 @@ if df_raw is not None:
                 for _, row in df_t.iterrows():
                     cls = "borde-conforme" if row['Intención'] == "✅ CONFORME" else ("borde-oportunidad" if row['Intención'] == "💡 OPORTUNIDAD DE MEJORA" else "borde-critico")
                     st.markdown(f"""<div class="comentario-card {cls}"><div class="comentario-header">{row[col_cliente]} | {row['Intención']} | Nota: {row[col_nps_puntaje]}</div><div class="comentario-body">{row[col_t_concatenado]}</div></div>""", unsafe_allow_html=True)
-          st.markdown("---")
-          st.subheader("📋 Protocolo de Tratamiento sugerido")
-          col_act1, col_act2 = st.columns(2)
-            with col_act1:
-                st.info("""
-                **🔴 RECLAMOS CRÍTICOS (Contención)**
-                1. **Contacto:** Llamada del Jefe de Servicio en < 24hs.
-                2. **Solución:** Ofrecer solución técnica o compensación.
-                3. **Causa Raíz:** Identificar por qué falló el proceso.
-                """)
-            with col_act2:
-                st.warning("""
-                **🟡 OPORTUNIDADES (Mejora Continua)**
-                1. **Análisis:** Revisar en reunión semanal de equipo.
-                2. **Ajuste:** Modificar procesos internos o infraestructura.
-                3. **Feedback:** Capacitación grupal basada en la sugerencia.
-                """)
+            
+        # Bloque final: Protocolo de Tratamiento
+        st.markdown("---")
+        st.subheader("📋 Protocolo de Tratamiento sugerido")
+        col_act1, col_act2 = st.columns(2)
+        with col_act1:
+            st.info("""
+            **🔴 RECLAMOS CRÍTICOS (Contención)**
+            1. **Contacto:** Llamada del Jefe de Servicio en < 24hs.
+            2. **Solución:** Ofrecer solución técnica o compensación.
+            3. **Causa Raíz:** Identificar por qué falló el proceso.
+            """)
+        with col_act2:
+            st.warning("""
+            **🟡 OPORTUNIDADES (Mejora Continua)**
+            1. **Análisis:** Revisar en reunión semanal de equipo.
+            2. **Ajuste:** Modificar procesos internos o infraestructura.
+            3. **Feedback:** Capacitación grupal basada en la sugerencia.
+            """)
