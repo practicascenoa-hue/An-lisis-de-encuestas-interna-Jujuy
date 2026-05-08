@@ -203,16 +203,20 @@ if df_raw is not None:
         df_v['Mes'] = df_v['Mes_Num'].map(meses_dict)
         st.plotly_chart(px.bar(df_v, y='Mes', x='Cant', orientation='h', text='Cant', color='Cant', color_continuous_scale='Sunset'), use_container_width=True)
  
-# --- TAB 4: RECLAMOS (LÓGICA NPS ESTRICTA) ---
+# --- TAB 4: RECLAMOS (LÓGICA NPS ESTRICTA + CATEGORÍAS DE INFRAESTRUCTURA) ---
     with tab4:
         st.header("⚠️ Análisis de Reclamos y Oportunidades")
         if len(df_mes) > 0:
             def clasificar_intencion(row):
-                nota, texto = row[col_nps_puntaje], str(row[col_t_concatenated]).lower()
-                dolores = ["mejorar", "sala", "espera", "demora", "tardó", "baño", "baños", "sucio", "polvillo", "color", "alineado", "ruido", "atencion", "trato", "explicación"]
-                if nota <= 6: return "⚠️ RECLAMO CRÍTICO"
+                nota, texto = row[col_nps_puntaje], str(row[col_t_concatenado]).lower()
+                # Lista maestra de dolores para detectar oportunidades en promotores
+                dolores = ["mejorar", "sala", "espera", "demora", "tardó", "baño", "baños", "sucio", "polvillo", "color", "alineado", "ruido", "atencion", "atención", "trato", "explicación", "café", "cafe", "comodidad"]
+                
+                if nota <= 6: 
+                    return "⚠️ RECLAMO CRÍTICO"
                 elif nota >= 9:
-                    if any(d in texto for d in dolores): return "💡 OPORTUNIDAD DE MEJORA"
+                    if any(d in texto for d in dolores): 
+                        return "💡 OPORTUNIDAD DE MEJORA"
                     return "✅ CONFORME"
                 return "Neutral"
             
@@ -222,44 +226,61 @@ if df_raw is not None:
             
             col_izq, col_der = st.columns([1, 2], gap="large")
             with col_izq:
-                c1, c2 = st.columns(2)
-                with c1:
-                    st.button("🟢 PROMOTORES", key="t4_p_f")
+                c_b1, c_b2 = st.columns(2)
+                with c_b1:
+                    if st.button("🟢 PROMOTORES", key="t4_p_final"): 
+                        st.session_state.tab4_filter = "Promotor"; st.rerun()
                     st.metric("", cp)
-                with c2:
-                    st.button("🔴 RECLAMOS", key="t4_r_f")
+                with c_b2:
+                    if st.button("🔴 RECLAMOS", key="t4_r_final"): 
+                        st.session_state.tab4_filter = "Reclamo"; st.rerun()
                     st.metric("", cr)
+                
+                if st.session_state.tab4_filter:
+                    if st.button("🔄 Ver Todo", key="res_t4"): 
+                        st.session_state.tab4_filter = None; st.rerun()
                 st.write("---")
+                
                 df_p = df_mes[df_mes['Grupo'] != "Neutral"]
                 if not df_p.empty:
-                    st.plotly_chart(px.pie(df_p, names='Grupo', hole=0.5, color='Grupo', color_discrete_map={"Reclamos": "#dc3545", "Promotores": "#198754"}), use_container_width=True)
+                    fig_p = px.pie(df_p, names='Grupo', hole=0.5, color='Grupo', color_discrete_map={"Reclamos": "#dc3545", "Promotores": "#198754"})
+                    fig_p.update_layout(height=250, margin=dict(t=0,b=0,l=0,r=0), showlegend=False)
+                    st.plotly_chart(fig_p, use_container_width=True)
                 
-                st.markdown("**🔍 Temas detectados:**")
+                st.markdown("**🔍 Temas detectados por Gravedad:**")
                 temas_cfg = {
-                    "Plazos y Tiempos": (["demora", "tardó", "fecha", "espera"], "Retrasos entrega."),
-                    "Infraestructura": (["sala", "baño", "café", "comodidad"], "Instalaciones."),
-                    "Atención": (["atencion", "trato", "explicación"], "Servicio al cliente."),
-                    "Calidad Técnica": (["color", "alineado", "ruido", "pintura", "sucio"], "Taller/Limpieza.")
+                    "Plazos y Tiempos": (["demora", "tardó", "fecha", "espera"], "Retrasos en entrega o recepción."),
+                    "Infraestructura": (["sala", "baño", "café", "cafe", "asiento", "comodidad"], "Estado de las instalaciones y confort."),
+                    "Atención": (["atencion", "atención", "trato", "explicación", "amabilidad"], "Calidad del servicio y trato humano."),
+                    "Calidad Técnica": (["color", "brillo", "alineado", "ruido", "pintura", "sucio", "lavado"], "Trabajos de taller y limpieza.")
                 }
+                
                 filas_b = []
                 for nom, (keys, defb) in temas_cfg.items():
                     for _, row in df_mes.iterrows():
-                        if any(p in str(row[col_t_concatenado]).lower() for p in keys):
+                        texto_com = str(row[col_t_concatenado]).lower()
+                        if any(p in texto_com for p in keys):
+                            # REGLA NPS: Rojo si nota <= 6, Amarillo si nota >= 9 con sugerencia
                             if row['Intención'] == "⚠️ RECLAMO CRÍTICO":
-                                filas_b.append({"Tema": nom, "Tipo": "Reclamo", "Det": f"Reclamo: {defb}"})
+                                filas_b.append({"Tema": nom, "Tipo": "Reclamo", "Detalle": f"<b>Reclamo</b>: {defb}"})
                             elif row['Intención'] == "💡 OPORTUNIDAD DE MEJORA":
-                                filas_b.append({"Tema": nom, "Tipo": "Oportunidad", "Det": f"Oportunidad: {defb}"})
+                                filas_b.append({"Tema": nom, "Tipo": "Oportunidad", "Detalle": f"<b>Oportunidad</b>: {defb}"})
+                
                 if filas_b:
-                    df_b = pd.DataFrame(filas_b).groupby(['Tema', 'Tipo', 'Det']).size().reset_index(name='Casos')
-                    fig_b = px.bar(df_b, x='Casos', y='Tema', orientation='h', color='Tipo', color_discrete_map={"Reclamo": "#dc3545", "Oportunidad": "#FFD700"}, custom_data=['Det'])
-                    fig_b.update_layout(showlegend=True, height=300, margin=dict(t=10,b=10,l=0,r=10), legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="right", x=1))
+                    df_barras = pd.DataFrame(filas_b).groupby(['Tema', 'Tipo', 'Detalle']).size().reset_index(name='Casos')
+                    fig_b = px.bar(df_barras, x='Casos', y='Tema', orientation='h', color='Tipo', 
+                                   color_discrete_map={"Reclamo": "#dc3545", "Oportunidad": "#FFD700"},
+                                   custom_data=['Detalle'])
+                    fig_b.update_layout(showlegend=True, height=350, margin=dict(t=10,b=10,l=0,r=10),
+                                        legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="right", x=1),
+                                        xaxis=dict(showline=True, linecolor='rgba(0,0,0,0.2)'),
+                                        yaxis=dict(showline=True, linecolor='rgba(0,0,0,0.2)'))
                     fig_b.update_traces(hovertemplate="<b>%{y}</b><br>Casos: %{x}<br>%{customdata[0]}<extra></extra>", width=0.5)
                     st.plotly_chart(fig_b, use_container_width=True)
 
             with col_der:
+                df_t = df_mes[df_mes['Grupo'] == "Promotores"] if st.session_state.tab4_filter == "Promotor" else (df_mes[df_mes['Grupo'] == "Reclamos"] if st.session_state.tab4_filter == "Reclamo" else df_mes[df_mes['Grupo'] != "Neutral"])
                 st.subheader("Auditoría de Feedback Detallado")
-                for _, row in df_mes[df_mes['Grupo'] != "Neutral"].iterrows():
+                for _, row in df_t.iterrows():
                     cls = "borde-conforme" if row['Intención'] == "✅ CONFORME" else ("borde-oportunidad" if row['Intención'] == "💡 OPORTUNIDAD DE MEJORA" else "borde-critico")
                     st.markdown(f"""<div class="comentario-card {cls}"><div class="comentario-header">{row[col_cliente]} | {row['Intención']} | Nota: {row[col_nps_puntaje]}</div><div class="comentario-body">{row[col_t_concatenado]}</div></div>""", unsafe_allow_html=True)
-else:
-    st.error("No se pudieron cargar los datos.")
