@@ -205,7 +205,7 @@ if df_raw is not None:
  
 # --- TAB 4: RECLAMOS (LÓGICA NPS ESTRICTA + CATEGORIZACIÓN ÚNICA) ---
     with tab4:
-        with st.expander("ℹ️ METODOLOGÍA DE CLASIFICACIÓN (Protocolo VOC)"):
+        with st.expander("ℹ️ PROTOCOLO VOC (voz del cliente)"):
             st.markdown("""
             **Este panel clasifica las encuestas mediante un algoritmo de detección de palabras clave y jerarquía de NPS.**
             
