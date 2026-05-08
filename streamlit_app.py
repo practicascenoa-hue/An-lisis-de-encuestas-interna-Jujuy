@@ -203,19 +203,23 @@ if df_raw is not None:
         df_v['Mes'] = df_v['Mes_Num'].map(meses_dict)
         st.plotly_chart(px.bar(df_v, y='Mes', x='Cant', orientation='h', text='Cant', color='Cant', color_continuous_scale='Sunset'), use_container_width=True)
  
-# --- TAB 4: RECLAMOS (LÓGICA NPS ESTRICTA + CATEGORÍAS DE INFRAESTRUCTURA) ---
+# --- TAB 4: RECLAMOS (LÓGICA NPS ESTRICTA + CATEGORIZACIÓN ÚNICA) ---
     with tab4:
         st.header("⚠️ Análisis de Reclamos y Oportunidades")
         if len(df_mes) > 0:
             def clasificar_intencion(row):
                 nota, texto = row[col_nps_puntaje], str(row[col_t_concatenado]).lower()
-                # Lista maestra de dolores para detectar oportunidades en promotores
-                dolores = ["mejorar", "sala", "espera", "demora", "tardó", "baño", "baños", "sucio", "polvillo", "color", "alineado", "ruido", "atencion", "atención", "trato", "explicación", "café", "cafe", "comodidad"]
+                # Elogios clave para Franco Alarcón, Rosalía Chambi y otros conformes
+                elogios_fuertes = ["excelente", "muy buena", "impecable", "satisfecho", "gracias", "recomendadisimo", "perfecto", "todo bien", "todo el tiempo"]
+                dolores = ["mejorar", "demora", "tardó", "falta", "sucio", "polvillo", "color", "alineado", "baño", "baños", "espera", "anticipado", "pero"]
                 
                 if nota <= 6: 
                     return "⚠️ RECLAMO CRÍTICO"
                 elif nota >= 9:
-                    if any(d in texto for d in dolores): 
+                    # Si menciona palabras de dolor pero el tono general es de elogio fuerte sin un "pero", es CONFORME
+                    if any(d in texto for d in dolores):
+                        if any(e in texto for e in elogios_fuertes) and "pero" not in texto and "demoraron" not in texto:
+                            return "✅ CONFORME"
                         return "💡 OPORTUNIDAD DE MEJORA"
                     return "✅ CONFORME"
                 return "Neutral"
@@ -228,17 +232,13 @@ if df_raw is not None:
             with col_izq:
                 c_b1, c_b2 = st.columns(2)
                 with c_b1:
-                    if st.button("🟢 PROMOTORES", key="t4_p_final"): 
-                        st.session_state.tab4_filter = "Promotor"; st.rerun()
+                    if st.button("🟢 PROMOTORES", key="t4_p_final"): st.session_state.tab4_filter = "Promotor"; st.rerun()
                     st.metric("", cp)
                 with c_b2:
-                    if st.button("🔴 RECLAMOS", key="t4_r_final"): 
-                        st.session_state.tab4_filter = "Reclamo"; st.rerun()
+                    if st.button("🔴 RECLAMOS", key="t4_r_final"): st.session_state.tab4_filter = "Reclamo"; st.rerun()
                     st.metric("", cr)
-                
                 if st.session_state.tab4_filter:
-                    if st.button("🔄 Ver Todo", key="res_t4"): 
-                        st.session_state.tab4_filter = None; st.rerun()
+                    if st.button("🔄 Ver Todo", key="res_t4"): st.session_state.tab4_filter = None; st.rerun()
                 st.write("---")
                 
                 df_p = df_mes[df_mes['Grupo'] != "Neutral"]
@@ -248,34 +248,36 @@ if df_raw is not None:
                     st.plotly_chart(fig_p, use_container_width=True)
                 
                 st.markdown("**🔍 Temas detectados por Gravedad:**")
-                temas_cfg = {
-                    "Plazos y Tiempos": (["demora", "tardó", "fecha", "espera"], "Retrasos en entrega o recepción."),
-                    "Infraestructura": (["sala", "baño", "café", "cafe", "asiento", "comodidad"], "Estado de las instalaciones y confort."),
-                    "Atención": (["atencion", "atención", "trato", "explicación", "amabilidad"], "Calidad del servicio y trato humano."),
-                    "Calidad Técnica": (["color", "brillo", "alineado", "ruido", "pintura", "sucio", "lavado"], "Trabajos de taller y limpieza.")
-                }
+                # Prioridad de temas para evitar que un caso sume en dos barras
+                temas_prioridad = [
+                    ("Calidad Técnica", ["color", "alineado", "ruido", "pintura", "sucio", "lavado"]),
+                    ("Plazos y Tiempos", ["demora", "tardó", "fecha", "espera", "tiempo"]),
+                    ("Infraestructura", ["sala", "baño", "café", "comodidad"]),
+                    ("Atención", ["atencion", "atención", "trato", "explicación"])
+                ]
                 
                 filas_b = []
-                for nom, (keys, defb) in temas_cfg.items():
-                    for _, row in df_mes.iterrows():
+                for _, row in df_mes.iterrows():
+                    if row['Intención'] in ["⚠️ RECLAMO CRÍTICO", "💡 OPORTUNIDAD DE MEJORA"]:
                         texto_com = str(row[col_t_concatenado]).lower()
-                        if any(p in texto_com for p in keys):
-                            # REGLA NPS: Rojo si nota <= 6, Amarillo si nota >= 9 con sugerencia
-                            if row['Intención'] == "⚠️ RECLAMO CRÍTICO":
-                                filas_b.append({"Tema": nom, "Tipo": "Reclamo", "Detalle": f"<b>Reclamo</b>: {defb}"})
-                            elif row['Intención'] == "💡 OPORTUNIDAD DE MEJORA":
-                                filas_b.append({"Tema": nom, "Tipo": "Oportunidad", "Detalle": f"<b>Oportunidad</b>: {defb}"})
-                
+                        tema_asignado = None
+                        # Buscamos solo el primer tema que coincida (Prioridad)
+                        for nom, keys in temas_prioridad:
+                            if any(p in texto_com for p in keys):
+                                tema_asignado = nom
+                                break # Rompe el bucle de temas: solo asigna el primero que encuentra
+                        
+                        if tema_asignado:
+                            t = "Reclamo" if row['Intención'] == "⚠️ RECLAMO CRÍTICO" else "Oportunidad"
+                            filas_b.append({"Tema": tema_asignado, "Tipo": t})
+
                 if filas_b:
-                    df_barras = pd.DataFrame(filas_b).groupby(['Tema', 'Tipo', 'Detalle']).size().reset_index(name='Casos')
+                    df_barras = pd.DataFrame(filas_b).groupby(['Tema', 'Tipo']).size().reset_index(name='Casos')
                     fig_b = px.bar(df_barras, x='Casos', y='Tema', orientation='h', color='Tipo', 
-                                   color_discrete_map={"Reclamo": "#dc3545", "Oportunidad": "#FFD700"},
-                                   custom_data=['Detalle'])
+                                   color_discrete_map={"Reclamo": "#dc3545", "Oportunidad": "#FFD700"})
                     fig_b.update_layout(showlegend=True, height=350, margin=dict(t=10,b=10,l=0,r=10),
-                                        legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="right", x=1),
-                                        xaxis=dict(showline=True, linecolor='rgba(0,0,0,0.2)'),
-                                        yaxis=dict(showline=True, linecolor='rgba(0,0,0,0.2)'))
-                    fig_b.update_traces(hovertemplate="<b>%{y}</b><br>Casos: %{x}<br>%{customdata[0]}<extra></extra>", width=0.5)
+                                        legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="right", x=1))
+                    fig_b.update_traces(width=0.5)
                     st.plotly_chart(fig_b, use_container_width=True)
 
             with col_der:
