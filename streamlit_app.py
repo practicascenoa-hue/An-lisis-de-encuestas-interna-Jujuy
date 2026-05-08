@@ -309,18 +309,18 @@ if df_raw is not None:
                     st.markdown(f"""<div class="comentario-card {cls}"><div class="comentario-header">{row[col_cliente]} | {row['Intención']} | Nota: {row[col_nps_puntaje]}</div><div class="comentario-body">{row[col_t_concatenado]}</div></div>""", unsafe_allow_html=True)
              st.markdown("---")
              st.subheader("📋 Protocolo de Tratamiento sugerido")
-             col1, col2 = st.columns(2)
-             with col1:
+             col_act1, col_act2 = st.columns(2)
+             with col_act1:
                  st.info("""
                  **🔴 RECLAMOS CRÍTICOS (Contención)**
-                 1. **Contacto:** Llamada del Líder/Jefe de Servicio en < 24hs.
-                 2. **Solución:** Ofrecer solución técnica o algun tipo de compensación o beneficio futuro.
+                 1. **Contacto:** Llamada del Jefe de Servicio en < 24hs.
+                 2. **Solución:** Ofrecer solución técnica o compensación.
                  3. **Causa Raíz:** Identificar por qué falló el proceso.
                  """)
-             with col2:
-                  st.warning("""
-                  **🟡 OPORTUNIDADES (Mejora Continua)**
-                  1. **Análisis:** Revisar en reunión semanal de equipo.
-                  2. **Ajuste:** Modificar procesos internos o infraestructura.
-                  3. **Feedback:** Capacitación necesaria basada en la sugerencia.
-                  """)
+             with col_act2:
+                 st.warning("""
+                 **🟡 OPORTUNIDADES (Mejora Continua)**
+                 1. **Análisis:** Revisar en reunión semanal de equipo.
+                 2. **Ajuste:** Modificar procesos internos o infraestructura.
+                 3. **Feedback:** Capacitación grupal basada en la sugerencia.
+                 """)
