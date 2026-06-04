@@ -330,16 +330,7 @@ if df_raw is not None:
              with cod6:
                  st.info("📊 **Siguiente pregunta disponible**\n\nEspacio libre en la segunda fila.")
  
-             # --- 3. AMBIENTE TALLER ---
-             amb_val = df_mes[col_ambiente_J].mean() * 10
-             st.markdown(f"""
-                 <div style="background-color: #f8f9fa; padding: 15px; border-radius: 12px; border: 1px solid #dee2e6; text-align: center; margin-top: 30px;">
-                     <span style="color: #495057; font-size: 16px; font-weight: bold; text-transform: uppercase;">🏢 Calificación Ambiente Taller</span>
-                     <br>
-                     <span style="color: #2c3e50; font-size: 32px; font-weight: bold;">{amb_val:.1f}%</span>
-                 </div>
-                 """, unsafe_allow_html=True)
- 
+
              # --- 4. SECCIÓN DE AUDITORÍA DINÁMICA ---
              if st.session_state.f_tipo:
                  st.markdown("---")
