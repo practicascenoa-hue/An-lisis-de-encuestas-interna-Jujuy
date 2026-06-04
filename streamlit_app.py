@@ -124,11 +124,11 @@ if df_raw is not None:
     tab1, tab2, tab3, tab4 = st.tabs(["🎯 INDICADORES", "👤 ASESORES", "📊 EVOLUCIÓN MENSUAL", "⚠️ ANÁLISIS DE RECLAMOS"])
  
     # --- TAB 1: INDICADORES (CON CUADRÍCULA DE RELOJES DE PREGUNTAS) ---
-        with tab1:
-            st.header(f"🎯 Indicadores Clave - {mes_sel_nombre} {anio_sel}")
+    with tab1:
+        st.header(f"🎯 Indicadores Clave - {mes_sel_nombre} {anio_sel}")
             
-            if len(df_mes) > 0:
-                # --- 1. SECCIÓN SUPERIOR: KPIs GLOBALES (NPS & CSI) ---
+        if len(df_mes) > 0:
+            # --- 1. SECCIÓN SUPERIOR: KPIs GLOBALES (NPS & CSI) ---
                 st.markdown("### Resumen Ejecutivo")
                 
                 # Cálculos base globales
