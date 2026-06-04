@@ -242,16 +242,13 @@ if df_raw is not None:
                 except Exception as e:
                     with cod1: st.error(f"Error en Columna F: {str(e)}")
     
-                # --- RESERVA DE ESPACIO PARA SIGUIENTES PREGUNTAS ---
-                with cod2:
-                    st.info("📊 **Siguiente pregunta disponible**\n\nIndícame qué columna evaluar para configurar el segundo reloj de la cuadrícula.")
-                    # --- PREGUNTA 2: ATENCIÓN Y CORTESÍA DEL ASESOR (COLUMNA H / ÍNDICE 7) ---
+                # --- PREGUNTA 2: ATENCIÓN Y CORTESÍA DEL ASESOR (COLUMNA H / ÍNDICE 7) ---
+            with cod2:
                 try:
                     col_h_asesor = df_mes.columns[7] # Columna H es índice 7
                     # Limpieza de datos numéricos para promediar correctamente
                     valores_asesor = pd.to_numeric(df_mes[col_h_asesor], errors='coerce').dropna()
-                
-                with cod2:
+                    
                     if not valores_asesor.empty:
                         score_asesor = valores_asesor.mean()
                         st.plotly_chart(crear_gauge(
@@ -263,8 +260,8 @@ if df_raw is not None:
                         st.caption(f"📍 *Muestra: {len(valores_asesor)} respuestas*")
                     else:
                         st.warning("Sin datos numéricos en Columna H")
-            except Exception as e:
-                with cod2: st.error(f"Error en Columna H: {str(e)}")
+                except Exception as e:
+                    st.error(f"Error en Columna H: {str(e)}")
                 with cod3:
                     st.info("📊 **Siguiente pregunta disponible**\n\nEspacio reservado para el tercer indicador.")
     
