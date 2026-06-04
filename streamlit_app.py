@@ -78,6 +78,63 @@ def load_data():
      except: return None, None
  
 df_raw, col_fecha_nombre = load_data()
+
+# --- FUNCIÓN MAESTRA GLOBAL: ANILLO EVOLUCIONADO CORPORATIVO ---
+# Definida aquí arriba al margen para que esté disponible en todo el archivo
+def crear_anillo_corporativo(valores_serie, titulo):
+    validos = pd.to_numeric(valores_serie, errors='coerce').dropna()
+    muestra = len(validos)
+    
+    if muestra == 0:
+        fig = go.Figure(go.Pie(values=[1], hole=0.75, marker=dict(colors=['#e9ecef']), showlegend=False, hoverinfo='none'))
+        fig.update_layout(title=dict(text=f"<b>{titulo}</b><br><span style='font-size:12px;color:orange;'>Sin Datos</span>", x=0.5, y=0.5))
+        return fig
+        
+    promedio = validos.mean()
+    
+    # Segmentación de clientes (Rojo <= 6, Amarillo 7-8, Verde >= 9)
+    detractores = len(validos[validos <= 6])
+    pasivos = len(validos[(validos > 6) & (validos <= 8)])
+    promoters = len(validos[validos >= 9])
+    
+    cantidades = [promoters, pasivos, detractores]
+    colores = ['#28a745', '#ffc107', '#dc3545']
+    
+    if sum(cantidades) == 0:
+        cantidades = [1]
+        colores = ['#e9ecef']
+
+    fig = go.Figure(go.Pie(
+        labels=['Excelente/Promotor', 'Regular/Pasivo', 'Malo/Detractor'],
+        values=cantidades,
+        hole=0.78,
+        marker=dict(colors=colores),
+        sort=False,
+        showlegend=False,
+        hoverinfo='label+percent'
+    ))
+    
+    fig.update_layout(
+        annotations=[
+            dict(
+                text=f"<b style='font-size:36px;color:#2c3e50;'>{promedio:.1f}</b>",
+                x=0.5, y=0.6, showarrow=False
+            ),
+            dict(
+                text=f"<span style='font-size:12px;color:#6c757d;'>Respuestas<br><b>{muestra}</b></span>",
+                x=0.5, y=0.35, showarrow=False
+            )
+        ],
+        title=dict(
+            text=f"<b style='font-size:15px;color:#333;'>{titulo}</b>",
+            x=0.5, y=0.95, xanchor='center'
+        ),
+        height=220,
+        margin=dict(l=10, r=10, t=40, b=10),
+        paper_bgcolor='rgba(0,0,0,0)',
+        plot_bgcolor='rgba(0,0,0,0)'
+    )
+    return fig
  
 if df_raw is not None:
      # --- MAPEADO DE COLUMNAS ---
