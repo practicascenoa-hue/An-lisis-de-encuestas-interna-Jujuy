@@ -140,7 +140,7 @@ if df_raw is not None:
              c1, c2 = st.columns(2)
              
              # Función maestra    # --- TAB 2: ASESORES ---
-    with tab2:
+     with tab2:
         st.subheader(f"Desempeño de Asesores - {mes_sel_nombre}")
         if len(df_mes) > 0:
             df_as = df_mes.groupby(col_asesor).size().reset_index(name='Encuestas')
@@ -157,8 +157,8 @@ if df_raw is not None:
                 df_res['¿RECIBIÓ SEGUIMIENTO?'] = df_res['Recibio_Seg_Count'].apply(lambda x: "Sí" if x > 0 else "No")
                 st.dataframe(df_res[[col_asesor, 'Total_Encuestas', '¿RECIBIÓ SEGUIMIENTO?', '% Cumplimiento']].sort_values('Total_Encuestas', ascending=False), use_container_width=True, hide_index=True)
  
-    # --- TAB 3: EVOLUCIÓN (FIXED) ---
-    with tab3:
+     # --- TAB 3: EVOLUCIÓN (FIXED) ---
+     with tab3:
         st.subheader(f"Evolución Mensual {anio_sel}")
         df_v = df_anio.groupby('Mes_Num').agg({col_fecha_nombre: 'count', col_csi_final: 'mean', col_nps_puntaje: 'mean'}).reset_index()
         df_v.columns = ['Mes_Num', 'Cant', 'CSI', 'NPS']
@@ -167,7 +167,7 @@ if df_raw is not None:
         st.plotly_chart(px.bar(df_v, y='Mes', x='Cant', orientation='h', text='Cant', color='Cant', color_continuous_scale='Sunset'), use_container_width=True)
  
 # --- TAB 4: RECLAMOS (LÓGICA NPS ESTRICTA + CATEGORIZACIÓN ÚNICA) ---
-    with tab4:
+     with tab4:
         # 1. Expander Informativo
         with st.expander("ℹ️ PROTOCOLO VOC (voz del cliente)"):
             st.markdown("""
