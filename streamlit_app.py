@@ -219,6 +219,7 @@ if df_raw is not None:
              # --- 2. SECCIÓN INFERIOR: RELOJES DETALLADOS POR PREGUNTA ---
              st.markdown("### Detalle por Pregunta de la Encuesta")
              
+             # --- FILA 1 DE RELOJES (Preguntas 1, 2 y 3) ---
              cod1, cod2, cod3 = st.columns(3)
              
              # --- PREGUNTA 1: FACILIDAD DE AGENDAMIENTO (COLUMNA F / ÍNDICE 5) ---
@@ -260,6 +261,74 @@ if df_raw is not None:
                          st.warning("Sin datos numéricos en Columna H")
                  except Exception as e:
                      st.error(f"Error en Columna H: {str(e)}")
+                     
+             # --- PREGUNTA 3: AMBIENTE DEL TALLER e INFRAESTRUCTURA (COLUMNA J / ÍNDICE 9) ---
+             with cod3:
+                 try:
+                     valores_ambiente = pd.to_numeric(df_mes[col_ambiente_J], errors='coerce').dropna()
+                     
+                     if not valores_ambiente.empty:
+                         score_ambiente = valores_ambiente.mean()
+                         st.plotly_chart(crear_gauge(
+                             score_ambiente, 
+                             "Q6 - Calidad Instalaciones y Confort", 
+                             rango=[1, 10], 
+                             tipo_escala='PREGUNTA'
+                         ), use_container_width=True)
+                         st.caption(f"📍 *Muestra: {len(valores_ambiente)} respuestas*")
+                     else:
+                         st.warning("Sin datos numéricos en Columna J")
+                 except Exception as e:
+                     st.error(f"Error en Columna J: {str(e)}")
+
+             st.write("") # Pequeño espacio vertical entre filas
+
+             # --- FILA 2 DE RELOJES (Preguntas 4 y 5) ---
+             cod4, cod5, cod6 = st.columns(3)
+
+             # --- PREGUNTA 4: CALIDAD CHAPA Y PINTURA (COLUMNA L / ÍNDICE 11) ---
+             with cod4:
+                 try:
+                     col_l_chapa = df_mes.columns[11] # Columna L es índice 11
+                     valores_chapa = pd.to_numeric(df_mes[col_l_chapa], errors='coerce').dropna()
+                     
+                     if not valores_chapa.empty:
+                         score_chapa = valores_chapa.mean()
+                         st.plotly_chart(crear_gauge(
+                             score_chapa, 
+                             "Q12 - Calidad Chapa y Pintura", 
+                             rango=[1, 10], 
+                             tipo_escala='PREGUNTA'
+                         ), use_container_width=True)
+                         st.caption(f"📍 *Muestra: {len(valores_chapa)} respuestas*")
+                     else:
+                         st.warning("Sin datos numéricos en Columna L")
+                 except Exception as e:
+                     st.error(f"Error en Columna L: {str(e)}")
+
+             # --- PREGUNTA 5: TIEMPO DE REPARACIÓN (COLUMNA N / ÍNDICE 13) ---
+             with cod5:
+                 try:
+                     col_n_tiempo = df_mes.columns[13] # Columna N es índice 13
+                     valores_tiempo = pd.to_numeric(df_mes[col_n_tiempo], errors='coerce').dropna()
+                     
+                     if not valores_tiempo.empty:
+                         score_tiempo = valores_tiempo.mean()
+                         st.plotly_chart(crear_gauge(
+                             score_tiempo, 
+                             "Q9 - Tiempo de Reparación", 
+                             rango=[1, 10], 
+                             tipo_escala='PREGUNTA'
+                         ), use_container_width=True)
+                         st.caption(f"📍 *Muestra: {len(valores_tiempo)} respuestas*")
+                     else:
+                         st.warning("Sin datos numéricos en Columna N")
+                 except Exception as e:
+                     st.error(f"Error en Columna N: {str(e)}")
+
+             # --- ESPACIO RESERVADO PARA UNA SEXTA PREGUNTA EN EL FUTURO ---
+             with cod6:
+                 st.info("📊 **Siguiente pregunta disponible**\n\nEspacio libre en la segunda fila.")
                      
              # --- PREGUNTA 3: AMBIENTE DEL TALLER e INFRAESTRUCTURA (COLUMNA J / ÍNDICE 9) ---
              with cod3:
