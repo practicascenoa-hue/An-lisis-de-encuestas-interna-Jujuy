@@ -9,262 +9,261 @@ st.set_page_config(page_title="DASHBOARD POSTVENTA", layout="wide")
  
 # Inicializar estados de sesión para filtros y botones
 if "f_tipo" not in st.session_state:
-   st.session_state.f_tipo = None
+    st.session_state.f_tipo = None
 if "f_val" not in st.session_state:
-   st.session_state.f_val = None
+    st.session_state.f_val = None
 if "btn_active" not in st.session_state:
-   st.session_state.btn_active = None
+    st.session_state.btn_active = None
 if "tab4_filter" not in st.session_state:
-   st.session_state.tab4_filter = None
+    st.session_state.tab4_filter = None
  
 # --- CSS: ESTILO GLOBAL Y TARJETAS DINÁMICAS ---
 st.markdown("""
-    <style>
-    div.stButton > button {
-        width: 100% !important;
-        height: 38px !important;
-        border-radius: 8px !important;
-    }
-   button[kind="primary"] {
-       background-color: #007bff !important;
-        border-color: #007bff !important;
-        color: white !important;
-        font-weight: bold !important;
-    }
-    .stTabs [data-baseweb="tab-list"] {
-        gap: 10px;
-       background-color: #f8f9fa;
-        padding: 10px;
-        border-radius: 10px;
-    }
-    .stTabs [data-baseweb="tab"] { font-weight: bold; }
-    
-    /* TARJETAS CON IDENTIDAD DE COLOR PARA LECTURA COMPLETA */
-    .comentario-card {
-       background-color: #ffffff;
-        padding: 15px;
-        border-radius: 8px;
-        margin-bottom: 10px;
-        box-shadow: 0 2px 8px rgba(0,0,0,0.05);
-        border: 1px solid #eee;
-    }
-    .borde-conforme { border-left: 5px solid #28a745; }
-    .borde-oportunidad { border-left: 5px solid #ffc107; }
-    .borde-critico { border-left: 5px solid #dc3545; }
-    
-    .comentario-header { font-weight: bold; color: #333; margin-bottom: 5px; font-size: 14px; }
-    .comentario-body { color: #555; font-size: 13px; line-height: 1.5; }
+     <style>
+     div.stButton > button {
+         width: 100% !important;
+         height: 38px !important;
+         border-radius: 8px !important;
+     }
+    button[kind="primary"] {
+        background-color: #007bff !important;
+         border-color: #007bff !important;
+         color: white !important;
+         font-weight: bold !important;
+     }
+     .stTabs [data-baseweb="tab-list"] {
+         gap: 10px;
+        background-color: #f8f9fa;
+         padding: 10px;
+         border-radius: 10px;
+     }
+     .stTabs [data-baseweb="tab"] { font-weight: bold; }
+     
+     /* TARJETAS CON IDENTIDAD DE COLOR PARA LECTURA COMPLETA */
+     .comentario-card {
+        background-color: #ffffff;
+         padding: 15px;
+         border-radius: 8px;
+         margin-bottom: 10px;
+         box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+         border: 1px solid #eee;
+     }
+     .borde-conforme { border-left: 5px solid #28a745; }
+     .borde-oportunidad { border-left: 5px solid #ffc107; }
+     .borde-critico { border-left: 5px solid #dc3545; }
+     
+     .comentario-header { font-weight: bold; color: #333; margin-bottom: 5px; font-size: 14px; }
+     .comentario-body { color: #555; font-size: 13px; line-height: 1.5; }
  
-    /* FORZAR SALTO DE LÍNEA EN TABLAS Y DATAFRAMES */
-   [data-testid="stTable"] td, [data-testid="stDataFrame"] td {
-        white-space: normal !important;
-        word-break: break-word !important;
-        line-height: 1.4 !important;
-    }
-    </style>
-   """, unsafe_allow_html=True)
+     /* FORZAR SALTO DE LÍNEA EN TABLAS Y DATAFRAMES */
+     [data-testid="stTable"] td, [data-testid="stDataFrame"] td {
+         white-space: normal !important;
+         word-break: break-word !important;
+         line-height: 1.4 !important;
+     }
+     </style>
+     """, unsafe_allow_html=True)
  
 # --- CARGA DE DATOS ---
 SHEET_URL = "https://docs.google.com/spreadsheets/d/1ER40wQho6sPz24oBvEUmQnsHnAxrnzmP3ppPukMy24Y/export?format=csv&gid=309618647"
  
 @st.cache_data(ttl=30)
 def load_data():
-    try:
-        df = pd.read_csv(SHEET_URL)
-        col_fecha = "Marca temporal"
-        if col_fecha in df.columns:
-           df[col_fecha] = pd.to_datetime(df[col_fecha], dayfirst=True, errors='coerce')
-        return df.dropna(how='all'), col_fecha
-    except: return None, None
+     try:
+         df = pd.read_csv(SHEET_URL)
+         col_fecha = "Marca temporal"
+         if col_fecha in df.columns:
+             df[col_fecha] = pd.to_datetime(df[col_fecha], dayfirst=True, errors='coerce')
+         return df.dropna(how='all'), col_fecha
+     except: return None, None
  
 df_raw, col_fecha_nombre = load_data()
  
 if df_raw is not None:
-    # --- MAPEADO DE COLUMNAS ---
-    col_comentario_K = df_raw.columns[10]
-    col_ambiente_J = df_raw.columns[9]
-    col_seguimiento = df_raw.columns[15]
-    col_nps_puntaje = df_raw.columns[16]
-    col_csi_final = df_raw.columns[18]
-    col_nps_comentario = df_raw.columns[17]
-    col_com_atencion = df_raw.columns[8]
-    col_com_calidad = df_raw.columns[12]
-    col_com_tiempo = df_raw.columns[14]
-    col_t_concatenado = df_raw.columns[19]
-    col_cliente = next((c for c in df_raw.columns if "nombre" in c.lower() and "apellido" in c.lower()), "Cliente")
-    col_asesor = next((c for c in df_raw.columns if "asesor" in c.lower() or "recepcionista" in c.lower()), "Asesor")
+     # --- MAPEADO DE COLUMNAS ---
+     col_comentario_K = df_raw.columns[10]
+     col_ambiente_J = df_raw.columns[9]
+     col_seguimiento = df_raw.columns[15]
+     col_nps_puntaje = df_raw.columns[16]
+     col_csi_final = df_raw.columns[18]
+     col_nps_comentario = df_raw.columns[17]
+     col_com_atencion = df_raw.columns[8]
+     col_com_calidad = df_raw.columns[12]
+     col_com_tiempo = df_raw.columns[14]
+     col_t_concatenado = df_raw.columns[19]
+     col_cliente = next((c for c in df_raw.columns if "nombre" in c.lower() and "apellido" in c.lower()), "Cliente")
+     col_asesor = next((c for c in df_raw.columns if "asesor" in c.lower() or "recepcionista" in c.lower()), "Asesor")
  
-    # --- LIMPIEZA DE DATOS ---
-    def clean_val(x):
-        if pd.isna(x): return 0.0
-        try:
-            val = str(x).replace('%', '').replace(',', '.').strip()
-            return float(val)
-        except: return 0.0
+     # --- LIMPIEZA DE DATOS ---
+     def clean_val(x):
+         if pd.isna(x): return 0.0
+         try:
+             val = str(x).replace('%', '').replace(',', '.').strip()
+             return float(val)
+         except: return 0.0
  
-    df_raw[col_nps_puntaje] = df_raw[col_nps_puntaje].apply(clean_val)
-    df_raw[col_csi_final] = df_raw[col_csi_final].apply(clean_val)
-    df_raw[col_ambiente_J] = df_raw[col_ambiente_J].apply(clean_val)
+     df_raw[col_nps_puntaje] = df_raw[col_nps_puntaje].apply(clean_val)
+     df_raw[col_csi_final] = df_raw[col_csi_final].apply(clean_val)
+     df_raw[col_ambiente_J] = df_raw[col_ambiente_J].apply(clean_val)
  
-    # Sidebar: Filtros de Tiempo
-    df_raw['Año'] = df_raw[col_fecha_nombre].dt.year
-    df_raw['Mes_Num'] = df_raw[col_fecha_nombre].dt.month
-    meses_dict = {1:"Enero", 2:"Febrero", 3:"Marzo", 4:"Abril", 5:"Mayo", 6:"Junio", 7:"Julio", 8:"Agosto", 9:"Septiembre", 10:"Octubre", 11:"Noviembre", 12:"Diciembre"}
-    
-    st.sidebar.header("FILTROS PERIODO")
-    anio_sel = st.sidebar.selectbox("Año", sorted(df_raw['Año'].dropna().unique().astype(int), reverse=True))
-    df_anio = df_raw[df_raw['Año'] == anio_sel].copy()
-    
-    meses_nros = sorted(df_anio['Mes_Num'].dropna().unique().astype(int))
-    mes_sel_nombre = st.sidebar.selectbox("Mes", [meses_dict[m] for m in meses_nros])
-    mes_sel_num = [k for k, v in meses_dict.items() if v == mes_sel_nombre][0]
-    df_mes = df_anio[df_anio['Mes_Num'] == mes_sel_num].copy()
+     # Sidebar: Filtros de Tiempo
+     df_raw['Año'] = df_raw[col_fecha_nombre].dt.year
+     df_raw['Mes_Num'] = df_raw[col_fecha_nombre].dt.month
+     meses_dict = {1:"Enero", 2:"Febrero", 3:"Marzo", 4:"Abril", 5:"Mayo", 6:"Junio", 7:"Julio", 8:"Agosto", 9:"Septiembre", 10:"Octubre", 11:"Noviembre", 12:"Diciembre"}
+     
+     st.sidebar.header("FILTROS PERIODO")
+     anio_sel = st.sidebar.selectbox("Año", sorted(df_raw['Año'].dropna().unique().astype(int), reverse=True))
+     df_anio = df_raw[df_raw['Año'] == anio_sel].copy()
+     
+     meses_nros = sorted(df_anio['Mes_Num'].dropna().unique().astype(int))
+     mes_sel_nombre = st.sidebar.selectbox("Mes", [meses_dict[m] for m in meses_nros])
+     mes_sel_num = [k for k, v in meses_dict.items() if v == mes_sel_nombre][0]
+     df_mes = df_anio[df_anio['Mes_Num'] == mes_sel_num].copy()
  
-    st.title("INDICADORES ENCUESTAS DE SATISFACCIÓN")
-    tab1, tab2, tab3, tab4 = st.tabs(["🎯 INDICADORES", "👤 ASESORES", "📊 EVOLUCIÓN MENSUAL", "⚠️ ANÁLISIS DE RECLAMOS"])
+     st.title("INDICADORES ENCUESTAS DE SATISFACCIÓN")
+     tab1, tab2, tab3, tab4 = st.tabs(["🎯 INDICADORES", "👤 ASESORES", "📊 EVOLUCIÓN MENSUAL", "⚠️ ANÁLISIS DE RECLAMOS"])
  
-    # --- TAB 1: INDICADORES (CON CUADRÍCULA DE RELOJES DE PREGUNTAS) ---
-    with tab1:
-        st.header(f"🎯 Indicadores Clave - {mes_sel_nombre} {anio_sel}")
-            
-        if len(df_mes) > 0:
-            # --- 1. SECCIÓN SUPERIOR: KPIs GLOBALES (NPS & CSI) ---
-                st.markdown("### Resumen Ejecutivo")
-                
-                # Cálculos base globales
-                nps_val = df_mes[col_nps_puntaje].mean() * 10
-                csi_raw = df_mes[col_csi_final].mean()
-                # Ajuste de escala CSI (si es 0.9 -> 90%, si es 90 -> 90%)
-                csi_val = csi_raw * 100 if csi_raw <= 1.1 else csi_raw
-    
-                c1, c2 = st.columns(2)
-                
-                # Función maestra para relojes (Gauges)
-                def crear_gauge(valor, titulo, rango=[0, 100], tipo_escala='VOC'):
-                    if tipo_escala == 'VOC':
-                        # Lógica de color estricta VOC: Rojo <=60, Amarillo <=90, Verde >90
-                        steps = [
-                            {'range': [0, 60], 'color': "#f8d7da"},
-                            {'range': [60, 90], 'color': "#fff3cd"},
-                            {'range': [90, 100], 'color': "#d1e7dd"}
-                        ]
-                        color_bar = "#34495e"
-                        format_num = ".1f"
-                        suffix_num = "%"
-                    else:
-                        # Lógica para preguntas individuales de escala 1 al 10
-                        steps = [
-                            {'range': [0, 6], 'color': "#f8d7da"},
-                            {'range': [6, 9], 'color': "#fff3cd"},
-                            {'range': [9, 10], 'color': "#d1e7dd"}
-                        ]
-                        color_bar = "#555555"
-                        format_num = ".1f"
-                        suffix_num = ""
-    
-                    fig = go.Figure(go.Indicator(
-                        mode="gauge+number", 
-                        value=valor, 
-                        title={'text': f"<b>{titulo}</b>", 'font': {'size': 16, 'color': '#333'}},
-                        number={'valueformat': format_num, 'suffix': suffix_num, 'font': {'size': 38, 'color': '#333'}},
-                        gauge={
-                            'axis': {'range': rango, 'tickwidth': 1, 'tickcolor': '#555', 'tickmode': 'linear', 'dtick': rango[1]/10},
-                            'bar': {'color': color_bar, 'thickness': 0.25},
-                            'bgcolor': "white",
-                            'borderwidth': 1,
-                            'bordercolor': "#ccc",
-                            'steps': steps
-                        }
-                    ))
-                    fig.update_layout(height=240, margin=dict(l=30, r=30, t=50, b=20), paper_bgcolor='rgba(0,0,0,0)')
-                    return fig
-    
-                with c1:
-                    st.plotly_chart(crear_gauge(nps_val, "NPS (Recomendación)", rango=[0, 100], tipo_escala='VOC'), use_container_width=True)
-                    
-                    # Conteo y botones de auditoría NPS
-                    p_c = len(df_mes[df_mes[col_nps_puntaje] >= 9])
-                    d_c = len(df_mes[df_mes[col_nps_puntaje] <= 6])
-                    pas_c = len(df_mes) - p_c - d_c
-                    
-                    _, b1, b2, b3 = st.columns([0.1, 1, 1, 1])
-                    if b1.button(f"🟢 {p_c} Prom", key="btn1_nps"):
-                        st.session_state.update({"f_tipo":"NPS","f_val":"Promotor"}); st.rerun()
-                    if b2.button(f"🟡 {pas_c} Neu", key="btn2_nps"):
-                        st.session_state.update({"f_tipo":"NPS","f_val":"Pasivo"}); st.rerun()
-                    if b3.button(f"🔴 {d_c} Det", key="btn3_nps"):
-                        st.session_state.update({"f_tipo":"NPS","f_val":"Detractor"}); st.rerun()
-    
-                with c2:
-                    st.plotly_chart(crear_gauge(csi_val, "CSI (Satisfacción)", rango=[0, 100], tipo_escala='VOC'), use_container_width=True)
-                    
-                    # Conteo y botones de auditoría CSI
-                    limit_exc = 90 if csi_val > 15 else 9
-                    limit_mal = 60 if csi_val > 15 else 6
-                    exc_c = len(df_mes[df_mes[col_csi_final] >= limit_exc])
-                    mal_c = len(df_mes[df_mes[col_csi_final] <= limit_mal])
-                    reg_c = len(df_mes) - exc_c - mal_c
-                    
-                    _, b4, b5, b6 = st.columns([0.1, 1, 1, 1])
-                    if b4.button(f"🟢 {exc_c} Exc", key="btn4_csi"):
-                        st.session_state.update({"f_tipo":"CSI","f_val":"Excelente"}); st.rerun()
-                    if b5.button(f"🟡 {reg_c} Reg", key="btn5_csi"):
-                        st.session_state.update({"f_tipo":"CSI","f_val":"Regular"}); st.rerun()
-                    if b6.button(f"🔴 {mal_c} Mal", key="btn6_csi"):
-                        st.session_state.update({"f_tipo":"CSI","f_val":"Malo"}); st.rerun()
-    
-                st.write("---")
-                
-                # --- 2. SECCIÓN INFERIOR: RELOJES DETALLADOS POR PREGUNTA ---
-                st.markdown("### Detalle por Pregunta de la Encuesta")
-                
-                # Definimos la cuadrícula de 3 columnas para los relojes individuales
-                cod1, cod2, cod3 = st.columns(3)
-                
-                # --- PREGUNTA 1: FACILIDAD DE AGENDAMIENTO (COLUMNA F / ÍNDICE 5) ---
-                try:
-                    col_f_turno = df_mes.columns[5] # Columna F es índice 5
-                    # Limpieza rápida para asegurar que promedie solo valores numéricos válidos
-                    valores_turno = pd.to_numeric(df_mes[col_f_turno], errors='coerce').dropna()
-                    
-                    if not valores_turno.empty:
-                        score_turno = valores_turno.mean()
-                        with cod1:
-                            st.plotly_chart(crear_gauge(
-                                score_turno, 
-                                "Q5 - Facilidad de Agendamiento", 
-                                rango=[1, 10], 
-                                tipo_escala='PREGUNTA'
-                            ), use_container_width=True)
-                            st.caption(f"📍 *Muestra: {len(valores_turno)} respuestas*")
-                    else:
-                        with cod1: st.warning("Sin datos numéricos en Columna F")
-                except Exception as e:
-                    with cod1: st.error(f"Error en Columna F: {str(e)}")
-    
-                # --- PREGUNTA 2: ATENCIÓN Y CORTESÍA DEL ASESOR (COLUMNA H / ÍNDICE 7) ---
-            with cod2:
-                try:
-                    col_h_asesor = df_mes.columns[7] # Columna H es índice 7
-                    # Limpieza de datos numéricos para promediar correctamente
-                    valores_asesor = pd.to_numeric(df_mes[col_h_asesor], errors='coerce').dropna()
-                    
-                    if not valores_asesor.empty:
-                        score_asesor = valores_asesor.mean()
-                        st.plotly_chart(crear_gauge(
-                            score_asesor, 
-                            "Q8 - Cortesía y Competencia Asesor", 
-                            rango=[1, 10], 
-                            tipo_escala='PREGUNTA'
-                        ), use_container_width=True)
-                        st.caption(f"📍 *Muestra: {len(valores_asesor)} respuestas*")
-                    else:
-                        st.warning("Sin datos numéricos en Columna H")
-                except Exception as e:
-                    st.error(f"Error en Columna H: {str(e)}")
-                with cod3:
-                    st.info("📊 **Siguiente pregunta disponible**\n\nEspacio reservado para el tercer indicador.")
-    
+     # --- TAB 1: INDICADORES (CON CUADRÍCULA DE RELOJES DE PREGUNTAS) ---
+     with tab1:
+         st.header(f"🎯 Indicadores Clave - {mes_sel_nombre} {anio_sel}")
+                 
+         if len(df_mes) > 0:
+             # --- 1. SECCIÓN SUPERIOR: KPIs GLOBALES (NPS & CSI) ---
+             st.markdown("### Resumen Ejecutivo")
+             
+             # Cálculos base globales
+             nps_val = df_mes[col_nps_puntaje].mean() * 10
+             csi_raw = df_mes[col_csi_final].mean()
+             # Ajuste de escala CSI (si es 0.9 -> 90%, si es 90 -> 90%)
+             csi_val = csi_raw * 100 if csi_raw <= 1.1 else csi_raw
+ 
+             c1, c2 = st.columns(2)
+             
+             # Función maestra para relojes (Gauges)
+             def crear_gauge(valor, titulo, rango=[0, 100], tipo_escala='VOC'):
+                 if tipo_escala == 'VOC':
+                     # Lógica de color estricta VOC: Rojo <=60, Amarillo <=90, Verde >90
+                     steps = [
+                         {'range': [0, 60], 'color': "#f8d7da"},
+                         {'range': [60, 90], 'color': "#fff3cd"},
+                         {'range': [90, 100], 'color': "#d1e7dd"}
+                     ]
+                     color_bar = "#34495e"
+                     format_num = ".1f"
+                     suffix_num = "%"
+                 else:
+                     # Lógica para preguntas individuales de escala 1 al 10
+                     steps = [
+                         {'range': [0, 6], 'color': "#f8d7da"},
+                         {'range': [6, 9], 'color': "#fff3cd"},
+                         {'range': [9, 10], 'color': "#d1e7dd"}
+                     ]
+                     color_bar = "#555555"
+                     format_num = ".1f"
+                     suffix_num = ""
+ 
+                 fig = go.Figure(go.Indicator(
+                     mode="gauge+number", 
+                     value=valor, 
+                     title={'text': f"<b>{titulo}</b>", 'font': {'size': 16, 'color': '#333'}},
+                     number={'valueformat': format_num, 'suffix': suffix_num, 'font': {'size': 38, 'color': '#333'}},
+                     gauge={
+                         'axis': {'range': rango, 'tickwidth': 1, 'tickcolor': '#555', 'tickmode': 'linear', 'dtick': rango[1]/10},
+                         'bar': {'color': color_bar, 'thickness': 0.25},
+                         'bgcolor': "white",
+                         'borderwidth': 1,
+                         'bordercolor': "#ccc",
+                         'steps': steps
+                     }
+                 ))
+                 fig.update_layout(height=240, margin=dict(l=30, r=30, t=50, b=20), paper_bgcolor='rgba(0,0,0,0)')
+                 return fig
+ 
+             with c1:
+                 st.plotly_chart(crear_gauge(nps_val, "NPS (Recomendación)", rango=[0, 100], tipo_escala='VOC'), use_container_width=True)
+                 
+                 # Conteo y botones de auditoría NPS
+                 p_c = len(df_mes[df_mes[col_nps_puntaje] >= 9])
+                 d_c = len(df_mes[df_mes[col_nps_puntaje] <= 6])
+                 pas_c = len(df_mes) - p_c - d_c
+                 
+                 _, b1, b2, b3 = st.columns([0.1, 1, 1, 1])
+                 if b1.button(f"🟢 {p_c} Prom", key="btn1_nps"):
+                     st.session_state.update({"f_tipo":"NPS","f_val":"Promotor"}); st.rerun()
+                 if b2.button(f"🟡 {pas_c} Neu", key="btn2_nps"):
+                     st.session_state.update({"f_tipo":"NPS","f_val":"Pasivo"}); st.rerun()
+                 if b3.button(f"🔴 {d_c} Det", key="btn3_nps"):
+                     st.session_state.update({"f_tipo":"NPS","f_val":"Detractor"}); st.rerun()
+ 
+             with c2:
+                 st.plotly_chart(crear_gauge(csi_val, "CSI (Satisfacción)", rango=[0, 100], tipo_escala='VOC'), use_container_width=True)
+                 
+                 # Conteo y botones de auditoría CSI
+                 limit_exc = 90 if csi_val > 15 else 9
+                 limit_mal = 60 if csi_val > 15 else 6
+                 exc_c = len(df_mes[df_mes[col_csi_final] >= limit_exc])
+                 mal_c = len(df_mes[df_mes[col_csi_final] <= limit_mal])
+                 reg_c = len(df_mes) - exc_c - mal_c
+                 
+                 _, b4, b5, b6 = st.columns([0.1, 1, 1, 1])
+                 if b4.button(f"🟢 {exc_c} Exc", key="btn4_csi"):
+                     st.session_state.update({"f_tipo":"CSI","f_val":"Excelente"}); st.rerun()
+                 if b5.button(f"🟡 {reg_c} Reg", key="btn5_csi"):
+                     st.session_state.update({"f_tipo":"CSI","f_val":"Regular"}); st.rerun()
+                 if b6.button(f"🔴 {mal_c} Mal", key="btn6_csi"):
+                     st.session_state.update({"f_tipo":"CSI","f_val":"Malo"}); st.rerun()
+ 
+             st.write("---")
+             
+             # --- 2. SECCIÓN INFERIOR: RELOJES DETALLADOS POR PREGUNTA ---
+             st.markdown("### Detalle por Pregunta de la Encuesta")
+             
+             # Definimos la cuadrícula de 3 columnas para los relojes individuales
+             cod1, cod2, cod3 = st.columns(3)
+             
+             # --- PREGUNTA 1: FACILIDAD DE AGENDAMIENTO (COLUMNA F / ÍNDICE 5) ---
+             with cod1:
+                 try:
+                     col_f_turno = df_mes.columns[5] # Columna F es índice 5
+                     valores_turno = pd.to_numeric(df_mes[col_f_turno], errors='coerce').dropna()
+                     
+                     if not valores_turno.empty:
+                         score_turno = valores_turno.mean()
+                         st.plotly_chart(crear_gauge(
+                             score_turno, 
+                             "Q5 - Facilidad de Agendamiento", 
+                             rango=[1, 10], 
+                             tipo_escala='PREGUNTA'
+                         ), use_container_width=True)
+                         st.caption(f"📍 *Muestra: {len(valores_turno)} respuestas*")
+                     else:
+                         st.warning("Sin datos numéricos en Columna F")
+                 except Exception as e:
+                     st.error(f"Error en Columna F: {str(e)}")
+ 
+             # --- PREGUNTA 2: ATENCIÓN Y CORTESÍA DEL ASESOR (COLUMNA H / ÍNDICE 7) ---
+             with cod2:
+                 try:
+                     col_h_asesor = df_mes.columns[7] # Columna H es índice 7
+                     valores_asesor = pd.to_numeric(df_mes[col_h_asesor], errors='coerce').dropna()
+                     
+                     if not valores_asesor.empty:
+                         score_asesor = valores_asesor.mean()
+                         st.plotly_chart(crear_gauge(
+                             score_asesor, 
+                             "Q8 - Cortesía y Competencia Asesor", 
+                             rango=[1, 10], 
+                             tipo_escala='PREGUNTA'
+                         ), use_container_width=True)
+                         st.caption(f"📍 *Muestra: {len(valores_asesor)} respuestas*")
+                     else:
+                         st.warning("Sin datos numéricos en Columna H")
+                 except Exception as e:
+                     st.error(f"Error en Columna H: {str(e)}")
+                     
+             # --- PREGUNTA 3: ESPACIO DISPONIBLE ---
+             with cod3:
+                 st.info("📊 **Siguiente pregunta disponible**\n\nEspacio reservado para el tercer indicador.")    
                 # --- 3. AMBIENTE TALLER ---
                 amb_val = df_mes[col_ambiente_J].mean() * 10
                 st.markdown(f"""
