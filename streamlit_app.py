@@ -123,7 +123,7 @@ if df_raw is not None:
      st.title("INDICADORES ENCUESTAS DE SATISFACCIÓN")
      tab1, tab2, tab3, tab4 = st.tabs(["🎯 INDICADORES", "👤 ASESORES", "📊 EVOLUCIÓN MENSUAL", "⚠️ ANÁLISIS DE RECLAMOS"])
  
-     # --- TAB 1: INDICADORES (CON CUADRÍCULA DE RELOJES DE PREGUNTAS) ---
+     # --- TAB 1: INDICADORES (CON CUADRÍCULA DE ANILLOS CORPORATIVOS) ---
      with tab1:
          st.header(f"🎯 Indicadores Clave - {mes_sel_nombre} {anio_sel}")
                  
@@ -138,228 +138,151 @@ if df_raw is not None:
  
              c1, c2 = st.columns(2)
              
-             # Función maestra para relojes (Gauges) con Llave Única (key) integrada
-             def crear_gauge(valor, titulo, rango=[0, 100], tipo_escala='VOC'):
-                 if tipo_escala == 'VOC':
-                     steps = [
-                         {'range': [0, 60], 'color': "#f8d7da"},
-                         {'range': [60, 90], 'color': "#fff3cd"},
-                         {'range': [90, 100], 'color': "#d1e7dd"}
-                     ]
-                     color_bar = "#34495e"
-                     format_num = ".1f"
-                     suffix_num = "%"
-                 else:
-                     steps = [
-                         {'range': [0, 6], 'color': "#f8d7da"},
-                         {'range': [6, 9], 'color': "#fff3cd"},
-                         {'range': [9, 10], 'color': "#d1e7dd"}
-                     ]
-                     color_bar = "#555555"
-                     format_num = ".1f"
-                     suffix_num = ""
+             # --- NUEVA FUNCIÓN MAESTRA: ANILLO EVOLUCIONADO CORPORATIVO ---
+             def crear_anillo_corporativo(valores_serie, titulo):
+                 # Convertir a numérico y limpiar
+                 validos = pd.to_numeric(valores_serie, errors='coerce').dropna()
+                 muestra = len(validos)
+                 
+                 if muestra == 0:
+                     # Retornar un anillo vacío gris si no hay datos
+                     fig = go.Figure(go.Pie(values=[1], hole=0.75, marker=dict(colors=['#e9ecef']), showlegend=False, hoverinfo='none'))
+                     fig.update_layout(title=dict(text=f"<b>{titulo}</b><br><span style='font-size:12px;color:orange;'>Sin Datos</span>", x=0.5, y=0.5))
+                     return fig
+                     
+                 promedio = validos.mean()
+                 
+                 # Segmentación para armar las porciones del anillo como la marca
+                 # Contamos cuántos clientes caen en cada tramo (Rojo: 1-6, Amarillo: 7-8, Verde: 9-10)
+                 detractores = len(validos[validos <= 6])
+                 pasivos = len(validos[(validos > 6) & (validos <= 8)])
+                 promotores = len(validos[validos >= 9])
+                 
+                 # Si todos son 0 (evitar error), por defecto rellenamos
+                 cantidades = [promotores, pasivos, detractores]
+                 colores = ['#28a745', '#ffc107', '#dc3545'] # Verde, Amarillo, Rojo oficiales
+                 
+                 # Si la muestra es positiva pero no queremos que se rompa el gráfico si están en 0
+                 if sum(cantidades) == 0:
+                     cantidades = [1]
+                     colores = ['#e9ecef']
  
+                 # Crear el anillo de progreso
+                 fig = go.Figure(go.Pie(
+                     labels=['Excelente/Promotor', 'Regular/Pasivo', 'Malo/Detractor'],
+                     values=cantidades,
+                     hole=0.78,
+                     marker=dict(colors=colores),
+                     sort=False,
+                     showlegend=False,
+                     hoverinfo='label+percent'
+                 ))
+                 
+                 # Inyectar el número gigante y la muestra exacta en el centro del anillo
+                 fig.update_layout(
+                     annotations=[
+                         dict(
+                             text=f"<b style='font-size:36px;color:#2c3e50;'>{promedio:.1f}</b>",
+                             x=0.5, y=0.6, showarrow=False
+                         ),
+                         dict(
+                             text=f"<span style='font-size:12px;color:#6c757d;'>Respuestas<br><b>{muestra}</b></span>",
+                             x=0.5, y=0.35, showarrow=False
+                         )
+                     ],
+                     title=dict(
+                         text=f"<b style='font-size:15px;color:#333;'>{titulo}</b>",
+                         x=0.5, y=0.95, xanchor='center'
+                     ),
+                     height=220,
+                     margin=dict(l=10, r=10, t=40, b=10),
+                     paper_bgcolor='rgba(0,0,0,0)',
+                     plot_bgcolor='rgba(0,0,0,0)'
+                 )
+                 return fig
+ 
+             # Lógica para los relojes tradicionales superiores (Resumen Ejecutivo)
+             def crear_gauge_global(valor, titulo, rango=[0, 100]):
+                 steps = [
+                     {'range': [0, 60], 'color': "#f8d7da"},
+                     {'range': [60, 90], 'color': "#fff3cd"},
+                     {'range': [90, 100], 'color': "#d1e7dd"}
+                 ]
                  fig = go.Figure(go.Indicator(
-                     mode="gauge+number", 
-                     value=valor, 
-                     title={'text': f"<b>{titulo}</b>", 'font': {'size': 16, 'color': '#333'}},
-                     number={'valueformat': format_num, 'suffix': suffix_num, 'font': {'size': 38, 'color': '#333'}},
+                     mode="gauge+number", value=valor, 
+                     title={'text': f"<b>{titulo}</b>", 'font': {'size': 16}},
+                     number={'valueformat': ".1f", 'suffix': "%", 'font': {'size': 36}},
                      gauge={
-                         'axis': {'range': rango, 'tickwidth': 1, 'tickcolor': '#555', 'tickmode': 'linear', 'dtick': rango[1]/10},
-                         'bar': {'color': color_bar, 'thickness': 0.25},
-                         'bgcolor': "white",
-                         'borderwidth': 1,
-                         'bordercolor': "#ccc",
-                         'steps': steps
+                         'axis': {'range': rango, 'tickwidth': 1, 'dtick': 20},
+                         'bar': {'color': "#34495e", 'thickness': 0.25},
+                         'bgcolor': "white", 'borderwidth': 1, 'bordercolor': "#ccc", 'steps': steps
                      }
                  ))
-                 fig.update_layout(height=240, margin=dict(l=30, r=30, t=50, b=20), paper_bgcolor='rgba(0,0,0,0)')
+                 fig.update_layout(height=220, margin=dict(l=30, r=30, t=40, b=10), paper_bgcolor='rgba(0,0,0,0)')
                  return fig
  
              with c1:
-                 st.plotly_chart(crear_gauge(nps_val, "NPS (Recomendación)", rango=[0, 100], tipo_escala='VOC'), use_container_width=True, key="gauge_nps_global")
-                 
+                 st.plotly_chart(crear_gauge_global(nps_val, "NPS (Recomendación)"), use_container_width=True, key="gauge_nps_global")
                  p_c = len(df_mes[df_mes[col_nps_puntaje] >= 9])
                  d_c = len(df_mes[df_mes[col_nps_puntaje] <= 6])
                  pas_c = len(df_mes) - p_c - d_c
-                 
                  _, b1, b2, b3 = st.columns([0.1, 1, 1, 1])
                  if b1.button(f"🟢 {p_c} Prom", key="btn1_nps"):
-                     st.session_state.update({"f_tipo":"NPS","f_val":"Promotor"})
-                     st.rerun()
+                     st.session_state.update({"f_tipo":"NPS","f_val":"Promotor"}); st.rerun()
                  if b2.button(f"🟡 {pas_c} Neu", key="btn2_nps"):
-                     st.session_state.update({"f_tipo":"NPS","f_val":"Pasivo"})
-                     st.rerun()
+                     st.session_state.update({"f_tipo":"NPS","f_val":"Pasivo"}); st.rerun()
                  if b3.button(f"🔴 {d_c} Det", key="btn3_nps"):
-                     st.session_state.update({"f_tipo":"NPS","f_val":"Detractor"})
-                     st.rerun()
+                     st.session_state.update({"f_tipo":"NPS","f_val":"Detractor"}); st.rerun()
  
              with c2:
-                 st.plotly_chart(crear_gauge(csi_val, "CSI (Satisfacción)", rango=[0, 100], tipo_escala='VOC'), use_container_width=True, key="gauge_csi_global")
-                 
+                 st.plotly_chart(crear_gauge_global(csi_val, "CSI (Satisfacción)"), use_container_width=True, key="gauge_csi_global")
                  limit_exc = 90 if csi_val > 15 else 9
                  limit_mal = 60 if csi_val > 15 else 6
                  exc_c = len(df_mes[df_mes[col_csi_final] >= limit_exc])
                  mal_c = len(df_mes[df_mes[col_csi_final] <= limit_mal])
                  reg_c = len(df_mes) - exc_c - mal_c
-                 
                  _, b4, b5, b6 = st.columns([0.1, 1, 1, 1])
                  if b4.button(f"🟢 {exc_c} Exc", key="btn4_csi"):
-                     st.session_state.update({"f_tipo":"CSI","f_val":"Excelente"})
-                     st.rerun()
+                     st.session_state.update({"f_tipo":"CSI","f_val":"Excelente"}); st.rerun()
                  if b5.button(f"🟡 {reg_c} Reg", key="btn5_csi"):
-                     st.session_state.update({"f_tipo":"CSI","f_val":"Regular"})
-                     st.rerun()
+                     st.session_state.update({"f_tipo":"CSI","f_val":"Regular"}); st.rerun()
                  if b6.button(f"🔴 {mal_c} Mal", key="btn6_csi"):
-                     st.session_state.update({"f_tipo":"CSI","f_val":"Malo"})
-                     st.rerun()
+                     st.session_state.update({"f_tipo":"CSI","f_val":"Malo"}); st.rerun()
  
              st.write("---")
              
-             # --- 2. SECCIÓN INFERIOR: RELOJES DETALLADOS POR PREGUNTA ---
-             st.markdown("### Detalle por Pregunta de la Encuesta")
+             # --- 2. SECCIÓN INFERIOR: CUADRÍCULA DE ANILLOS LIMPIOS ---
+             st.markdown("### Detalle por Pregunta de la Encuesta (Estilo Corporativo)")
              
-             # --- FILA 1 DE RELOJES (Preguntas 1, 2 y 3) ---
+             # --- FILA 1 DE ANILLOS (Preguntas 1, 2 y 3) ---
              cod1, cod2, cod3 = st.columns(3)
              
-             # --- PREGUNTA 1: FACILIDAD DE AGENDAMIENTO (COLUMNA F / ÍNDICE 5) ---
              with cod1:
-                 try:
-                     col_f_turno = df_mes.columns[5]
-                     valores_turno = pd.to_numeric(df_mes[col_f_turno], errors='coerce').dropna()
-                     
-                     if not valores_turno.empty:
-                         score_turno = valores_turno.mean()
-                         st.plotly_chart(crear_gauge(
-                             score_turno, 
-                             "Q5 - Facilidad de Agendamiento", 
-                             rango=[1, 10], 
-                             tipo_escala='PREGUNTA'
-                         ), use_container_width=True, key="gauge_q5_agendamiento")
-                         st.caption(f"📍 *Muestra: {len(valores_turno)} respuestas*")
-                     else:
-                         st.warning("Sin datos numéricos en Columna F")
-                 except Exception as e:
-                     st.error(f"Error en Columna F: {str(e)}")
+                 col_f_turno = df_mes.columns[5]
+                 st.plotly_chart(crear_anillo_corporativo(df_mes[col_f_turno], "Q5 - Facilidad de Agendamiento"), use_container_width=True, key="anillo_q5_agendamiento")
  
-             # --- PREGUNTA 2: ATENCIÓN Y CORTESÍA DEL ASESOR (COLUMNA H / ÍNDICE 7) ---
              with cod2:
-                 try:
-                     col_h_asesor = df_raw.columns[7]
-                     valores_asesor = pd.to_numeric(df_mes[col_h_asesor], errors='coerce').dropna()
+                 col_h_asesor = df_raw.columns[7]
+                 st.plotly_chart(crear_anillo_corporativo(df_mes[col_h_asesor], "Q8 - Cortesía y Competencia Asesor"), use_container_width=True, key="anillo_q8_asesor")
                      
-                     if not valores_asesor.empty:
-                         score_asesor = valores_asesor.mean()
-                         st.plotly_chart(crear_gauge(
-                             score_asesor, 
-                             "Q8 - Cortesía y Competencia Asesor", 
-                             rango=[1, 10], 
-                             tipo_escala='PREGUNTA'
-                         ), use_container_width=True, key="gauge_q8_asesor")
-                         st.caption(f"📍 *Muestra: {len(valores_asesor)} respuestas*")
-                     else:
-                         st.warning("Sin datos numéricos en Columna H")
-                 except Exception as e:
-                     st.error(f"Error en Columna H: {str(e)}")
-                     
-             # --- PREGUNTA 3: AMBIENTE DEL TALLER (COLUMNA J / ÍNDICE 9) ---
              with cod3:
-                 try:
-                     valores_ambiente = pd.to_numeric(df_mes[col_ambiente_J], errors='coerce').dropna()
-                     
-                     if not valores_ambiente.empty:
-                         score_ambiente = valores_ambiente.mean()
-                         st.plotly_chart(crear_gauge(
-                             score_ambiente, 
-                             "Q6 - Calidad Instalaciones y Confort", 
-                             rango=[1, 10], 
-                             tipo_escala='PREGUNTA'
-                         ), use_container_width=True, key="gauge_q6_ambiente")
-                         st.caption(f"📍 *Muestra: {len(valores_ambiente)} respuestas*")
-                     else:
-                         st.warning("Sin datos numéricos en Columna J")
-                 except Exception as e:
-                     st.error(f"Error en Columna J: {str(e)}")
+                 st.plotly_chart(crear_anillo_corporativo(df_mes[col_ambiente_J], "Q6 - Calidad Instalaciones y Confort"), use_container_width=True, key="anillo_q6_ambiente")
  
              st.write("") # Espacio sutil entre filas
  
-             # --- FILA 2 DE RELOJES (Preguntas 4 y 5) ---
+             # --- FILA 2 DE ANILLOS (Preguntas 4 y 5) ---
              cod4, cod5, cod6 = st.columns(3)
  
-             # --- PREGUNTA 4: CALIDAD CHAPA Y PINTURA (COLUMNA L / ÍNDICE 11) ---
              with cod4:
-                 try:
-                     col_l_chapa = df_mes.columns[11]
-                     valores_chapa = pd.to_numeric(df_mes[col_l_chapa], errors='coerce').dropna()
-                     
-                     if not valores_chapa.empty:
-                         score_chapa = valores_chapa.mean()
-                         st.plotly_chart(crear_gauge(
-                             score_chapa, 
-                             "Q12 - Calidad Chapa y Pintura", 
-                             rango=[1, 10], 
-                             tipo_escala='PREGUNTA'
-                         ), use_container_width=True, key="gauge_q12_chapa")
-                         st.caption(f"📍 *Muestra: {len(valores_chapa)} respuestas*")
-                     else:
-                         st.warning("Sin datos numéricos en Columna L")
-                 except Exception as e:
-                     st.error(f"Error en Columna L: {str(e)}")
+                 col_l_chapa = df_mes.columns[11]
+                 st.plotly_chart(crear_anillo_corporativo(df_mes[col_l_chapa], "Q12 - Calidad Chapa y Pintura"), use_container_width=True, key="anillo_q12_chapa")
  
-             # --- PREGUNTA 5: TIEMPO DE REPARACIÓN (COLUMNA N / ÍNDICE 13) ---
              with cod5:
-                 try:
-                     col_n_tiempo = df_mes.columns[13]
-                     valores_tiempo = pd.to_numeric(df_mes[col_n_tiempo], errors='coerce').dropna()
-                     
-                     if not valores_tiempo.empty:
-                         score_tiempo = valores_tiempo.mean()
-                         st.plotly_chart(crear_gauge(
-                             score_tiempo, 
-                             "Q9 - Tiempo de Reparación", 
-                             rango=[1, 10], 
-                             tipo_escala='PREGUNTA'
-                         ), use_container_width=True, key="gauge_q9_tiempo")
-                         st.caption(f"📍 *Muestra: {len(valores_tiempo)} respuestas*")
-                     else:
-                         st.warning("Sin datos numéricos en Columna N")
-                 except Exception as e:
-                     st.error(f"Error en Columna N: {str(e)}")
+                 col_n_tiempo = df_mes.columns[13]
+                 st.plotly_chart(crear_anillo_corporativo(df_mes[col_n_tiempo], "Q9 - Tiempo de Reparación"), use_container_width=True, key="anillo_q9_tiempo")
  
-             # --- ESPACIO RESERVADO ---
              with cod6:
-                 st.info("📊 **Siguiente pregunta disponible**\n\nEspacio libre en la segunda fila.")
- 
-
-             # --- 4. SECCIÓN DE AUDITORÍA DINÁMICA ---
-             if st.session_state.f_tipo:
-                 st.markdown("---")
-                 col_aud1, col_aud2 = st.columns([3, 1])
-                 with col_aud1:
-                     st.subheader(f"🔍 Auditoría {st.session_state.f_tipo}: {st.session_state.f_val}")
-                 with col_aud2:
-                     if st.button("✖️ Cerrar Auditoría", key="close_aud"):
-                         st.session_state.update({"f_tipo": None, "f_val": None})
-                         st.rerun()
-                 
-                 if st.session_state.f_tipo == "NPS":
-                     if st.session_state.f_val == "Promotor":
-                         df_f = df_mes[df_mes[col_nps_puntaje] >= 9]
-                     elif st.session_state.f_val == "Detractor":
-                         df_f = df_mes[df_mes[col_nps_puntaje] <= 6]
-                     else:
-                         df_f = df_mes[(df_mes[col_nps_puntaje] > 6) & (df_mes[col_nps_puntaje] < 9)]
-                     cols_show = [col_cliente, col_asesor, col_nps_puntaje, col_nps_comentario]
-                 else:
-                     if st.session_state.f_val == "Excelente":
-                         df_f = df_mes[df_mes[col_csi_final] >= limit_exc]
-                     elif st.session_state.f_val == "Malo":
-                         df_f = df_mes[df_mes[col_csi_final] <= limit_mal]
-                     else:
-                         df_f = df_mes[(df_mes[col_csi_final] > limit_mal) & (df_mes[col_csi_final] < limit_exc)]
-                     cols_show = [col_cliente, col_asesor, col_csi_final, col_com_atencion, col_com_calidad, col_com_tiempo]
- 
-                 st.dataframe(df_f[cols_show].fillna("Sin comentario"), use_container_width=True, hide_index=True)             
+                 st.info("📊 **Siguiente pregunta disponible**\n\nEspacio libre en la segunda fila.")             
            
      # --- TAB 2: ASESORES ---
      with tab2:
