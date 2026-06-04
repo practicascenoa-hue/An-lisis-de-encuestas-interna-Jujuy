@@ -360,23 +360,58 @@ if df_raw is not None:
                      cols_show = [col_cliente, col_asesor, col_csi_final, col_com_atencion, col_com_calidad, col_com_tiempo]
  
                  st.dataframe(df_f[cols_show].fillna("Sin comentario"), use_container_width=True, hide_index=True)             
-             # Función maestra    # --- TAB 2: ASESORES ---
+           
+     # --- TAB 2: ASESORES ---
      with tab2:
-        st.subheader(f"Desempeño de Asesores - {mes_sel_nombre}")
+        st.subheader(f"👤 Desempeño de Asesores - {mes_sel_nombre} {anio_sel}")
+        
         if len(df_mes) > 0:
+            # 1. Gráfico de volumen de encuestas por asesor
             df_as = df_mes.groupby(col_asesor).size().reset_index(name='Encuestas')
-            st.plotly_chart(px.bar(df_as, x=col_asesor, y='Encuestas', text='Encuestas', color='Encuestas', color_continuous_scale='Blues'), use_container_width=True)
+            st.plotly_chart(px.bar(df_as, x=col_asesor, y='Encuestas', text='Encuestas', color='Encuestas', color_continuous_scale='Blues'), use_container_width=True, key="bar_asesores_vol")
+            
             st.markdown("---")
+            
             ca, cb = st.columns([1, 2])
+            
             with ca:
+                # Gráfico de torta global de seguimiento en el mes
                 res_p = df_mes[col_seguimiento].fillna("N/C").value_counts().reset_index()
-                st.plotly_chart(px.pie(res_p, names=res_p.columns[0], values='count', hole=0.4), use_container_width=True)
+                st.plotly_chart(px.pie(res_p, names=res_p.columns[0], values='count', hole=0.4), use_container_width=True, key="pie_seguimiento_global")
+            
             with cb:
+                # Aseguramos la limpieza de la columna Q8 (Cortesía - Columna H / Índice 7) de forma temporal para la tabla
+                col_h_asesor = df_mes.columns[7]
+                df_mes['Q8_Num'] = pd.to_numeric(df_mes[col_h_asesor], errors='coerce')
+                
+                # Lógica de conversión para el cumplimiento del seguimiento
                 df_mes['Sigue_Num'] = df_mes[col_seguimiento].apply(lambda x: 1 if str(x).lower().strip() == 'sí' else 0)
-                df_res = df_mes.groupby(col_asesor).agg(Total_Encuestas=(col_asesor, 'size'), Recibio_Seg_Count=('Sigue_Num', 'sum')).reset_index()
-                df_res['% Cumplimiento'] = (df_res['Recibio_Seg_Count'] / df_res['Total_Encuestas'] * 100).round(1).astype(str) + "%"
-                df_res['¿RECIBIÓ SEGUIMIENTO?'] = df_res['Recibio_Seg_Count'].apply(lambda x: "Sí" if x > 0 else "No")
-                st.dataframe(df_res[[col_asesor, 'Total_Encuestas', '¿RECIBIÓ SEGUIMIENTO?', '% Cumplimiento']].sort_values('Total_Encuestas', ascending=False), use_container_width=True, hide_index=True)
+                
+                # Agrupación maestra por asesor sumando volumen, seguimiento y la nueva columna promedio Q8
+                df_res = df_mes.groupby(col_asesor).agg(
+                    Total_Encuestas=(col_asesor, 'size'),
+                    Recibio_Seg_Count=('Sigue_Num', 'sum'),
+                    Nota_Q8_Prom=('Q8_Num', 'mean') # <-- Tu columna extra estratégica
+                ).reset_index()
+                
+                # Formateo de métricas para la visualización final de la tabla
+                df_res['% Cumplimiento Seg.'] = (df_res['Recibio_Seg_Count'] / df_res['Total_Encuestas'] * 100).round(1).astype(str) + "%"
+                df_res['Nota Cortesía (Q8)'] = df_res['Nota_Q8_Prom'].apply(lambda x: f"{x:.2f}" if pd.notna(x) else "Sin notas")
+                
+                # Columnas finales seleccionadas y ordenadas para el negocio
+                columnas_finales = [
+                    col_asesor, 
+                    'Total_Encuestas', 
+                    '% Cumplimiento Seg.', 
+                    'Nota Cortesía (Q8)' # <-- Columna extra inyectada al final
+                ]
+                
+                st.markdown("### 📊 Tabla de Rendimiento Individual")
+                st.dataframe(
+                    df_res[columnas_finales].sort_values('Total_Encuestas', ascending=False), 
+                    use_container_width=True, 
+                    hide_index=True
+                )
  
      # --- TAB 3: EVOLUCIÓN (FIXED) ---
      with tab3:
