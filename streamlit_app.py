@@ -80,7 +80,6 @@ def load_data():
 df_raw, col_fecha_nombre = load_data()
 
 # --- FUNCIÓN MAESTRA GLOBAL: ANILLO EVOLUCIONADO CORPORATIVO ---
-# Definida aquí arriba al margen para que esté disponible en todo el archivo
 def crear_anillo_corporativo(valores_serie, titulo):
     validos = pd.to_numeric(valores_serie, errors='coerce').dropna()
     muestra = len(validos)
@@ -92,7 +91,6 @@ def crear_anillo_corporativo(valores_serie, titulo):
         
     promedio = validos.mean()
     
-    # Segmentación de clientes (Rojo <= 6, Amarillo 7-8, Verde >= 9)
     detractores = len(validos[validos <= 6])
     pasivos = len(validos[(validos > 6) & (validos <= 8)])
     promoters = len(validos[validos >= 9])
@@ -137,66 +135,63 @@ def crear_anillo_corporativo(valores_serie, titulo):
     return fig
  
 if df_raw is not None:
-     # --- MAPEADO DE COLUMNAS ---
-     col_comentario_K = df_raw.columns[10]
-     col_ambiente_J = df_raw.columns[9]
-     col_seguimiento = df_raw.columns[15]
-     col_nps_puntaje = df_raw.columns[16]
-     col_csi_final = df_raw.columns[18]
-     col_nps_comentario = df_raw.columns[17]
-     col_com_atencion = df_raw.columns[8]
-     col_com_calidad = df_raw.columns[12]
-     col_com_tiempo = df_raw.columns[14]
-     col_t_concatenado = df_raw.columns[19]
-     col_cliente = next((c for c in df_raw.columns if "nombre" in c.lower() and "apellido" in c.lower()), "Cliente")
-     col_asesor = next((c for c in df_raw.columns if "asesor" in c.lower() or "recepcionista" in c.lower()), "Asesor")
- 
-     # --- LIMPIEZA DE DATOS ---
-     def clean_val(x):
-         if pd.isna(x): return 0.0
-         try:
-             val = str(x).replace('%', '').replace(',', '.').strip()
-             return float(val)
-         except: return 0.0
- 
-     df_raw[col_nps_puntaje] = df_raw[col_nps_puntaje].apply(clean_val)
-     df_raw[col_csi_final] = df_raw[col_csi_final].apply(clean_val)
-     df_raw[col_ambiente_J] = df_raw[col_ambiente_J].apply(clean_val)
- 
-     # Sidebar: Filtros de Tiempo
-     df_raw['Año'] = df_raw[col_fecha_nombre].dt.year
-     df_raw['Mes_Num'] = df_raw[col_fecha_nombre].dt.month
-     meses_dict = {1:"Enero", 2:"Febrero", 3:"Marzo", 4:"Abril", 5:"Mayo", 6:"Junio", 7:"Julio", 8:"Agosto", 9:"Septiembre", 10:"Octubre", 11:"Noviembre", 12:"Diciembre"}
-     
-     st.sidebar.header("FILTROS PERIODO")
-     anio_sel = st.sidebar.selectbox("Año", sorted(df_raw['Año'].dropna().unique().astype(int), reverse=True))
-     df_anio = df_raw[df_raw['Año'] == anio_sel].copy()
-     
-     meses_nros = sorted(df_anio['Mes_Num'].dropna().unique().astype(int))
-     mes_sel_nombre = st.sidebar.selectbox("Mes", [meses_dict[m] for m in meses_nros])
-     mes_sel_num = [k for k, v in meses_dict.items() if v == mes_sel_nombre][0]
-     df_mes = df_anio[df_anio['Mes_Num'] == mes_sel_num].copy()
- 
-     st.title("INDICADORES ENCUESTAS DE SATISFACCIÓN")
-     tab1, tab2, tab3, tab4 = st.tabs(["🎯 INDICADORES", "👤 ASESORES", "📊 EVOLUCIÓN MENSUAL", "⚠️ ANÁLISIS DE RECLAMOS"])
- 
-     # --- TAB 1: INDICADORES (CON RESUMEN EJECUTIVO DE ALTO IMPACTO) ---
+    # --- MAPEADO DE COLUMNAS ---
+    col_comentario_K = df_raw.columns[10]
+    col_ambiente_J = df_raw.columns[9]
+    col_seguimiento = df_raw.columns[15]
+    col_nps_puntaje = df_raw.columns[16]
+    col_csi_final = df_raw.columns[18]
+    col_nps_comentario = df_raw.columns[17]
+    col_com_atencion = df_raw.columns[8]
+    col_com_calidad = df_raw.columns[12]
+    col_com_tiempo = df_raw.columns[14]
+    col_t_concatenado = df_raw.columns[19]
+    col_cliente = next((c for c in df_raw.columns if "nombre" in c.lower() and "apellido" in c.lower()), "Cliente")
+    col_asesor = next((c for c in df_raw.columns if "asesor" in c.lower() or "recepcionista" in c.lower()), "Asesor")
+
+    # --- LIMPIEZA DE DATOS ---
+    def clean_val(x):
+        if pd.isna(x): return 0.0
+        try:
+            val = str(x).replace('%', '').replace(',', '.').strip()
+            return float(val)
+        except: return 0.0
+
+    df_raw[col_nps_puntaje] = df_raw[col_nps_puntaje].apply(clean_val)
+    df_raw[col_csi_final] = df_raw[col_csi_final].apply(clean_val)
+    df_raw[col_ambiente_J] = df_raw[col_ambiente_J].apply(clean_val)
+
+    # Sidebar: Filtros de Tiempo
+    df_raw['Año'] = df_raw[col_fecha_nombre].dt.year
+    df_raw['Mes_Num'] = df_raw[col_fecha_nombre].dt.month
+    meses_dict = {1:"Enero", 2:"Febrero", 3:"Marzo", 4:"Abril", 5:"Mayo", 6:"Junio", 7:"Julio", 8:"Agosto", 9:"Septiembre", 10:"Octubre", 11:"Noviembre", 12:"Diciembre"}
+    
+    st.sidebar.header("FILTROS PERIODO")
+    anio_sel = st.sidebar.selectbox("Año", sorted(df_raw['Año'].dropna().unique().astype(int), reverse=True))
+    df_anio = df_raw[df_raw['Año'] == anio_sel].copy()
+    
+    meses_nros = sorted(df_anio['Mes_Num'].dropna().unique().astype(int))
+    mes_sel_nombre = st.sidebar.selectbox("Mes", [meses_dict[m] for m in meses_nros])
+    mes_sel_num = [k for k, v in meses_dict.items() if v == mes_sel_nombre][0]
+    df_mes = df_anio[df_anio['Mes_Num'] == mes_sel_num].copy()
+
+    st.title("INDICADORES ENCUESTAS DE SATISFACCIÓN")
+    tab1, tab2, tab3, tab4 = st.tabs(["🎯 INDICADORES", "👤 ASESORES", "📊 EVOLUCIÓN MENSUAL", "⚠️ ANÁLISIS DE RECLAMOS"])
+
+    # --- TAB 1: INDICADORES (CON RESUMEN EJECUTIVO TRICOLOR) ---
     with tab1:
         st.header(f"🎯 Indicadores Clave - {mes_sel_nombre} {anio_sel}")
                 
         if len(df_mes) > 0:
-            # --- 1. SECCIÓN SUPERIOR: KPIs GLOBALES (NPS & CSI) ---
             st.markdown("### Resumen Ejecutivo")
             
-            # Cálculos base globales
             nps_val = df_mes[col_nps_puntaje].mean() * 10
             csi_raw = df_mes[col_csi_final].mean()
             csi_val = csi_raw * 100 if csi_raw <= 1.1 else csi_raw
 
-            # Conteo para distribución real de la muestra en las barras
             total_respuestas = len(df_mes)
             
-            # Segmentación NPS
+            # Segmentación de volumen para barra de NPS
             p_c = len(df_mes[df_mes[col_nps_puntaje] >= 9])
             d_c = len(df_mes[df_mes[col_nps_puntaje] <= 6])
             pas_c = total_respuestas - p_c - d_c
@@ -205,7 +200,7 @@ if df_raw is not None:
             pct_pas = (pas_c / total_respuestas) * 100 if total_respuestas > 0 else 0
             pct_det = (d_c / total_respuestas) * 100 if total_respuestas > 0 else 0
 
-            # Segmentación CSI
+            # Segmentación de volumen para barra de CSI
             limit_exc = 90 if csi_val > 15 else 9
             limit_mal = 60 if csi_val > 15 else 6
             exc_c = len(df_mes[df_mes[col_csi_final] >= limit_exc])
@@ -216,7 +211,6 @@ if df_raw is not None:
             pct_reg = (reg_c / total_respuestas) * 100 if total_respuestas > 0 else 0
             pct_mal = (mal_c / total_respuestas) * 100 if total_respuestas > 0 else 0
 
-            # Determinar etiquetas y colores de estatus según el rendimiento final
             def obtener_status_kpi(valor):
                 if valor >= 90: return "Excelente", "#28a745"
                 elif valor >= 60: return "Regular", "#ffc107"
@@ -228,17 +222,15 @@ if df_raw is not None:
             c1, c2 = st.columns(2)
             
             with c1:
-                # Tarjeta para NPS con Barra Segmentada Multi-color
                 st.markdown(f"""
                     <div style="background-color: white; padding: 20px; border-radius: 12px; border-left: 6px solid {color_nps}; box-shadow: 0 2px 8px rgba(0,0,0,0.05); margin-bottom: 15px;">
                         <span style="color: #6c757d; font-size: 14px; font-weight: bold; text-transform: uppercase;">Métrica de Recomendación</span>
                         <h2 style="color: #2c3e50; margin: 5px 0 0 0; font-size: 38px; font-weight: bold;">NPS: {nps_val:.1f}%</h2>
                         <p style="color: {color_nps}; font-weight: bold; margin: 2px 0 15px 0; font-size: 15px;">Estado: {status_nps} <span style="font-size: 13px; font-weight: normal; color: #6c757d;">(Muestra: {total_respuestas})</span></p>
-                        
                         <div style="display: flex; border-radius: 4px; height: 10px; width: 100%; overflow: hidden; background-color: #e9ecef; margin-bottom: 10px;">
-                            <div style="background-color: #28a745; width: {pct_prom}%; height: 100%;" title="Promotores"></div>
-                            <div style="background-color: #ffc107; width: {pct_pas}%; height: 100%;" title="Pasivos"></div>
-                            <div style="background-color: #dc3545; width: {pct_det}%; height: 100%;" title="Detractors"></div>
+                            <div style="background-color: #28a745; width: {pct_prom}%; height: 100%;"></div>
+                            <div style="background-color: #ffc107; width: {pct_pas}%; height: 100%;"></div>
+                            <div style="background-color: #dc3545; width: {pct_det}%; height: 100%;"></div>
                         </div>
                     </div>
                     """, unsafe_allow_html=True)
@@ -252,30 +244,10 @@ if df_raw is not None:
                     st.session_state.update({"f_tipo":"NPS","f_val":"Detractor"}); st.rerun()
 
             with c2:
-                # Tarjeta para CSI con Barra Segmentada Multi-color
                 st.markdown(f"""
                     <div style="background-color: white; padding: 20px; border-radius: 12px; border-left: 6px solid {color_csi}; box-shadow: 0 2px 8px rgba(0,0,0,0.05); margin-bottom: 15px;">
                         <span style="color: #6c757d; font-size: 14px; font-weight: bold; text-transform: uppercase;">Índice de Satisfacción General</span>
-                        <h2 style="color: #2c3e50; margin: 5px 0 0 0; font-size: 38px; font-weight: bold;">CSI: {csi_val:.1f}%</h2>
-                        <p style="color: {color_csi}; font-weight: bold; margin: 2px 0 15px 0; font-size: 15px;">Estado: {status_csi} <span style="font-size: 13px; font-weight: normal; color: #6c757d;">(Muestra: {total_respuestas})</span></p>
-                        
-                        <div style="display: flex; border-radius: 4px; height: 10px; width: 100%; overflow: hidden; background-color: #e9ecef; margin-bottom: 10px;">
-                            <div style="background-color: #28a745; width: {pct_exc}%; height: 100%;" title="Excelentes"></div>
-                            <div style="background-color: #ffc107; width: {pct_reg}%; height: 100%;" title="Regulares"></div>
-                            <div style="background-color: #dc3545; width: {pct_mal}%; height: 100%;" title="Malos"></div>
-                        </div>
-                    </div>
-                    """, unsafe_allow_html=True)
-                
-                b4, b5, b6 = st.columns(3)
-                if b4.button(f"🟢 {exc_c} Excelentes", key="btn4_csi"):
-                    st.session_state.update({"f_tipo":"CSI","f_val":"Excelente"}); st.rerun()
-                if b5.button(f"🟡 {reg_c} Regulares", key="btn5_csi"):
-                    st.session_state.update({"f_tipo":"CSI","f_val":"Regular"}); st.rerun()
-                if b6.button(f"🔴 {mal_c} Malos", key="btn6_csi"):
-                    st.session_state.update({"f_tipo":"CSI","f_val":"Malo"}); st.rerun()
-
-            st.write("---")
+                        <h2 style="color: #2c3e50; margin: 5px 0 0 0; font-size: 38px; font-weight: bold;">CSI: {csi_val:.
              
              # --- 2. SECCIÓN INFERIOR: CUADRÍCULA DE ANILLOS LIMPIOS ---
              st.markdown("### Detalle por Pregunta de la Encuesta (Estilo Corporativo)")
