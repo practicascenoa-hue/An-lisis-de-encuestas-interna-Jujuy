@@ -181,84 +181,101 @@ if df_raw is not None:
      tab1, tab2, tab3, tab4 = st.tabs(["🎯 INDICADORES", "👤 ASESORES", "📊 EVOLUCIÓN MENSUAL", "⚠️ ANÁLISIS DE RECLAMOS"])
  
      # --- TAB 1: INDICADORES (CON RESUMEN EJECUTIVO DE ALTO IMPACTO) ---
-     with tab1:
-         st.header(f"🎯 Indicadores Clave - {mes_sel_nombre} {anio_sel}")
-                 
-         if len(df_mes) > 0:
-             # --- 1. SECCIÓN SUPERIOR: KPIs GLOBALES (NPS & CSI) ---
-             st.markdown("### Resumen Ejecutivo")
-             
-             # Cálculos base globales
-             nps_val = df_mes[col_nps_puntaje].mean() * 10
-             csi_raw = df_mes[col_csi_final].mean()
-             csi_val = csi_raw * 100 if csi_raw <= 1.1 else csi_raw
- 
-             # Determinar etiquetas y colores según el rendimiento
-             def obtener_status_kpi(valor):
-                 if valor >= 90: return "Excelente 🟢", "#28a745"
-                 elif valor >= 60: return "Regular 🟡", "#ffc107"
-                 return "Crítico 🔴", "#dc3545"
- 
-             status_nps, color_nps = obtener_status_kpi(nps_val)
-             status_csi, color_csi = obtener_status_kpi(csi_val)
- 
-             c1, c2 = st.columns(2)
-             
-             with c1:
-                 # Tarjeta de Diseño para NPS
-                 st.markdown(f"""
-                     <div style="background-color: white; padding: 20px; border-radius: 12px; border-left: 6px solid {color_nps}; box-shadow: 0 2px 8px rgba(0,0,0,0.05); margin-bottom: 15px;">
-                         <span style="color: #6c757d; font-size: 14px; font-weight: bold; text-transform: uppercase;">Métrica de Recomendación</span>
-                         <h2 style="color: #2c3e50; margin: 5px 0 0 0; font-size: 38px; font-weight: bold;">NPS: {nps_val:.1f}%</h2>
-                         <p style="color: {color_nps}; font-weight: bold; margin: 2px 0 15px 0; font-size: 15px;">Estado: {status_nps}</p>
-                         <div style="background-color: #e9ecef; border-radius: 4px; height: 8px; width: 100%; margin-bottom: 10px;">
-                             <div style="background-color: {color_nps}; height: 8px; border-radius: 4px; width: {min(max(nps_val, 0), 100)}%;"></div>
-                         </div>
-                     </div>
-                     """, unsafe_allow_html=True)
-                 
-                 # Conteo para botones de auditoría
-                 p_c = len(df_mes[df_mes[col_nps_puntaje] >= 9])
-                 d_c = len(df_mes[df_mes[col_nps_puntaje] <= 6])
-                 pas_c = len(df_mes) - p_c - d_c
-                 
-                 b1, b2, b3 = st.columns(3)
-                 if b1.button(f"🟢 {p_c} Promotores", key="btn1_nps"):
-                     st.session_state.update({"f_tipo":"NPS","f_val":"Promotor"}); st.rerun()
-                 if b2.button(f"🟡 {pas_c} Pasivos", key="btn2_nps"):
-                     st.session_state.update({"f_tipo":"NPS","f_val":"Pasivo"}); st.rerun()
-                 if b3.button(f"🔴 {d_c} Detractores", key="btn3_nps"):
-                     st.session_state.update({"f_tipo":"NPS","f_val":"Detractor"}); st.rerun()
- 
-             with c2:
-                 # Tarjeta de Diseño para CSI
-                 st.markdown(f"""
-                     <div style="background-color: white; padding: 20px; border-radius: 12px; border-left: 6px solid {color_csi}; box-shadow: 0 2px 8px rgba(0,0,0,0.05); margin-bottom: 15px;">
-                         <span style="color: #6c757d; font-size: 14px; font-weight: bold; text-transform: uppercase;">Índice de Satisfacción General</span>
-                         <h2 style="color: #2c3e50; margin: 5px 0 0 0; font-size: 38px; font-weight: bold;">CSI: {csi_val:.1f}%</h2>
-                         <p style="color: {color_csi}; font-weight: bold; margin: 2px 0 15px 0; font-size: 15px;">Estado: {status_csi}</p>
-                         <div style="background-color: #e9ecef; border-radius: 4px; height: 8px; width: 100%; margin-bottom: 10px;">
-                             <div style="background-color: {color_csi}; height: 8px; border-radius: 4px; width: {min(max(csi_val, 0), 100)}%;"></div>
-                         </div>
-                     </div>
-                     """, unsafe_allow_html=True)
-                 
-                 # Conteo para botones de auditoría CSI
-                 limit_exc = 90 if csi_val > 15 else 9
-                 limit_mal = 60 if csi_val > 15 else 6
-                 exc_c = len(df_mes[df_mes[col_csi_final] >= limit_exc])
-                 mal_c = len(df_mes[df_mes[col_csi_final] <= limit_mal])
-                 reg_c = len(df_mes) - exc_c - mal_c
-                 
-                 b4, b5, b6 = st.columns(3)
-                 if b4.button(f"🟢 {exc_c} Excelentes", key="btn4_csi"):
-                     st.session_state.update({"f_tipo":"CSI","f_val":"Excelente"}); st.rerun()
-                 if b5.button(f"🟡 {reg_c} Regulares", key="btn5_csi"):
-                     st.session_state.update({"f_tipo":"CSI","f_val":"Regular"}); st.rerun()
-                 if b6.button(f"🔴 {mal_c} Malos", key="btn6_csi"):
-                     st.session_state.update({"f_tipo":"CSI","f_val":"Malo"}); st.rerun()
- 
-             st.write("---")
+    with tab1:
+        st.header(f"🎯 Indicadores Clave - {mes_sel_nombre} {anio_sel}")
+                
+        if len(df_mes) > 0:
+            # --- 1. SECCIÓN SUPERIOR: KPIs GLOBALES (NPS & CSI) ---
+            st.markdown("### Resumen Ejecutivo")
+            
+            # Cálculos base globales
+            nps_val = df_mes[col_nps_puntaje].mean() * 10
+            csi_raw = df_mes[col_csi_final].mean()
+            csi_val = csi_raw * 100 if csi_raw <= 1.1 else csi_raw
+
+            # Conteo para distribución real de la muestra en las barras
+            total_respuestas = len(df_mes)
+            
+            # Segmentación NPS
+            p_c = len(df_mes[df_mes[col_nps_puntaje] >= 9])
+            d_c = len(df_mes[df_mes[col_nps_puntaje] <= 6])
+            pas_c = total_respuestas - p_c - d_c
+            
+            pct_prom = (p_c / total_respuestas) * 100 if total_respuestas > 0 else 0
+            pct_pas = (pas_c / total_respuestas) * 100 if total_respuestas > 0 else 0
+            pct_det = (d_c / total_respuestas) * 100 if total_respuestas > 0 else 0
+
+            # Segmentación CSI
+            limit_exc = 90 if csi_val > 15 else 9
+            limit_mal = 60 if csi_val > 15 else 6
+            exc_c = len(df_mes[df_mes[col_csi_final] >= limit_exc])
+            mal_c = len(df_mes[df_mes[col_csi_final] <= limit_mal])
+            reg_c = total_respuestas - exc_c - mal_c
+            
+            pct_exc = (exc_c / total_respuestas) * 100 if total_respuestas > 0 else 0
+            pct_reg = (reg_c / total_respuestas) * 100 if total_respuestas > 0 else 0
+            pct_mal = (mal_c / total_respuestas) * 100 if total_respuestas > 0 else 0
+
+            # Determinar etiquetas y colores de estatus según el rendimiento final
+            def obtener_status_kpi(valor):
+                if valor >= 90: return "Excelente", "#28a745"
+                elif valor >= 60: return "Regular", "#ffc107"
+                return "Crítico", "#dc3545"
+
+            status_nps, color_nps = obtener_status_kpi(nps_val)
+            status_csi, color_csi = obtener_status_kpi(csi_val)
+
+            c1, c2 = st.columns(2)
+            
+            with c1:
+                # Tarjeta para NPS con Barra Segmentada Multi-color
+                st.markdown(f"""
+                    <div style="background-color: white; padding: 20px; border-radius: 12px; border-left: 6px solid {color_nps}; box-shadow: 0 2px 8px rgba(0,0,0,0.05); margin-bottom: 15px;">
+                        <span style="color: #6c757d; font-size: 14px; font-weight: bold; text-transform: uppercase;">Métrica de Recomendación</span>
+                        <h2 style="color: #2c3e50; margin: 5px 0 0 0; font-size: 38px; font-weight: bold;">NPS: {nps_val:.1f}%</h2>
+                        <p style="color: {color_nps}; font-weight: bold; margin: 2px 0 15px 0; font-size: 15px;">Estado: {status_nps} <span style="font-size: 13px; font-weight: normal; color: #6c757d;">(Muestra: {total_respuestas})</span></p>
+                        
+                        <div style="display: flex; border-radius: 4px; height: 10px; width: 100%; overflow: hidden; background-color: #e9ecef; margin-bottom: 10px;">
+                            <div style="background-color: #28a745; width: {pct_prom}%; height: 100%;" title="Promotores"></div>
+                            <div style="background-color: #ffc107; width: {pct_pas}%; height: 100%;" title="Pasivos"></div>
+                            <div style="background-color: #dc3545; width: {pct_det}%; height: 100%;" title="Detractors"></div>
+                        </div>
+                    </div>
+                    """, unsafe_allow_html=True)
+                
+                b1, b2, b3 = st.columns(3)
+                if b1.button(f"🟢 {p_c} Promotores", key="btn1_nps"):
+                    st.session_state.update({"f_tipo":"NPS","f_val":"Promotor"}); st.rerun()
+                if b2.button(f"🟡 {pas_c} Pasivos", key="btn2_nps"):
+                    st.session_state.update({"f_tipo":"NPS","f_val":"Pasivo"}); st.rerun()
+                if b3.button(f"🔴 {d_c} Detractores", key="btn3_nps"):
+                    st.session_state.update({"f_tipo":"NPS","f_val":"Detractor"}); st.rerun()
+
+            with c2:
+                # Tarjeta para CSI con Barra Segmentada Multi-color
+                st.markdown(f"""
+                    <div style="background-color: white; padding: 20px; border-radius: 12px; border-left: 6px solid {color_csi}; box-shadow: 0 2px 8px rgba(0,0,0,0.05); margin-bottom: 15px;">
+                        <span style="color: #6c757d; font-size: 14px; font-weight: bold; text-transform: uppercase;">Índice de Satisfacción General</span>
+                        <h2 style="color: #2c3e50; margin: 5px 0 0 0; font-size: 38px; font-weight: bold;">CSI: {csi_val:.1f}%</h2>
+                        <p style="color: {color_csi}; font-weight: bold; margin: 2px 0 15px 0; font-size: 15px;">Estado: {status_csi} <span style="font-size: 13px; font-weight: normal; color: #6c757d;">(Muestra: {total_respuestas})</span></p>
+                        
+                        <div style="display: flex; border-radius: 4px; height: 10px; width: 100%; overflow: hidden; background-color: #e9ecef; margin-bottom: 10px;">
+                            <div style="background-color: #28a745; width: {pct_exc}%; height: 100%;" title="Excelentes"></div>
+                            <div style="background-color: #ffc107; width: {pct_reg}%; height: 100%;" title="Regulares"></div>
+                            <div style="background-color: #dc3545; width: {pct_mal}%; height: 100%;" title="Malos"></div>
+                        </div>
+                    </div>
+                    """, unsafe_allow_html=True)
+                
+                b4, b5, b6 = st.columns(3)
+                if b4.button(f"🟢 {exc_c} Excelentes", key="btn4_csi"):
+                    st.session_state.update({"f_tipo":"CSI","f_val":"Excelente"}); st.rerun()
+                if b5.button(f"🟡 {reg_c} Regulares", key="btn5_csi"):
+                    st.session_state.update({"f_tipo":"CSI","f_val":"Regular"}); st.rerun()
+                if b6.button(f"🔴 {mal_c} Malos", key="btn6_csi"):
+                    st.session_state.update({"f_tipo":"CSI","f_val":"Malo"}); st.rerun()
+
+            st.write("---")
              
              # --- 2. SECCIÓN INFERIOR: CUADRÍCULA DE ANILLOS LIMPIOS ---
              st.markdown("### Detalle por Pregunta de la Encuesta (Estilo Corporativo)")
