@@ -261,19 +261,25 @@ if df_raw is not None:
                  except Exception as e:
                      st.error(f"Error en Columna H: {str(e)}")
                      
-             # --- PREGUNTA 3: ESPACIO DISPONIBLE ---
+             # --- PREGUNTA 3: AMBIENTE DEL TALLER e INFRAESTRUCTURA (COLUMNA J / ÍNDICE 9) ---
              with cod3:
-                 st.info("📊 **Siguiente pregunta disponible**\n\nEspacio reservado para el tercer indicador.")
- 
-             # --- 3. AMBIENTE TALLER ---
-             amb_val = df_mes[col_ambiente_J].mean() * 10
-             st.markdown(f"""
-                 <div style="background-color: #f8f9fa; padding: 15px; border-radius: 12px; border: 1px solid #dee2e6; text-align: center; margin-top: 30px;">
-                     <span style="color: #495057; font-size: 16px; font-weight: bold; text-transform: uppercase;">🏢 Calificación Ambiente Taller</span>
-                     <br>
-                     <span style="color: #2c3e50; font-size: 32px; font-weight: bold;">{amb_val:.1f}%</span>
-                 </div>
-                 """, unsafe_allow_html=True)
+                 try:
+                     # Usamos la columna col_ambiente_J que ya mapeaste al inicio
+                     valores_ambiente = pd.to_numeric(df_mes[col_ambiente_J], errors='coerce').dropna()
+                     
+                     if not valores_ambiente.empty:
+                         score_ambiente = valores_ambiente.mean()
+                         st.plotly_chart(crear_gauge(
+                             score_ambiente, 
+                             "Q6 - Calidad Instalaciones y Confort", 
+                             rango=[1, 10], 
+                             tipo_escala='PREGUNTA'
+                         ), use_container_width=True)
+                         st.caption(f"📍 *Muestra: {len(valores_ambiente)} respuestas*")
+                     else:
+                         st.warning("Sin datos numéricos en Columna J")
+                 except Exception as e:
+                     st.error(f"Error en Columna J: {str(e)}")
  
              # --- 4. SECCIÓN DE AUDITORÍA DINÁMICA ---
              if st.session_state.f_tipo:
