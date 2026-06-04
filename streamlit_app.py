@@ -138,7 +138,7 @@ if df_raw is not None:
  
              c1, c2 = st.columns(2)
              
-             # Función maestra para relojes (Gauges)
+             # Función maestra para relojes (Gauges) con Llave Única (key) integrada
              def crear_gauge(valor, titulo, rango=[0, 100], tipo_escala='VOC'):
                  if tipo_escala == 'VOC':
                      steps = [
@@ -177,7 +177,7 @@ if df_raw is not None:
                  return fig
  
              with c1:
-                 st.plotly_chart(crear_gauge(nps_val, "NPS (Recomendación)", rango=[0, 100], tipo_escala='VOC'), use_container_width=True)
+                 st.plotly_chart(crear_gauge(nps_val, "NPS (Recomendación)", rango=[0, 100], tipo_escala='VOC'), use_container_width=True, key="gauge_nps_global")
                  
                  p_c = len(df_mes[df_mes[col_nps_puntaje] >= 9])
                  d_c = len(df_mes[df_mes[col_nps_puntaje] <= 6])
@@ -195,7 +195,7 @@ if df_raw is not None:
                      st.rerun()
  
              with c2:
-                 st.plotly_chart(crear_gauge(csi_val, "CSI (Satisfacción)", rango=[0, 100], tipo_escala='VOC'), use_container_width=True)
+                 st.plotly_chart(crear_gauge(csi_val, "CSI (Satisfacción)", rango=[0, 100], tipo_escala='VOC'), use_container_width=True, key="gauge_csi_global")
                  
                  limit_exc = 90 if csi_val > 15 else 9
                  limit_mal = 60 if csi_val > 15 else 6
@@ -235,7 +235,7 @@ if df_raw is not None:
                              "Q5 - Facilidad de Agendamiento", 
                              rango=[1, 10], 
                              tipo_escala='PREGUNTA'
-                         ), use_container_width=True)
+                         ), use_container_width=True, key="gauge_q5_agendamiento")
                          st.caption(f"📍 *Muestra: {len(valores_turno)} respuestas*")
                      else:
                          st.warning("Sin datos numéricos en Columna F")
@@ -255,14 +255,14 @@ if df_raw is not None:
                              "Q8 - Cortesía y Competencia Asesor", 
                              rango=[1, 10], 
                              tipo_escala='PREGUNTA'
-                         ), use_container_width=True)
+                         ), use_container_width=True, key="gauge_q8_asesor")
                          st.caption(f"📍 *Muestra: {len(valores_asesor)} respuestas*")
                      else:
                          st.warning("Sin datos numéricos en Columna H")
                  except Exception as e:
                      st.error(f"Error en Columna H: {str(e)}")
                      
-             # --- PREGUNTA 3: AMBIENTE DEL TALLER e INFRAESTRUCTURA (COLUMNA J / ÍNDICE 9) ---
+             # --- PREGUNTA 3: AMBIENTE DEL TALLER (COLUMNA J / ÍNDICE 9) ---
              with cod3:
                  try:
                      valores_ambiente = pd.to_numeric(df_mes[col_ambiente_J], errors='coerce').dropna()
@@ -274,22 +274,22 @@ if df_raw is not None:
                              "Q6 - Calidad Instalaciones y Confort", 
                              rango=[1, 10], 
                              tipo_escala='PREGUNTA'
-                         ), use_container_width=True)
+                         ), use_container_width=True, key="gauge_q6_ambiente")
                          st.caption(f"📍 *Muestra: {len(valores_ambiente)} respuestas*")
                      else:
                          st.warning("Sin datos numéricos en Columna J")
                  except Exception as e:
                      st.error(f"Error en Columna J: {str(e)}")
-
-             st.write("") # Pequeño espacio vertical entre filas
-
+ 
+             st.write("") # Espacio sutil entre filas
+ 
              # --- FILA 2 DE RELOJES (Preguntas 4 y 5) ---
              cod4, cod5, cod6 = st.columns(3)
-
+ 
              # --- PREGUNTA 4: CALIDAD CHAPA Y PINTURA (COLUMNA L / ÍNDICE 11) ---
              with cod4:
                  try:
-                     col_l_chapa = df_mes.columns[11] # Columna L es índice 11
+                     col_l_chapa = df_mes.columns[11]
                      valores_chapa = pd.to_numeric(df_mes[col_l_chapa], errors='coerce').dropna()
                      
                      if not valores_chapa.empty:
@@ -299,17 +299,17 @@ if df_raw is not None:
                              "Q12 - Calidad Chapa y Pintura", 
                              rango=[1, 10], 
                              tipo_escala='PREGUNTA'
-                         ), use_container_width=True)
+                         ), use_container_width=True, key="gauge_q12_chapa")
                          st.caption(f"📍 *Muestra: {len(valores_chapa)} respuestas*")
                      else:
                          st.warning("Sin datos numéricos en Columna L")
                  except Exception as e:
                      st.error(f"Error en Columna L: {str(e)}")
-
+ 
              # --- PREGUNTA 5: TIEMPO DE REPARACIÓN (COLUMNA N / ÍNDICE 13) ---
              with cod5:
                  try:
-                     col_n_tiempo = df_mes.columns[13] # Columna N es índice 13
+                     col_n_tiempo = df_mes.columns[13]
                      valores_tiempo = pd.to_numeric(df_mes[col_n_tiempo], errors='coerce').dropna()
                      
                      if not valores_tiempo.empty:
@@ -319,36 +319,26 @@ if df_raw is not None:
                              "Q9 - Tiempo de Reparación", 
                              rango=[1, 10], 
                              tipo_escala='PREGUNTA'
-                         ), use_container_width=True)
+                         ), use_container_width=True, key="gauge_q9_tiempo")
                          st.caption(f"📍 *Muestra: {len(valores_tiempo)} respuestas*")
                      else:
                          st.warning("Sin datos numéricos en Columna N")
                  except Exception as e:
                      st.error(f"Error en Columna N: {str(e)}")
-
-             # --- ESPACIO RESERVADO PARA UNA SEXTA PREGUNTA EN EL FUTURO ---
+ 
+             # --- ESPACIO RESERVADO ---
              with cod6:
                  st.info("📊 **Siguiente pregunta disponible**\n\nEspacio libre en la segunda fila.")
-                     
-             # --- PREGUNTA 3: AMBIENTE DEL TALLER e INFRAESTRUCTURA (COLUMNA J / ÍNDICE 9) ---
-             with cod3:
-                 try:
-                     # Usamos la columna col_ambiente_J que ya mapeaste al inicio
-                     valores_ambiente = pd.to_numeric(df_mes[col_ambiente_J], errors='coerce').dropna()
-                     
-                     if not valores_ambiente.empty:
-                         score_ambiente = valores_ambiente.mean()
-                         st.plotly_chart(crear_gauge(
-                             score_ambiente, 
-                             "Q6 - Calidad Instalaciones y Confort", 
-                             rango=[1, 10], 
-                             tipo_escala='PREGUNTA'
-                         ), use_container_width=True)
-                         st.caption(f"📍 *Muestra: {len(valores_ambiente)} respuestas*")
-                     else:
-                         st.warning("Sin datos numéricos en Columna J")
-                 except Exception as e:
-                     st.error(f"Error en Columna J: {str(e)}")
+ 
+             # --- 3. AMBIENTE TALLER ---
+             amb_val = df_mes[col_ambiente_J].mean() * 10
+             st.markdown(f"""
+                 <div style="background-color: #f8f9fa; padding: 15px; border-radius: 12px; border: 1px solid #dee2e6; text-align: center; margin-top: 30px;">
+                     <span style="color: #495057; font-size: 16px; font-weight: bold; text-transform: uppercase;">🏢 Calificación Ambiente Taller</span>
+                     <br>
+                     <span style="color: #2c3e50; font-size: 32px; font-weight: bold;">{amb_val:.1f}%</span>
+                 </div>
+                 """, unsafe_allow_html=True)
  
              # --- 4. SECCIÓN DE AUDITORÍA DINÁMICA ---
              if st.session_state.f_tipo:
