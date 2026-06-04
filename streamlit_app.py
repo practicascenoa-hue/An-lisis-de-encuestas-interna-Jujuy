@@ -9,13 +9,13 @@ st.set_page_config(page_title="DASHBOARD POSTVENTA", layout="wide")
  
 # Inicializar estados de sesión para filtros y botones
 if "f_tipo" not in st.session_state:
-    st.session_state.f_tipo = None
+   st.session_state.f_tipo = None
 if "f_val" not in st.session_state:
-    st.session_state.f_val = None
+   st.session_state.f_val = None
 if "btn_active" not in st.session_state:
-    st.session_state.btn_active = None
+   st.session_state.btn_active = None
 if "tab4_filter" not in st.session_state:
-    st.session_state.tab4_filter = None
+   st.session_state.tab4_filter = None
  
 # --- CSS: ESTILO GLOBAL Y TARJETAS DINÁMICAS ---
 st.markdown("""
@@ -25,15 +25,15 @@ st.markdown("""
          height: 38px !important;
          border-radius: 8px !important;
      }
-    button[kind="primary"] {
-        background-color: #007bff !important;
+   button[kind="primary"] {
+       background-color: #007bff !important;
          border-color: #007bff !important;
          color: white !important;
          font-weight: bold !important;
      }
      .stTabs [data-baseweb="tab-list"] {
          gap: 10px;
-        background-color: #f8f9fa;
+       background-color: #f8f9fa;
          padding: 10px;
          border-radius: 10px;
      }
@@ -41,7 +41,7 @@ st.markdown("""
      
      /* TARJETAS CON IDENTIDAD DE COLOR PARA LECTURA COMPLETA */
      .comentario-card {
-        background-color: #ffffff;
+       background-color: #ffffff;
          padding: 15px;
          border-radius: 8px;
          margin-bottom: 10px;
@@ -78,6 +78,62 @@ def load_data():
      except: return None, None
  
 df_raw, col_fecha_nombre = load_data()
+
+# --- NUEVA FUNCIÓN MAESTRA: ANILLO EVOLUCIONADO CORPORATIVO ---
+# Ubicada de manera global al principio para evitar el error NameError en los anillos inferiores
+def crear_anillo_corporativo(valores_serie, titulo):
+    validos = pd.to_numeric(valores_serie, errors='coerce').dropna()
+    muestra = len(validos)
+    
+    if muestra == 0:
+        fig = go.Figure(go.Pie(values=[1], hole=0.75, marker=dict(colors=['#e9ecef']), showlegend=False, hoverinfo='none'))
+        fig.update_layout(title=dict(text=f"<b>{titulo}</b><br><span style='font-size:12px;color:orange;'>Sin Datos</span>", x=0.5, y=0.5))
+        return fig
+        
+    promedio = validos.mean()
+    
+    detractores = len(validos[validos <= 6])
+    pasivos = len(validos[(validos > 6) & (validos <= 8)])
+    promotores = len(validos[validos >= 9])
+    
+    cantidades = [promotores, pasivos, detractores]
+    colores = ['#28a745', '#ffc107', '#dc3545']
+    
+    if sum(cantidades) == 0:
+        cantidades = [1]
+        colores = ['#e9ecef']
+
+    fig = go.Figure(go.Pie(
+        labels=['Excelente/Promotor', 'Regular/Pasivo', 'Malo/Detractor'],
+        values=cantidades,
+        hole=0.78,
+        marker=dict(colors=colores),
+        sort=False,
+        showlegend=False,
+        hoverinfo='label+percent'
+    ))
+    
+    fig.update_layout(
+        annotations=[
+            dict(
+                text=f"<b style='font-size:36px;color:#2c3e50;'>{promedio:.1f}</b>",
+                x=0.5, y=0.6, showarrow=False
+            ),
+            dict(
+                text=f"<span style='font-size:12px;color:#6c757d;'>Respuestas<br><b>{muestra}</b></span>",
+                x=0.5, y=0.35, showarrow=False
+            )
+        ],
+        title=dict(
+            text=f"<b style='font-size:15px;color:#333;'>{titulo}</b>",
+            x=0.5, y=0.95, xanchor='center'
+        ),
+        height=220,
+        margin=dict(l=10, r=10, t=40, b=10),
+        paper_bgcolor='rgba(0,0,0,0)',
+        plot_bgcolor='rgba(0,0,0,0)'
+    )
+    return fig
  
 if df_raw is not None:
      # --- MAPEADO DE COLUMNAS ---
@@ -123,12 +179,12 @@ if df_raw is not None:
      st.title("INDICADORES ENCUESTAS DE SATISFACCIÓN")
      tab1, tab2, tab3, tab4 = st.tabs(["🎯 INDICADORES", "👤 ASESORES", "📊 EVOLUCIÓN MENSUAL", "⚠️ ANÁLISIS DE RECLAMOS"])
  
-     # --- TAB 1: INDICADORES (CON CUADRÍCULA DE ANILLOS CORPORATIVOS) ---
+     # --- TAB 1: INDICADORES ---
      with tab1:
          st.header(f"🎯 Indicadores Clave - {mes_sel_nombre} {anio_sel}")
                  
          if len(df_mes) > 0:
-             # --- 1. SECCIÓN SUPERIOR: KPIs GLOBALES (NPS & CSI) ---
+             # --- 1. SECCIÓN SUPERIOR: KPIs GLOBALES (NPS & CSI TRICOLOR REAL) ---
              st.markdown("### Resumen Ejecutivo")
              
              # Cálculos base globales
@@ -136,96 +192,52 @@ if df_raw is not None:
              csi_raw = df_mes[col_csi_final].mean()
              csi_val = csi_raw * 100 if csi_raw <= 1.1 else csi_raw
  
+             total_respuestas = len(df_mes)
+             
+             # Segmentación exacta por volúmenes para las barras proporcionales
+             p_c = len(df_mes[df_mes[col_nps_puntaje] >= 9])
+             d_c = len(df_mes[df_mes[col_nps_puntaje] <= 6])
+             pas_c = total_respuestas - p_c - d_c
+             
+             pct_prom = (p_c / total_respuestas) * 100 if total_respuestas > 0 else 0
+             pct_pas = (pas_c / total_respuestas) * 100 if total_respuestas > 0 else 0
+             pct_det = (d_c / total_respuestas) * 100 if total_respuestas > 0 else 0
+ 
+             limit_exc = 90 if csi_val > 15 else 9
+             limit_mal = 60 if csi_val > 15 else 6
+             exc_c = len(df_mes[df_mes[col_csi_final] >= limit_exc])
+             mal_c = len(df_mes[df_mes[col_csi_final] <= limit_mal])
+             reg_c = total_respuestas - exc_c - mal_c
+             
+             pct_exc = (exc_c / total_respuestas) * 100 if total_respuestas > 0 else 0
+             pct_reg = (reg_c / total_respuestas) * 100 if total_respuestas > 0 else 0
+             pct_mal = (mal_c / total_respuestas) * 100 if total_respuestas > 0 else 0
+ 
+             def obtener_status_kpi(valor):
+                 if valor >= 90: return "Excelente", "#28a745"
+                 elif valor >= 60: return "Regular", "#ffc107"
+                 return "Crítico", "#dc3545"
+ 
+             status_nps, color_nps = obtener_status_kpi(nps_val)
+             status_csi, color_csi = obtener_status_kpi(csi_val)
+ 
              c1, c2 = st.columns(2)
              
-             # --- NUEVA FUNCIÓN MAESTRA: ANILLO EVOLUCIONADO CORPORATIVO ---
-             def crear_anillo_corporativo(valores_serie, titulo):
-                 # Convertir a numérico y limpiar
-                 validos = pd.to_numeric(valores_serie, errors='coerce').dropna()
-                 muestra = len(validos)
-                 
-                 if muestra == 0:
-                     # Retornar un anillo vacío gris si no hay datos
-                     fig = go.Figure(go.Pie(values=[1], hole=0.75, marker=dict(colors=['#e9ecef']), showlegend=False, hoverinfo='none'))
-                     fig.update_layout(title=dict(text=f"<b>{titulo}</b><br><span style='font-size:12px;color:orange;'>Sin Datos</span>", x=0.5, y=0.5))
-                     return fig
-                     
-                 promedio = validos.mean()
-                 
-                 # Segmentación para armar las porciones del anillo como la marca
-                 # Contamos cuántos clientes caen en cada tramo (Rojo: 1-6, Amarillo: 7-8, Verde: 9-10)
-                 detractores = len(validos[validos <= 6])
-                 pasivos = len(validos[(validos > 6) & (validos <= 8)])
-                 promotores = len(validos[validos >= 9])
-                 
-                 # Si todos son 0 (evitar error), por defecto rellenamos
-                 cantidades = [promotores, pasivos, detractores]
-                 colores = ['#28a745', '#ffc107', '#dc3545'] # Verde, Amarillo, Rojo oficiales
-                 
-                 # Si la muestra es positiva pero no queremos que se rompa el gráfico si están en 0
-                 if sum(cantidades) == 0:
-                     cantidades = [1]
-                     colores = ['#e9ecef']
- 
-                 # Crear el anillo de progreso
-                 fig = go.Figure(go.Pie(
-                     labels=['Excelente/Promotor', 'Regular/Pasivo', 'Malo/Detractor'],
-                     values=cantidades,
-                     hole=0.78,
-                     marker=dict(colors=colores),
-                     sort=False,
-                     showlegend=False,
-                     hoverinfo='label+percent'
-                 ))
-                 
-                 # Inyectar el número gigante y la muestra exacta en el centro del anillo
-                 fig.update_layout(
-                     annotations=[
-                         dict(
-                             text=f"<b style='font-size:36px;color:#2c3e50;'>{promedio:.1f}</b>",
-                             x=0.5, y=0.6, showarrow=False
-                         ),
-                         dict(
-                             text=f"<span style='font-size:12px;color:#6c757d;'>Respuestas<br><b>{muestra}</b></span>",
-                             x=0.5, y=0.35, showarrow=False
-                         )
-                     ],
-                     title=dict(
-                         text=f"<b style='font-size:15px;color:#333;'>{titulo}</b>",
-                         x=0.5, y=0.95, xanchor='center'
-                     ),
-                     height=220,
-                     margin=dict(l=10, r=10, t=40, b=10),
-                     paper_bgcolor='rgba(0,0,0,0)',
-                     plot_bgcolor='rgba(0,0,0,0)'
-                 )
-                 return fig
- 
-             # Lógica para los relojes tradicionales superiores (Resumen Ejecutivo)
-             def crear_gauge_global(valor, titulo, rango=[0, 100]):
-                 steps = [
-                     {'range': [0, 60], 'color': "#f8d7da"},
-                     {'range': [60, 90], 'color': "#fff3cd"},
-                     {'range': [90, 100], 'color': "#d1e7dd"}
-                 ]
-                 fig = go.Figure(go.Indicator(
-                     mode="gauge+number", value=valor, 
-                     title={'text': f"<b>{titulo}</b>", 'font': {'size': 16}},
-                     number={'valueformat': ".1f", 'suffix': "%", 'font': {'size': 36}},
-                     gauge={
-                         'axis': {'range': rango, 'tickwidth': 1, 'dtick': 20},
-                         'bar': {'color': "#34495e", 'thickness': 0.25},
-                         'bgcolor': "white", 'borderwidth': 1, 'bordercolor': "#ccc", 'steps': steps
-                     }
-                 ))
-                 fig.update_layout(height=220, margin=dict(l=30, r=30, t=40, b=10), paper_bgcolor='rgba(0,0,0,0)')
-                 return fig
- 
              with c1:
-                 st.plotly_chart(crear_gauge_global(nps_val, "NPS (Recomendación)"), use_container_width=True, key="gauge_nps_global")
-                 p_c = len(df_mes[df_mes[col_nps_puntaje] >= 9])
-                 d_c = len(df_mes[df_mes[col_nps_puntaje] <= 6])
-                 pas_c = len(df_mes) - p_c - d_c
+                 # Tarjeta avanzada tricolor para NPS
+                 st.markdown(f"""
+                     <div style="background-color: white; padding: 20px; border-radius: 12px; border-left: 6px solid {color_nps}; box-shadow: 0 2px 8px rgba(0,0,0,0.05); margin-bottom: 15px;">
+                         <span style="color: #6c757d; font-size: 14px; font-weight: bold; text-transform: uppercase;">Métrica de Recomendación</span>
+                         <h2 style="color: #2c3e50; margin: 5px 0 0 0; font-size: 38px; font-weight: bold;">NPS: {nps_val:.1f}%</h2>
+                         <p style="color: {color_nps}; font-weight: bold; margin: 2px 0 15px 0; font-size: 15px;">Estado: {status_nps} <span style="font-size: 13px; font-weight: normal; color: #6c757d;">(Muestra: {total_respuestas})</span></p>
+                         <div style="display: flex; border-radius: 4px; height: 10px; width: 100%; overflow: hidden; background-color: #e9ecef; margin-bottom: 10px;">
+                             <div style="background-color: #28a745; width: {pct_prom}%; height: 100%;"></div>
+                             <div style="background-color: #ffc107; width: {pct_pas}%; height: 100%;"></div>
+                             <div style="background-color: #dc3545; width: {pct_det}%; height: 100%;"></div>
+                         </div>
+                     </div>
+                     """, unsafe_allow_html=True)
+                 
                  _, b1, b2, b3 = st.columns([0.1, 1, 1, 1])
                  if b1.button(f"🟢 {p_c} Prom", key="btn1_nps"):
                      st.session_state.update({"f_tipo":"NPS","f_val":"Promotor"}); st.rerun()
@@ -235,12 +247,20 @@ if df_raw is not None:
                      st.session_state.update({"f_tipo":"NPS","f_val":"Detractor"}); st.rerun()
  
              with c2:
-                 st.plotly_chart(crear_gauge_global(csi_val, "CSI (Satisfacción)"), use_container_width=True, key="gauge_csi_global")
-                 limit_exc = 90 if csi_val > 15 else 9
-                 limit_mal = 60 if csi_val > 15 else 6
-                 exc_c = len(df_mes[df_mes[col_csi_final] >= limit_exc])
-                 mal_c = len(df_mes[df_mes[col_csi_final] <= limit_mal])
-                 reg_c = len(df_mes) - exc_c - mal_c
+                 # Tarjeta avanzada tricolor para CSI
+                 st.markdown(f"""
+                     <div style="background-color: white; padding: 20px; border-radius: 12px; border-left: 6px solid {color_csi}; box-shadow: 0 2px 8px rgba(0,0,0,0.05); margin-bottom: 15px;">
+                         <span style="color: #6c757d; font-size: 14px; font-weight: bold; text-transform: uppercase;">Índice de Satisfacción General</span>
+                         <h2 style="color: #2c3e50; margin: 5px 0 0 0; font-size: 38px; font-weight: bold;">CSI: {csi_val:.1f}%</h2>
+                         <p style="color: {color_csi}; font-weight: bold; margin: 2px 0 15px 0; font-size: 15px;">Estado: {status_csi} <span style="font-size: 13px; font-weight: normal; color: #6c757d;">(Muestra: {total_respuestas})</span></p>
+                         <div style="display: flex; border-radius: 4px; height: 10px; width: 100%; overflow: hidden; background-color: #e9ecef; margin-bottom: 10px;">
+                             <div style="background-color: #28a745; width: {pct_exc}%; height: 100%;"></div>
+                             <div style="background-color: #ffc107; width: {pct_reg}%; height: 100%;"></div>
+                             <div style="background-color: #dc3545; width: {pct_mal}%; height: 100%;"></div>
+                         </div>
+                     </div>
+                     """, unsafe_allow_html=True)
+                 
                  _, b4, b5, b6 = st.columns([0.1, 1, 1, 1])
                  if b4.button(f"🟢 {exc_c} Exc", key="btn4_csi"):
                      st.session_state.update({"f_tipo":"CSI","f_val":"Excelente"}); st.rerun()
@@ -284,11 +304,11 @@ if df_raw is not None:
              with cod6:
                  st.info("📊 **Siguiente pregunta disponible**\n\nEspacio libre en la segunda fila.")             
            
-     # --- TAB 2: ASESORES ---
-     with tab2:
-        st.subheader(f"👤 Desempeño de Asesores - {mes_sel_nombre} {anio_sel}")
+    # --- TAB 2: ASESORES ---
+    with tab2:
+       st.subheader(f"👤 Desempeño de Asesores - {mes_sel_nombre} {anio_sel}")
         
-        if len(df_mes) > 0:
+       if len(df_mes) > 0:
             # 1. Gráfico de volumen de encuestas por asesor
             df_as = df_mes.groupby(col_asesor).size().reset_index(name='Encuestas')
             st.plotly_chart(px.bar(df_as, x=col_asesor, y='Encuestas', text='Encuestas', color='Encuestas', color_continuous_scale='Blues'), use_container_width=True, key="bar_asesores_vol")
@@ -336,41 +356,41 @@ if df_raw is not None:
                     hide_index=True
                 )
  
-     # --- TAB 3: EVOLUCIÓN (FIXED) ---
-     with tab3:
-        st.subheader(f"Evolución Mensual {anio_sel}")
-        df_v = df_anio.groupby('Mes_Num').agg({col_fecha_nombre: 'count', col_csi_final: 'mean', col_nps_puntaje: 'mean'}).reset_index()
-        df_v.columns = ['Mes_Num', 'Cant', 'CSI', 'NPS']
-        df_v['NPS'] = df_v['NPS'] * 10
-        df_v['Mes'] = df_v['Mes_Num'].map(meses_dict)
-        st.plotly_chart(px.bar(df_v, y='Mes', x='Cant', orientation='h', text='Cant', color='Cant', color_continuous_scale='Sunset'), use_container_width=True)
+    # --- TAB 3: EVOLUCIÓN (FIXED) ---
+    with tab3:
+       st.subheader(f"Evolución Mensual {anio_sel}")
+       df_v = df_anio.groupby('Mes_Num').agg({col_fecha_nombre: 'count', col_csi_final: 'mean', col_nps_puntaje: 'mean'}).reset_index()
+       df_v.columns = ['Mes_Num', 'Cant', 'CSI', 'NPS']
+       df_v['NPS'] = df_v['NPS'] * 10
+       df_v['Mes'] = df_v['Mes_Num'].map(meses_dict)
+       st.plotly_chart(px.bar(df_v, y='Mes', x='Cant', orientation='h', text='Cant', color='Cant', color_continuous_scale='Sunset'), use_container_width=True)
  
-# --- TAB 4: RECLAMOS (LÓGICA NPS ESTRICTA + CATEGORIZACIÓN ÚNICA) ---
-     with tab4:
-        # 1. Expander Informativo
-        with st.expander("ℹ️ PROTOCOLO VOC (voz del cliente)"):
-            st.markdown("""
-            **Este panel clasifica las encuestas mediante un algoritmo de detección de palabras clave y jerarquía de NPS.**
-            
-            ### 1. El Semáforo de Gestión
-            * 🔴 **Reclamo Crítico:** Clientes con **NPS ≤ 6**. Es una alerta de insatisfacción que requiere contacto inmediato.
-            * 🟡 **Oportunidad de Mejora:** Clientes **Promotores (NPS 9-10)** que dejaron una sugerencia puntual sobre procesos.
-            * 🟢 **Conforme:** Clientes **Promotores (NPS 9-10)** con comentarios 100% positivos o elogios directos.
-
-            ### 2. Dimensiones de Calidad
-            * **🛠️ Calidad Técnica:** Estado de la unidad, pintura, alineación y limpieza final.
-            * **⏱️ Plazos y Tiempos:** Cumplimiento de fechas y tiempos de espera en sucursal.
-            * **🏢 Infraestructura:** Comodidad de la sala, estado de baños y servicios (café/WiFi).
-            * **👤 Atención y Trato:** Amabilidad, claridad técnica y calidad de comunicación del asesor.
-
-            ### 3. Regla de Jerarquía Única
-            Para evitar duplicar datos en el gráfico de barras, si un cliente menciona varios temas, el sistema prioriza el impacto operativo en este orden: 
-            **1. Técnico > 2. Tiempos > 3. Infraestructura > 4. Atención.**
-            """)
-
-        st.header("⚠️ Análisis de Reclamos y Oportunidades")
-        
-        if len(df_mes) > 0:
+    # --- TAB 4: RECLAMOS (LÓGICA NPS ESTRICTA + CATEGORIZACIÓN ÚNICA) ---
+    with tab4:
+       # 1. Expander Informativo
+       with st.expander("ℹ️ PROTOCOLO VOC (voz del cliente)"):
+           st.markdown("""
+           **Este panel clasifica las encuestas mediante un algoritmo de detección de palabras clave y jerarquía de NPS.**
+           
+           ### 1. El Semáforo de Gestión
+           * 🔴 **Reclamo Crítico:** Clientes con **NPS ≤ 6**. Es una alerta de insatisfacción que requiere contacto inmediato.
+           * 🟡 **Oportunidad de Mejora:** Clientes **Promotores (NPS 9-10)** que dejaron una sugerencia puntual sobre procesos.
+           * 🟢 **Conforme:** Clientes **Promotores (NPS 9-10)** con comentarios 100% positivos o elogios directos.
+ 
+           ### 2. Dimensiones de Calidad
+           * **🛠️ Calidad Técnica:** Estado de la unidad, pintura, alineación y limpieza final.
+           * **⏱️ Plazos y Tiempos:** Cumplimiento de fechas y tiempos de espera en sucursal.
+           * **🏢 Infraestructura:** Comodidad de la sala, estado de baños y servicios (café/WiFi).
+           * **👤 Atención y Trato:** Amabilidad, claridad técnica y calidad de comunicación del asesor.
+ 
+           ### 3. Regla de Jerarquía Única
+           Para evitar duplicar datos en el gráfico de barras, si un cliente menciona varios temas, el sistema prioriza el impacto operativo en este orden: 
+           **1. Técnico > 2. Tiempos > 3. Infraestructura > 4. Atención.**
+           """)
+ 
+       st.header("⚠️ Análisis de Reclamos y Oportunidades")
+       
+       if len(df_mes) > 0:
             def clasificar_intencion(row):
                 nota, texto = row[col_nps_puntaje], str(row[col_t_concatenado]).lower()
                 elogios_fuertes = ["excelente", "muy buena", "impecable", "satisfecho", "gracias", "recomendadisimo", "perfecto", "todo bien", "todo el tiempo"]
@@ -380,9 +400,9 @@ if df_raw is not None:
                     return "⚠️ RECLAMO CRÍTICO"
                 elif nota >= 9:
                     if any(d in texto for d in dolores):
-                        if any(e in texto for e in elogios_fuertes) and "pero" not in texto and "demoraron" not in texto:
-                            return "✅ CONFORME"
-                        return "💡 OPORTUNIDAD DE MEJORA"
+                       if any(e in texto for e in elogios_fuertes) and "pero" not in texto and "demoraron" not in texto:
+                           return "✅ CONFORME"
+                       return "💡 OPORTUNIDAD DE MEJORA"
                     return "✅ CONFORME"
                 return "Neutral"
             
@@ -396,19 +416,19 @@ if df_raw is not None:
                 c_b1, c_b2 = st.columns(2)
                 with c_b1:
                     if st.button("🟢 PROMOTORES", key="t4_p_final"):
-                        st.session_state.tab4_filter = "Promotor"
-                        st.rerun()
+                       st.session_state.tab4_filter = "Promotor"
+                       st.rerun()
                     st.metric("", cp)
                 with c_b2:
                     if st.button("🔴 RECLAMOS", key="t4_r_final"):
-                        st.session_state.tab4_filter = "Reclamo"
-                        st.rerun()
+                       st.session_state.tab4_filter = "Reclamo"
+                       st.rerun()
                     st.metric("", cr)
-                
+               
                 if st.session_state.tab4_filter:
                     if st.button("🔄 Ver Todo", key="res_t4"):
-                        st.session_state.tab4_filter = None
-                        st.rerun()
+                       st.session_state.tab4_filter = None
+                       st.rerun()
                 
                 st.write("---")
                 
@@ -429,26 +449,26 @@ if df_raw is not None:
                 filas_b = []
                 for _, row in df_mes.iterrows():
                     if row['Intención'] in ["⚠️ RECLAMO CRÍTICO", "💡 OPORTUNIDAD DE MEJORA"]:
-                        texto_com = str(row[col_t_concatenado]).lower()
-                        tema_asignado = None
-                        for nom, keys in temas_prioridad:
-                            if any(p in texto_com for p in keys):
+                       texto_com = str(row[col_t_concatenado]).lower()
+                       tema_asignado = None
+                       for nom, keys in temas_prioridad:
+                           if any(p in texto_com for p in keys):
                                 tema_asignado = nom
                                 break 
-                        
-                        if tema_asignado:
-                            t = "Reclamo" if row['Intención'] == "⚠️ RECLAMO CRÍTICO" else "Oportunidad"
-                            filas_b.append({"Tema": tema_asignado, "Tipo": t})
-
+                       
+                       if tema_asignado:
+                           t = "Reclamo" if row['Intención'] == "⚠️ RECLAMO CRÍTICO" else "Oportunidad"
+                           filas_b.append({"Tema": tema_asignado, "Tipo": t})
+ 
                 if filas_b:
                     df_barras = pd.DataFrame(filas_b).groupby(['Tema', 'Tipo']).size().reset_index(name='Casos')
                     fig_b = px.bar(df_barras, x='Casos', y='Tema', orientation='h', color='Tipo', 
                                    color_discrete_map={"Reclamo": "#dc3545", "Oportunidad": "#FFD700"})
                     fig_b.update_layout(showlegend=True, height=350, margin=dict(t=10,b=10,l=0,r=10),
-                                        legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="right", x=1))
+                                       legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="right", x=1))
                     fig_b.update_traces(width=0.5)
                     st.plotly_chart(fig_b, use_container_width=True)
-
+ 
             with col_der:
                 df_t = df_mes[df_mes['Grupo'] == "Promotores"] if st.session_state.tab4_filter == "Promotor" else (df_mes[df_mes['Grupo'] == "Reclamos"] if st.session_state.tab4_filter == "Reclamo" else df_mes[df_mes['Grupo'] != "Neutral"])
                 st.subheader("Auditoría de Feedback Detallado")
@@ -474,4 +494,3 @@ if df_raw is not None:
             2. **Ajuste:** Modificar procesos internos o infraestructura.
             3. **Feedback:** Capacitación grupal basada en la sugerencia.
             """)
-
