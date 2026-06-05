@@ -251,14 +251,14 @@ if df_raw is not None:
                  col_f_turno = df_mes.columns[5]
                  st.plotly_chart(crear_anillo_corporativo(df_mes[col_f_turno], "Q5 - Facilidad de Agendamiento"), use_container_width=True, key="anillo_q5_agendamiento")
  
-             with cod2:
+            with cod2:
                  col_h_asesor = df_raw.columns[7]
                  st.plotly_chart(crear_anillo_corporativo(df_mes[col_h_asesor], "Q8 - Cortesía y Competencia Asesor"), use_container_width=True, key="anillo_q8_asesor")
                      
-             with cod3:
+            with cod3:
                  st.plotly_chart(crear_anillo_corporativo(df_mes[col_ambiente_J], "Q6 - Calidad Instalaciones y Confort"), use_container_width=True, key="anillo_q6_ambiente")
  
-             st.write("") # Espacio sutil entre filas
+            st.write("") # Espacio sutil entre filas
  
              # --- FILA 2 DE ANILLOS (Preguntas 4 y 5) ---
              cod4, cod5, cod6 = st.columns(3)
