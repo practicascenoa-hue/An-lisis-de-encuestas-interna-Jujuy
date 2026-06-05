@@ -124,19 +124,19 @@ if df_raw is not None:
      tab1, tab2, tab3, tab4 = st.tabs(["🎯 INDICADORES", "👤 ASESORES", "📊 EVOLUCIÓN MENSUAL", "⚠️ ANÁLISIS DE RECLAMOS"])
  
      # --- TAB 1: INDICADORES (CON CUADRÍCULA DE ANILLOS CORPORATIVOS) ---
-     with tab1:
+    with tab1:
         st.header(f"🎯 Indicadores Clave - {mes_sel_nombre} {anio_sel}")
                  
         if len(df_mes) > 0:
-            # --- 1. SECCIÓN SUPERIOR: KPIs GLOBALES (NPS & CSI TRICOLOR) ---
+            # --- 1. SECCIÓN SUPERIOR: KPIs GLOBALES (NPS & CSI) ---
             st.markdown("### Resumen Ejecutivo")
             
-            # Cálculos base globales de rendimiento
+            # Cálculos base globales
             nps_val = df_mes[col_nps_puntaje].mean() * 10
             csi_raw = df_mes[col_csi_final].mean()
             csi_val = csi_raw * 100 if csi_raw <= 1.1 else csi_raw
-   
-            # --- NUEVA FUNCIÓN PARA LOS ANILLOS MAXI DEL RESUMEN EJECUTIVO ---
+
+            # --- NUEVA FUNCIÓN PARA LOS ANILLOS MAXI DEL RESUMEN EJECUTIVO (ESTILO DONA) ---
             def crear_anillo_maxi_global(valores_serie, titulo, valor_grande, sufijo="%"):
                 validos = pd.to_numeric(valores_serie, errors='coerce').dropna()
                 total = len(validos)
@@ -145,7 +145,7 @@ if df_raw is not None:
                     fig = go.Figure(go.Pie(values=[1], hole=0.72, marker=dict(colors=['#e9ecef']), showlegend=False))
                     return fig
                 
-                # Clasificación de la muestra real para armar las porciones de la dona
+                # Agrupamos promotores, pasivos y detractores reales de la muestra
                 detractores = len(validos[validos <= 6])
                 pasivos = len(validos[(validos > 6) & (validos <= 8)])
                 promotores = len(validos[validos >= 9])
@@ -175,9 +175,9 @@ if df_raw is not None:
                 return fig
 
             c1, c2 = st.columns(2)
-
+            
             with c1:
-                # Dibujamos el anillo Maxi segmentado tricolor para el NPS
+                # Dibujamos el anillo Maxi tricolor de NPS
                 st.plotly_chart(crear_anillo_maxi_global(df_mes[col_nps_puntaje], "NPS", nps_val, "%"), use_container_width=True, key="anillo_maxi_nps")
                 p_c = len(df_mes[df_mes[col_nps_puntaje] >= 9])
                 d_c = len(df_mes[df_mes[col_nps_puntaje] <= 6])
@@ -190,8 +190,8 @@ if df_raw is not None:
                 if b3.button(f"🔴 {d_c} Det", key="btn3_nps"):
                     st.session_state.update({"f_tipo":"NPS","f_val":"Detractor"}); st.rerun()
 
-            with c2:
-                # Dibujamos el anillo Maxi segmentado tricolor para el CSI
+         with c2:
+                # Dibujamos el anillo Maxi tricolor de CSI
                 st.plotly_chart(crear_anillo_maxi_global(df_mes[col_csi_final], "CSI", csi_val, "%"), use_container_width=True, key="anillo_maxi_csi")
                 limit_exc = 90 if csi_val > 15 else 9
                 limit_mal = 60 if csi_val > 15 else 6
@@ -206,8 +206,7 @@ if df_raw is not None:
                 if b6.button(f"🔴 {mal_c} Mal", key="btn6_csi"):
                     st.session_state.update({"f_tipo":"CSI","f_val":"Malo"}); st.rerun()
 
-            st.write("---")
-            
+            st.write("---")            
             # --- 2. SECCIÓN INFERIOR: CUADRÍCULA DE ANILLOS LIMPIOS ---
             st.markdown("### Detalle por Pregunta de la Encuesta (Estilo Corporativo)")
             
