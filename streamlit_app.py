@@ -125,132 +125,151 @@ if df_raw is not None:
  
      # --- TAB 1: INDICADORES (CON CUADRÍCULA DE ANILLOS CORPORATIVOS) ---
      with tab1:
-         st.header(f"🎯 Indicadores Clave - {mes_sel_nombre} {anio_sel}")
-                 
-         if len(df_mes) > 0:
-             # --- 1. SECCIÓN SUPERIOR: KPIs GLOBALES (NPS & CSI) ---
-             st.markdown("### Resumen Ejecutivo")
+     st.header(f"🎯 Indicadores Clave - {mes_sel_nombre} {anio_sel}")
+              
+     if len(df_mes) > 0:
+         # --- 1. SECCIÓN SUPERIOR: KPIs GLOBALES (NPS & CSI) ---
+         st.markdown("### Resumen Ejecutivo")
+         
+         # Cálculos base globales
+         nps_val = df_mes[col_nps_puntaje].mean() * 10
+         csi_raw = df_mes[col_csi_final].mean()
+         csi_val = csi_raw * 100 if csi_raw <= 1.1 else csi_raw
+
+         c1, c2 = st.columns(2)
+         
+         # --- NUEVA FUNCIÓN MAESTRA: ANILLO EVOLUCIONADO CORPORATIVO ---
+         def crear_anillo_corporativo(valores_serie, titulo):
+             # Convertir a numérico y limpiar
+             validos = pd.to_numeric(valores_serie, errors='coerce').dropna()
+             muestra = len(validos)
              
-             # Cálculos base globales
-             nps_val = df_mes[col_nps_puntaje].mean() * 10
-             csi_raw = df_mes[col_csi_final].mean()
-             csi_val = csi_raw * 100 if csi_raw <= 1.1 else csi_raw
- 
-             c1, c2 = st.columns(2)
+             if muestra == 0:
+                 # Retornar un anillo vacío gris si no hay datos
+                 fig = go.Figure(go.Pie(values=[1], hole=0.75, marker=dict(colors=['#e9ecef']), showlegend=False, hoverinfo='none'))
+                 fig.update_layout(title=dict(text=f"<b>{titulo}</b><br><span style='font-size:12px;color:orange;'>Sin Datos</span>", x=0.5, y=0.5))
+                 return fig
+                 
+             promedio = validos.mean()
              
-             # --- NUEVA FUNCIÓN MAESTRA: ANILLO EVOLUCIONADO CORPORATIVO ---
-             def crear_anillo_corporativo(valores_serie, titulo):
-                 # Convertir a numérico y limpiar
-                 validos = pd.to_numeric(valores_serie, errors='coerce').dropna()
-                 muestra = len(validos)
-                 
-                 if muestra == 0:
-                     # Retornar un anillo vacío gris si no hay datos
-                     fig = go.Figure(go.Pie(values=[1], hole=0.75, marker=dict(colors=['#e9ecef']), showlegend=False, hoverinfo='none'))
-                     fig.update_layout(title=dict(text=f"<b>{titulo}</b><br><span style='font-size:12px;color:orange;'>Sin Datos</span>", x=0.5, y=0.5))
-                     return fig
-                     
-                 promedio = validos.mean()
-                 
-                 # Segmentación para armar las porciones del anillo como la marca
-                 # Contamos cuántos clientes caen en cada tramo (Rojo: 1-6, Amarillo: 7-8, Verde: 9-10)
-                 detractores = len(validos[validos <= 6])
-                 pasivos = len(validos[(validos > 6) & (validos <= 8)])
-                 promotores = len(validos[validos >= 9])
-                 
-                 # Si todos son 0 (evitar error), por defecto rellenamos
-                 cantidades = [promotores, pasivos, detractores]
-                 colores = ['#28a745', '#ffc107', '#dc3545'] # Verde, Amarillo, Rojo oficiales
-                 
-                 # Si la muestra es positiva pero no queremos que se rompa el gráfico si están en 0
-                 if sum(cantidades) == 0:
-                     cantidades = [1]
-                     colores = ['#e9ecef']
- 
-                 # Crear el anillo de progreso
-                 fig = go.Figure(go.Pie(
-                     labels=['Excelente/Promotor', 'Regular/Pasivo', 'Malo/Detractor'],
-                     values=cantidades,
-                     hole=0.78,
-                     marker=dict(colors=colores),
-                     sort=False,
-                     showlegend=False,
-                     hoverinfo='label+percent'
-                 ))
-                 
-                 # Inyectar el número gigante y la muestra exacta en el centro del anillo
-                 fig.update_layout(
-                     annotations=[
-                         dict(
-                             text=f"<b style='font-size:36px;color:#2c3e50;'>{promedio:.1f}</b>",
-                             x=0.5, y=0.6, showarrow=False
-                         ),
-                         dict(
-                             text=f"<span style='font-size:12px;color:#6c757d;'>Respuestas<br><b>{muestra}</b></span>",
-                             x=0.5, y=0.35, showarrow=False
-                         )
-                     ],
-                     title=dict(
-                         text=f"<b style='font-size:15px;color:#333;'>{titulo}</b>",
-                         x=0.5, y=0.95, xanchor='center'
+             # Segmentación para armar las porciones del anillo como la marca
+             # Contamos cuántos clientes caen en cada tramo (Rojo: 1-6, Amarillo: 7-8, Verde: 9-10)
+             detractores = len(validos[validos <= 6])
+             pasivos = len(validos[(validos > 6) & (validos <= 8)])
+             promotores = len(validos[validos >= 9])
+             
+             # Si todos son 0 (evitar error), por defecto rellenamos
+             cantidades = [promotores, pasivos, detractores]
+             colores = ['#28a745', '#ffc107', '#dc3545'] # Verde, Amarillo, Rojo oficiales
+             
+             # Si la muestra es positiva pero no queremos que se rompa el gráfico si están en 0
+             if sum(cantidades) == 0:
+                 cantidades = [1]
+                 colores = ['#e9ecef']
+
+             # Crear el anillo de progreso
+             fig = go.Figure(go.Pie(
+                 labels=['Excelente/Promotor', 'Regular/Pasivo', 'Malo/Detractor'],
+                 values=cantidades,
+                 hole=0.78,
+                 marker=dict(colors=colores),
+                 sort=False,
+                 showlegend=False,
+                 hoverinfo='label+percent'
+             ))
+             
+             # Inyectar el número gigante y la muestra exacta en el centro del anillo
+             fig.update_layout(
+                 annotations=[
+                     dict(
+                         text=f"<b style='font-size:36px;color:#2c3e50;'>{promedio:.1f}</b>",
+                         x=0.5, y=0.6, showarrow=False
                      ),
-                     height=220,
-                     margin=dict(l=10, r=10, t=40, b=10),
-                     paper_bgcolor='rgba(0,0,0,0)',
-                     plot_bgcolor='rgba(0,0,0,0)'
-                 )
-                 return fig
- 
-             # Lógica para los relojes tradicionales superiores (Resumen Ejecutivo)
-             def crear_gauge_global(valor, titulo, rango=[0, 100]):
-                 steps = [
-                     {'range': [0, 60], 'color': "#f8d7da"},
-                     {'range': [60, 90], 'color': "#fff3cd"},
-                     {'range': [90, 100], 'color': "#d1e7dd"}
-                 ]
-                 fig = go.Figure(go.Indicator(
-                     mode="gauge+number", value=valor, 
-                     title={'text': f"<b>{titulo}</b>", 'font': {'size': 16}},
-                     number={'valueformat': ".1f", 'suffix': "%", 'font': {'size': 36}},
-                     gauge={
-                         'axis': {'range': rango, 'tickwidth': 1, 'dtick': 20},
-                         'bar': {'color': "#34495e", 'thickness': 0.25},
-                         'bgcolor': "white", 'borderwidth': 1, 'bordercolor': "#ccc", 'steps': steps
-                     }
-                 ))
-                 fig.update_layout(height=220, margin=dict(l=30, r=30, t=40, b=10), paper_bgcolor='rgba(0,0,0,0)')
-                 return fig
- 
-             with c1:
-                 st.plotly_chart(crear_gauge_global(nps_val, "NPS (Recomendación)"), use_container_width=True, key="gauge_nps_global")
-                 p_c = len(df_mes[df_mes[col_nps_puntaje] >= 9])
-                 d_c = len(df_mes[df_mes[col_nps_puntaje] <= 6])
-                 pas_c = len(df_mes) - p_c - d_c
-                 _, b1, b2, b3 = st.columns([0.1, 1, 1, 1])
-                 if b1.button(f"🟢 {p_c} Prom", key="btn1_nps"):
-                     st.session_state.update({"f_tipo":"NPS","f_val":"Promotor"}); st.rerun()
-                 if b2.button(f"🟡 {pas_c} Neu", key="btn2_nps"):
-                     st.session_state.update({"f_tipo":"NPS","f_val":"Pasivo"}); st.rerun()
-                 if b3.button(f"🔴 {d_c} Det", key="btn3_nps"):
-                     st.session_state.update({"f_tipo":"NPS","f_val":"Detractor"}); st.rerun()
- 
-             with c2:
-                 st.plotly_chart(crear_gauge_global(csi_val, "CSI (Satisfacción)"), use_container_width=True, key="gauge_csi_global")
-                 limit_exc = 90 if csi_val > 15 else 9
-                 limit_mal = 60 if csi_val > 15 else 6
-                 exc_c = len(df_mes[df_mes[col_csi_final] >= limit_exc])
-                 mal_c = len(df_mes[df_mes[col_csi_final] <= limit_mal])
-                 reg_c = len(df_mes) - exc_c - mal_c
-                 _, b4, b5, b6 = st.columns([0.1, 1, 1, 1])
-                 if b4.button(f"🟢 {exc_c} Exc", key="btn4_csi"):
-                     st.session_state.update({"f_tipo":"CSI","f_val":"Excelente"}); st.rerun()
-                 if b5.button(f"🟡 {reg_c} Reg", key="btn5_csi"):
-                     st.session_state.update({"f_tipo":"CSI","f_val":"Regular"}); st.rerun()
-                 if b6.button(f"🔴 {mal_c} Mal", key="btn6_csi"):
-                     st.session_state.update({"f_tipo":"CSI","f_val":"Malo"}); st.rerun()
- 
-             st.write("---")
+                     dict(
+                         text=f"<span style='font-size:12px;color:#6c757d;'>Respuestas<br><b>{muestra}</b></span>",
+                         x=0.5, y=0.35, showarrow=False
+                     )
+                 ],
+                 title=dict(
+                     text=f"<b style='font-size:15px;color:#333;'>{titulo}</b>",
+                     x=0.5, y=0.95, xanchor='center'
+                 ),
+                 height=220,
+                 margin=dict(l=10, r=10, t=40, b=10),
+                 paper_bgcolor='rgba(0,0,0,0)',
+                 plot_bgcolor='rgba(0,0,0,0)'
+             )
+             return fig
+
+         # --- NUEVA FUNCIÓN PARA LOS ANILLOS MAXI DEL RESUMEN EJECUTIVO (COMO TUS FOTOS) ---
+         def crear_anillo_maxi_global(valores_serie, titulo, valor_grande, sufijo="%"):
+             validos = pd.to_numeric(valores_serie, errors='coerce').dropna()
+             total = len(validos)
              
+             if total == 0:
+                 fig = go.Figure(go.Pie(values=[1], hole=0.72, marker=dict(colors=['#e9ecef']), showlegend=False))
+                 return fig
+             
+             # Contamos detractores, pasivos y promotores sobre la muestra real del mes
+             detractores = len(validos[validos <= 6])
+             pasivos = len(validos[(validos > 6) & (validos <= 8)])
+             promotores = len(validos[validos >= 9])
+             
+             fig = go.Figure(go.Pie(
+                 labels=['Promotores/Exc', 'Pasivos/Reg', 'Detractores/Mal'],
+                 values=[promotores, pasivos, detractores],
+                 hole=0.74,
+                 marker=dict(colors=['#28a745', '#ffc107', '#dc3545']),
+                 sort=False,
+                 showlegend=False,
+                 hoverinfo='label+value+percent'
+             ))
+             
+             fig.update_layout(
+                 annotations=[
+                     dict(
+                         text=f"<span style='font-size:14px;color:#6c757d;font-weight:bold;'>{titulo}</span><br><b style='font-size:38px;color:#2c3e50;'>{valor_grande:.1f}{sufijo}</b><br><span style='font-size:11px;color:#888;'>Muestra: {total}</span>",
+                         x=0.5, y=0.5, showarrow=False, textalign='center'
+                     )
+                 ],
+                 height=250,
+                 margin=dict(l=10, r=10, t=10, b=10),
+                 paper_bgcolor='rgba(0,0,0,0)',
+                 plot_bgcolor='rgba(0,0,0,0)'
+             )
+             return fig
+
+         with c1:
+             # Mostramos el anillo Maxi segmentado usando la lógica de tus imágenes
+             st.plotly_chart(crear_anillo_maxi_global(df_mes[col_nps_puntaje], "NPS", nps_val, "%"), use_container_width=True, key="anillo_maxi_nps")
+             p_c = len(df_mes[df_mes[col_nps_puntaje] >= 9])
+             d_c = len(df_mes[df_mes[col_nps_puntaje] <= 6])
+             pas_c = len(df_mes) - p_c - d_c
+             _, b1, b2, b3 = st.columns([0.1, 1, 1, 1])
+             if b1.button(f"🟢 {p_c} Prom", key="btn1_nps"):
+                 st.session_state.update({"f_tipo":"NPS","f_val":"Promotor"}); st.rerun()
+             if b2.button(f"🟡 {pas_c} Neu", key="btn2_nps"):
+                 st.session_state.update({"f_tipo":"NPS","f_val":"Pasivo"}); st.rerun()
+             if b3.button(f"🔴 {d_c} Det", key="btn3_nps"):
+                 st.session_state.update({"f_tipo":"NPS","f_val":"Detractor"}); st.rerun()
+
+         with c2:
+             # Mostramos el anillo Maxi segmentado para el CSI
+             st.plotly_chart(crear_anillo_maxi_global(df_mes[col_csi_final], "CSI", csi_val, "%"), use_container_width=True, key="anillo_maxi_csi")
+             limit_exc = 90 if csi_val > 15 else 9
+             limit_mal = 60 if csi_val > 15 else 6
+             exc_c = len(df_mes[df_mes[col_csi_final] >= limit_exc])
+             mal_c = len(df_mes[df_mes[col_csi_final] <= limit_mal])
+             reg_c = len(df_mes) - exc_c - mal_c
+             _, b4, b5, b6 = st.columns([0.1, 1, 1, 1])
+             if b4.button(f"🟢 {exc_c} Exc", key="btn4_csi"):
+                 st.session_state.update({"f_tipo":"CSI","f_val":"Excelente"}); st.rerun()
+             if b5.button(f"🟡 {reg_c} Reg", key="btn5_csi"):
+                 st.session_state.update({"f_tipo":"CSI","f_val":"Regular"}); st.rerun()
+             if b6.button(f"🔴 {mal_c} Mal", key="btn6_csi"):
+                 st.session_state.update({"f_tipo":"CSI","f_val":"Malo"}); st.rerun()
+
+         st.write("---")             
              # --- 2. SECCIÓN INFERIOR: CUADRÍCULA DE ANILLOS LIMPIOS ---
              st.markdown("### Detalle por Pregunta de la Encuesta (Estilo Corporativo)")
              
