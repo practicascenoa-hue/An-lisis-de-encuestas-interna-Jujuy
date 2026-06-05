@@ -131,7 +131,7 @@ if df_raw is not None:
          # --- 1. SECCIÓN SUPERIOR: KPIs GLOBALES (NPS & CSI) ---
          st.markdown("### Resumen Ejecutivo")
          
-         # Cálculos base globales
+         # --- PRIMERO LOS CÁLCULOS: Así evitamos cualquier NameError ---
          nps_val = df_mes[col_nps_puntaje].mean() * 10
          csi_raw = df_mes[col_csi_final].mean()
          csi_val = csi_raw * 100 if csi_raw <= 1.1 else csi_raw
@@ -153,16 +153,13 @@ if df_raw is not None:
              promedio = validos.mean()
              
              # Segmentación para armar las porciones del anillo como la marca
-             # Contamos cuántos clientes caen en cada tramo (Rojo: 1-6, Amarillo: 7-8, Verde: 9-10)
              detractores = len(validos[validos <= 6])
              pasivos = len(validos[(validos > 6) & (validos <= 8)])
              promotores = len(validos[validos >= 9])
              
-             # Si todos son 0 (evitar error), por defecto rellenamos
              cantidades = [promotores, pasivos, detractores]
-             colores = ['#28a745', '#ffc107', '#dc3545'] # Verde, Amarillo, Rojo oficiales
+             colores = ['#28a745', '#ffc107', '#dc3545']
              
-             # Si la muestra es positiva pero no queremos que se rompa el gráfico si están en 0
              if sum(cantidades) == 0:
                  cantidades = [1]
                  colores = ['#e9ecef']
@@ -178,7 +175,6 @@ if df_raw is not None:
                  hoverinfo='label+percent'
              ))
              
-             # Inyectar el número gigante y la muestra exacta en el centro del anillo
              fig.update_layout(
                  annotations=[
                      dict(
@@ -210,7 +206,6 @@ if df_raw is not None:
                  fig = go.Figure(go.Pie(values=[1], hole=0.72, marker=dict(colors=['#e9ecef']), showlegend=False))
                  return fig
              
-             # Contamos detractores, pasivos y promotores sobre la muestra real del mes
              detractores = len(validos[validos <= 6])
              pasivos = len(validos[(validos > 6) & (validos <= 8)])
              promotores = len(validos[validos >= 9])
@@ -240,7 +235,6 @@ if df_raw is not None:
              return fig
 
          with c1:
-             # Mostramos el anillo Maxi segmentado usando la lógica de tus imágenes
              st.plotly_chart(crear_anillo_maxi_global(df_mes[col_nps_puntaje], "NPS", nps_val, "%"), use_container_width=True, key="anillo_maxi_nps")
              p_c = len(df_mes[df_mes[col_nps_puntaje] >= 9])
              d_c = len(df_mes[df_mes[col_nps_puntaje] <= 6])
@@ -254,7 +248,6 @@ if df_raw is not None:
                  st.session_state.update({"f_tipo":"NPS","f_val":"Detractor"}); st.rerun()
 
          with c2:
-             # Mostramos el anillo Maxi segmentado para el CSI
              st.plotly_chart(crear_anillo_maxi_global(df_mes[col_csi_final], "CSI", csi_val, "%"), use_container_width=True, key="anillo_maxi_csi")
              limit_exc = 90 if csi_val > 15 else 9
              limit_mal = 60 if csi_val > 15 else 6
