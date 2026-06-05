@@ -247,8 +247,7 @@ if df_raw is not None:
              
             # --- FILA 1 DE ANILLOS (Preguntas 1, 2 y 3) ---
             cod1, cod2, cod3 = st.columns(3)
-             
-             with cod1:
+            with cod1:
                  col_f_turno = df_mes.columns[5]
                  st.plotly_chart(crear_anillo_corporativo(df_mes[col_f_turno], "Q5 - Facilidad de Agendamiento"), use_container_width=True, key="anillo_q5_agendamiento")
  
