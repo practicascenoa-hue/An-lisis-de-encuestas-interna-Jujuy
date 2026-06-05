@@ -245,8 +245,8 @@ if df_raw is not None:
             # --- 2. SECCIÓN INFERIOR: CUADRÍCULA DE ANILLOS LIMPIOS ---
             st.markdown("### Detalle por Pregunta de la Encuesta (Estilo Corporativo)")
              
-             # --- FILA 1 DE ANILLOS (Preguntas 1, 2 y 3) ---
-             cod1, cod2, cod3 = st.columns(3)
+            # --- FILA 1 DE ANILLOS (Preguntas 1, 2 y 3) ---
+            cod1, cod2, cod3 = st.columns(3)
              
              with cod1:
                  col_f_turno = df_mes.columns[5]
