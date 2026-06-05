@@ -136,7 +136,53 @@ if df_raw is not None:
             csi_raw = df_mes[col_csi_final].mean()
             csi_val = csi_raw * 100 if csi_raw <= 1.1 else csi_raw
 
-            # --- NUEVA FUNCIÓN PARA LOS ANILLOS MAXI DEL RESUMEN EJECUTIVO (ESTILO DONA) ---
+            # --- NUEVA FUNCIÓN MAESTRA: ANILLO EVOLUCIONADO CORPORATIVO ---
+            def crear_anillo_corporativo(valores_serie, titulo):
+                validos = pd.to_numeric(valores_serie, errors='coerce').dropna()
+                muestra = len(validos)
+                
+                if muestra == 0:
+                    fig = go.Figure(go.Pie(values=[1], hole=0.75, marker=dict(colors=['#e9ecef']), showlegend=False, hoverinfo='none'))
+                    fig.update_layout(title=dict(text=f"<b>{titulo}</b><br><span style='font-size:12px;color:orange;'>Sin Datos</span>", x=0.5, y=0.5))
+                    return fig
+                    
+                promedio = validos.mean()
+                
+                detractores = len(validos[validos <= 6])
+                pasivos = len(validos[(validos > 6) & (validos <= 8)])
+                promotores = len(validos[validos >= 9])
+                
+                cantidades = [promotores, pasivos, detractores]
+                colores = ['#28a745', '#ffc107', '#dc3545']
+                
+                if sum(cantidades) == 0:
+                    cantidades = [1]
+                    colores = ['#e9ecef']
+
+                fig = go.Figure(go.Pie(
+                    labels=['Excelente/Promotor', 'Regular/Pasivo', 'Malo/Detractor'],
+                    values=cantidades,
+                    hole=0.78,
+                    marker=dict(colors=colores),
+                    sort=False,
+                    showlegend=False,
+                    hoverinfo='label+percent'
+                ))
+                
+                fig.update_layout(
+                    annotations=[
+                        dict(text=f"<b style='font-size:36px;color:#2c3e50;'>{promedio:.1f}</b>", x=0.5, y=0.6, showarrow=False),
+                        dict(text=f"<span style='font-size:12px;color:#6c757d;'>Respuestas<br><b>{muestra}</b></span>", x=0.5, y=0.35, showarrow=False)
+                    ],
+                    title=dict(text=f"<b style='font-size:15px;color:#333;'>{titulo}</b>", x=0.5, y=0.95, xanchor='center'),
+                    height=220,
+                    margin=dict(l=10, r=10, t=40, b=10),
+                    paper_bgcolor='rgba(0,0,0,0)',
+                    plot_bgcolor='rgba(0,0,0,0)'
+                )
+                return fig
+
+            # --- NUEVA FUNCIÓN PARA LOS ANILLOS MAXI DEL RESUMEN EJECUTIVO (COMO TU DISEÑO) ---
             def crear_anillo_maxi_global(valores_serie, titulo, valor_grande, sufijo="%"):
                 validos = pd.to_numeric(valores_serie, errors='coerce').dropna()
                 total = len(validos)
@@ -145,7 +191,6 @@ if df_raw is not None:
                     fig = go.Figure(go.Pie(values=[1], hole=0.72, marker=dict(colors=['#e9ecef']), showlegend=False))
                     return fig
                 
-                # Agrupamos promotores, pasivos y detractores reales de la muestra
                 detractores = len(validos[validos <= 6])
                 pasivos = len(validos[(validos > 6) & (validos <= 8)])
                 promotores = len(validos[validos >= 9])
@@ -177,7 +222,6 @@ if df_raw is not None:
             c1, c2 = st.columns(2)
             
             with c1:
-                # Dibujamos el anillo Maxi tricolor de NPS
                 st.plotly_chart(crear_anillo_maxi_global(df_mes[col_nps_puntaje], "NPS", nps_val, "%"), use_container_width=True, key="anillo_maxi_nps")
                 p_c = len(df_mes[df_mes[col_nps_puntaje] >= 9])
                 d_c = len(df_mes[df_mes[col_nps_puntaje] <= 6])
@@ -190,8 +234,7 @@ if df_raw is not None:
                 if b3.button(f"🔴 {d_c} Det", key="btn3_nps"):
                     st.session_state.update({"f_tipo":"NPS","f_val":"Detractor"}); st.rerun()
 
-         with c2:
-                # Dibujamos el anillo Maxi tricolor de CSI
+            with c2:
                 st.plotly_chart(crear_anillo_maxi_global(df_mes[col_csi_final], "CSI", csi_val, "%"), use_container_width=True, key="anillo_maxi_csi")
                 limit_exc = 90 if csi_val > 15 else 9
                 limit_mal = 60 if csi_val > 15 else 6
@@ -206,6 +249,41 @@ if df_raw is not None:
                 if b6.button(f"🔴 {mal_c} Mal", key="btn6_csi"):
                     st.session_state.update({"f_tipo":"CSI","f_val":"Malo"}); st.rerun()
 
+            st.write("---")
+            
+            # --- 2. SECCIÓN INFERIOR: CUADRÍCULA DE ANILLOS LIMPIOS ---
+            st.markdown("### Detalle por Pregunta de la Encuesta (Estilo Corporativo)")
+            
+            # --- FILA 1 DE ANILLOS (Preguntas 1, 2 y 3) ---
+            cod1, cod2, cod3 = st.columns(3)
+            
+            with cod1:
+                col_f_turno = df_mes.columns[5]
+                st.plotly_chart(crear_anillo_corporativo(df_mes[col_f_turno], "Q5 - Facilidad de Agendamiento"), use_container_width=True, key="anillo_q5_agendamiento")
+
+            with cod2:
+                col_h_asesor = df_raw.columns[7]
+                st.plotly_chart(crear_anillo_corporativo(df_mes[col_h_asesor], "Q8 - Cortesía y Competencia Asesor"), use_container_width=True, key="anillo_q8_asesor")
+                    
+            with cod3:
+                st.plotly_chart(crear_anillo_corporativo(df_mes[col_ambiente_J], "Q6 - Calidad Instalaciones y Confort"), use_container_width=True, key="anillo_q6_ambiente")
+
+            st.write("") # Espacio sutil entre filas
+
+            # --- FILA 2 DE ANILLOS (Preguntas 4 y 5) ---
+            cod4, cod5, cod6 = st.columns(3)
+
+            with cod4:
+                col_l_chapa = df_mes.columns[11]
+                st.plotly_chart(crear_anillo_corporativo(df_mes[col_l_chapa], "Q12 - Calidad Chapa y Pintura"), use_container_width=True, key="anillo_q12_chapa")
+
+            with cod5:
+                col_n_tiempo = df_mes.columns[13]
+                st.plotly_chart(crear_anillo_corporativo(df_mes[col_n_tiempo], "Q9 - Tiempo de Reparación"), use_container_width=True, key="anillo_q9_tiempo")
+
+            with cod6:
+                st.info("📊 **Siguiente pregunta disponible**\n\nEspacio libre en la segunda fila.")             
+            
             st.write("---")            
             # --- 2. SECCIÓN INFERIOR: CUADRÍCULA DE ANILLOS LIMPIOS ---
             st.markdown("### Detalle por Pregunta de la Encuesta (Estilo Corporativo)")
