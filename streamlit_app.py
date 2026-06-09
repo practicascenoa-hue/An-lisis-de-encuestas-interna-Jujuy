@@ -319,38 +319,7 @@ if df_raw is not None:
               st.info("📊 **Siguiente pregunta disponible**\n\nEspacio libre en la segunda fila.")             
             
           st.write("---")             
-            # --- 2. SECCIÓN INFERIOR: CUADRÍCULA DE ANILLOS LIMPIOS ---
-            st.markdown("### Detalle por Pregunta de la Encuesta (Estilo Corporativo)")
-             
-            # --- FILA 1 DE ANILLOS (Preguntas 1, 2 y 3) ---
-            cod1, cod2, cod3 = st.columns(3)
-            with cod1:
-                 col_f_turno = df_mes.columns[5]
-                 st.plotly_chart(crear_anillo_corporativo(df_mes[col_f_turno], "Q5 - Facilidad de Agendamiento"), use_container_width=True, key="anillo_q5_agendamiento")
- 
-            with cod2:
-                 col_h_asesor = df_raw.columns[7]
-                 st.plotly_chart(crear_anillo_corporativo(df_mes[col_h_asesor], "Q8 - Cortesía y Competencia Asesor"), use_container_width=True, key="anillo_q8_asesor")
-                     
-            with cod3:
-                 st.plotly_chart(crear_anillo_corporativo(df_mes[col_ambiente_J], "Q6 - Calidad Instalaciones y Confort"), use_container_width=True, key="anillo_q6_ambiente")
- 
-            st.write("") # Espacio sutil entre filas
- 
-            # --- FILA 2 DE ANILLOS (Preguntas 4 y 5) ---
-            cod4, cod5, cod6 = st.columns(3)
- 
-            with cod4:
-                 col_l_chapa = df_mes.columns[11]
-                 st.plotly_chart(crear_anillo_corporativo(df_mes[col_l_chapa], "Q12 - Calidad Chapa y Pintura"), use_container_width=True, key="anillo_q12_chapa")
- 
-            with cod5:
-                 col_n_tiempo = df_mes.columns[13]
-                 st.plotly_chart(crear_anillo_corporativo(df_mes[col_n_tiempo], "Q9 - Tiempo de Reparación"), use_container_width=True, key="anillo_q9_tiempo")
- 
-            with cod6:
-                 st.info("📊 **Siguiente pregunta disponible**\n\nEspacio libre en la segunda fila.")             
-           
+                             
      # --- TAB 2: ASESORES ---
      with tab2:
         st.subheader(f"👤 Desempeño de Asesores - {mes_sel_nombre} {anio_sel}")
