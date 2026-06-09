@@ -278,7 +278,7 @@ if df_raw is not None:
           with cod3:
                 st.plotly_chart(crear_anillo_corporativo(df_mes[col_ambiente_J], "Q6 - Calidad Instalaciones y Confort"), use_container_width=True, key="anillo_q6_ambiente")
 
-            st.write("") # Espacio sutil entre filas
+          st.write("") # Espacio sutil entre filas
 
             # --- FILA 2 DE ANILLOS (Preguntas 4 y 5) ---
             cod4, cod5, cod6 = st.columns(3)
