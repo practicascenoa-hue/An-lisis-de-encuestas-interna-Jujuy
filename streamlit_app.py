@@ -123,6 +123,52 @@ if df_raw is not None:
      st.title("INDICADORES ENCUESTAS DE SATISFACCIÓN")
      tab1, tab2, tab3, tab4 = st.tabs(["🎯 INDICADORES", "👤 ASESORES", "📊 EVOLUCIÓN MENSUAL", "⚠️ ANÁLISIS DE RECLAMOS"])
 
+     # --- FUNCIÓN MAESTRA GLOBAL: ANILLO EVOLUCIONADO CORPORATIVO ---
+     def crear_anillo_corporativo(valores_serie, titulo):
+          validos = pd.to_numeric(valores_serie, errors='coerce').dropna()
+          muestra = len(validos)
+          
+          if muestra == 0:
+               fig = go.Figure(go.Pie(values=[1], hole=0.75, marker=dict(colors=['#e9ecef']), showlegend=False, hoverinfo='none'))
+               fig.update_layout(title=dict(text=f"<b>{titulo}</b><br><span style='font-size:12px;color:orange;'>Sin Datos</span>", x=0.5, y=0.5))
+               return fig
+               
+          promedio = validos.mean()
+          
+          detractores = len(validos[validos <= 6])
+          pasivos = len(validos[(validos > 6) & (validos <= 8)])
+          promotores = len(validos[validos >= 9])
+          
+          cantidades = [promotores, pasivos, detractores]
+          colores = ['#28a745', '#ffc107', '#dc3545']
+          
+          if sum(cantidades) == 0:
+               cantidades = [1]
+               colores = ['#e9ecef']
+
+          fig = go.Figure(go.Pie(
+               labels=['Excelente/Promotor', 'Regular/Pasivo', 'Malo/Detractor'],
+               values=cantidades,
+               hole=0.78,
+               marker=dict(colors=colores),
+               sort=False,
+               showlegend=False,
+               hoverinfo='label+percent'
+          ))
+          
+          fig.update_layout(
+               annotations=[
+                    dict(text=f"<b style='font-size:36px;color:#2c3e50;'>{promedio:.1f}</b>", x=0.5, y=0.6, showarrow=False),
+                    dict(text=f"<span style='font-size:12px;color:#6c757d;'>Respuestas<br><b>{muestra}</b></span>", x=0.5, y=0.35, showarrow=False)
+               ],
+               title=dict(text=f"<b style='font-size:15px;color:#333;'>{titulo}</b>", x=0.5, y=0.95, xanchor='center'),
+               height=220,
+               margin=dict(l=10, r=10, t=40, b=10),
+               paper_bgcolor='rgba(0,0,0,0)',
+               plot_bgcolor='rgba(0,0,0,0)'
+          )
+          return fig
+
      # --- TAB 1: INDICADORES (CON CUADRÍCULA DE ANILLOS CORPORATIVOS) ---
      with tab1:
           st.header(f"🎯 Indicadores Clave - {mes_sel_nombre} {anio_sel}")
@@ -135,52 +181,6 @@ if df_raw is not None:
                nps_val = df_mes[col_nps_puntaje].mean() * 10
                csi_raw = df_mes[col_csi_final].mean()
                csi_val = csi_raw * 100 if csi_raw <= 1.1 else csi_raw
-
-               # --- NUEVA FUNCIÓN MAESTRA: ANILLO EVOLUCIONADO CORPORATIVO ---
-               def crear_anillo_corporativo(valores_serie, titulo):
-                    validos = pd.to_numeric(valores_serie, errors='coerce').dropna()
-                    muestra = len(validos)
-                    
-                    if muestra == 0:
-                         fig = go.Figure(go.Pie(values=[1], hole=0.75, marker=dict(colors=['#e9ecef']), showlegend=False, hoverinfo='none'))
-                         fig.update_layout(title=dict(text=f"<b>{titulo}</b><br><span style='font-size:12px;color:orange;'>Sin Datos</span>", x=0.5, y=0.5))
-                         return fig
-                         
-                    promedio = validos.mean()
-                    
-                    detractores = len(validos[validos <= 6])
-                    pasivos = len(validos[(validos > 6) & (validos <= 8)])
-                    promotores = len(validos[validos >= 9])
-                    
-                    cantidades = [promotores, pasivos, detractores]
-                    colores = ['#28a745', '#ffc107', '#dc3545']
-                    
-                    if sum(cantidades) == 0:
-                         cantidades = [1]
-                         colores = ['#e9ecef']
-
-                    fig = go.Figure(go.Pie(
-                         labels=['Excelente/Promotor', 'Regular/Pasivo', 'Malo/Detractor'],
-                         values=cantidades,
-                         hole=0.78,
-                         marker=dict(colors=colores),
-                         sort=False,
-                         showlegend=False,
-                         hoverinfo='label+percent'
-                    ))
-                    
-                    fig.update_layout(
-                         annotations=[
-                              dict(text=f"<b style='font-size:36px;color:#2c3e50;'>{promedio:.1f}</b>", x=0.5, y=0.6, showarrow=False),
-                              dict(text=f"<span style='font-size:12px;color:#6c757d;'>Respuestas<br><b>{muestra}</b></span>", x=0.5, y=0.35, showarrow=False)
-                         ],
-                         title=dict(text=f"<b style='font-size:15px;color:#333;'>{titulo}</b>", x=0.5, y=0.95, xanchor='center'),
-                         height=220,
-                         margin=dict(l=10, r=10, t=40, b=10),
-                         paper_bgcolor='rgba(0,0,0,0)',
-                         plot_bgcolor='rgba(0,0,0,0)'
-                    )
-                    return fig
      
                # --- NUEVA FUNCIÓN PARA LOS ANILLOS MAXI DEL RESUMEN EJECUTIVO (ESTILO DONA) ---
                def crear_anillo_maxi_global(valores_serie, titulo, valor_grande, sufijo="%"):
@@ -274,7 +274,7 @@ if df_raw is not None:
                     col_n_tiempo = df_mes.columns[13]
                     st.plotly_chart(crear_anillo_corporativo(df_mes[col_n_tiempo], "Q9 - Tiempo de Reparación"), use_container_width=True, key="anillo_q9_tiempo")
                with cod6:
-                    st.info("📊 **Siguiente pregunta disponible**\n\nEspacio libre en la segunda fila.")             
+                    st.info("📊 **Siguiente pregunta disponible**\n\nEspacio libre en la segunda fila.")              
                
                if st.session_state.f_tipo:
                     st.markdown("---")
