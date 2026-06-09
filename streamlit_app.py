@@ -294,16 +294,7 @@ if df_raw is not None:
                with cod6:
                     st.info("📊 **Siguiente pregunta disponible**\n\nEspacio libre en la segunda fila.")
 
-               st.write("---")            
-            # --- 2. SECCIÓN INFERIOR: CUADRÍCULA DE ANILLOS LIMPIOS ---
-            st.markdown("### Detalle por Pregunta de la Encuesta (Estilo Corporativo)")
-            
-            # --- FILA 1 DE ANILLOS (Preguntas 1, 2 y 3) ---
-            cod1, cod2, cod3 = st.columns(3)
-            
-            with cod1:
-                col_f_turno = df_mes.columns[5]
-                st.plotly_chart(crear_anillo_corporativo(df_mes[col_f_turno], "Q5 - Facilidad de Agendamiento"), use_container_width=True, key="anillo_q5_agendamiento")
+               st.write("---")
 
             with cod2:
                 col_h_asesor = df_raw.columns[7]
