@@ -123,204 +123,143 @@ if df_raw is not None:
      st.title("INDICADORES ENCUESTAS DE SATISFACCIÓN")
      tab1, tab2, tab3, tab4 = st.tabs(["🎯 INDICADORES", "👤 ASESORES", "📊 EVOLUCIÓN MENSUAL", "⚠️ ANÁLISIS DE RECLAMOS"])
  # --- TAB 1: INDICADORES (CON CUADRÍCULA DE ANILLOS CORPORATIVOS) ---
-     with tab1:
-          st.header(f"🎯 Indicadores Clave - {mes_sel_nombre} {anio_sel}")
-                   
-          if len(df_mes) > 0:
-               # --- 1. SECCIÓN SUPERIOR: KPIs GLOBALES (NPS & CSI TRICOLOR) ---
-               st.markdown("### Resumen Ejecutivo")
-               
-               # Cálculos base globales
-               nps_val = df_mes[col_nps_puntaje].mean() * 10
-               csi_raw = df_mes[col_csi_final].mean()
-               csi_val = csi_raw * 100 if csi_raw <= 1.1 else csi_raw
+with tab1:
+     st.header(f"🎯 Indicadores Clave - {mes_sel_nombre} {anio_sel}")
+              
+     if len(df_mes) > 0:
+          # --- 1. SECCIÓN SUPERIOR: KPIs GLOBALES (NPS & CSI TRICOLOR) ---
+          st.markdown("### Resumen Ejecutivo")
+          
+          # Cálculos base globales
+          nps_val = df_mes[col_nps_puntaje].mean() * 10
+          csi_raw = df_mes[col_csi_final].mean()
+          csi_val = csi_raw * 100 if csi_raw <= 1.1 else csi_raw
 
-               # --- NUEVA FUNCIÓN PARA LOS ANILLOS MAXI DEL RESUMEN EJECUTIVO (ESTILO DONA) ---
-               def crear_anillo_maxi_global(valores_serie, titulo, valor_grande, sufijo="%"):
-                    validos = pd.to_numeric(valores_serie, errors='coerce').dropna()
-                    total = len(validos)
-                    
-                    if total == 0:
-                         fig = go.Figure(go.Pie(values=[1], hole=0.72, marker=dict(colors=['#e9ecef']), showlegend=False))
-                         return fig
-                    
-                    # Conteo proporcional real de la muestra para armar las porciones
-                    detractores = len(validos[validos <= 6])
-                    pasivos = len(validos[(validos > 6) & (validos <= 8)])
-                    promotores = len(validos[validos >= 9])
-                    
-                    fig = go.Figure(go.Pie(
-                         labels=['Promotores/Exc', 'Pasivos/Reg', 'Detractores/Mal'],
-                         values=[promotores, pasivos, detractores],
-                         hole=0.74,
-                         marker=dict(colors=['#28a745', '#ffc107', '#dc3545']),
-                         sort=False,
-                         showlegend=False,
-                         hoverinfo='label+value+percent'
-                    ))
-                    
-                    fig.update_layout(
-                         annotations=[
-                              dict(
-                                   text=f"<span style='font-size:14px;color:#6c757d;font-weight:bold;'>{titulo}</span><br><b style='font-size:38px;color:#2c3e50;'>{valor_grande:.1f}{sufijo}</b><br><span style='font-size:11px;color:#888;'>Muestra: {total}</span>",
-                                   x=0.5, y=0.5, showarrow=False, textalign='center'
-                              )
-                         ],
-                         height=250,
-                         margin=dict(l=10, r=10, t=10, b=10),
-                         paper_bgcolor='rgba(0,0,0,0)',
-                         plot_bgcolor='rgba(0,0,0,0)'
-                    )
+          # --- NUEVA FUNCIÓN PARA LOS ANILLOS MAXI DEL RESUMEN EJECUTIVO (ESTILO DONA) ---
+          def crear_anillo_maxi_global(valores_serie, titulo, valor_grande, sufijo="%"):
+               validos = pd.to_numeric(valores_serie, errors='coerce').dropna()
+               total = len(validos)
+               
+               if total == 0:
+                    fig = go.Figure(go.Pie(values=[1], hole=0.72, marker=dict(colors=['#e9ecef']), showlegend=False))
                     return fig
-
-               c1, c2 = st.columns(2)
                
-               with c1:
-                    st.plotly_chart(crear_anillo_maxi_global(df_mes[col_nps_puntaje], "NPS", nps_val, "%"), use_container_width=True, key="anillo_maxi_nps")
-                    p_c = len(df_mes[df_mes[col_nps_puntaje] >= 9])
-                    d_c = len(df_mes[df_mes[col_nps_puntaje] <= 6])
-                    pas_c = len(df_mes) - p_c - d_c
-                    _, b1, b2, b3 = st.columns([0.1, 1, 1, 1])
-                    if b1.button(f"🟢 {p_c} Prom", key="btn1_nps"):
-                         st.session_state.update({"f_tipo":"NPS","f_val":"Promotor"}); st.rerun()
-                    if b2.button(f"🟡 {pas_c} Neu", key="btn2_nps"):
-                         st.session_state.update({"f_tipo":"NPS","f_val":"Pasivo"}); st.rerun()
-                    if b3.button(f"🔴 {d_c} Det", key="btn3_nps"):
-                         st.session_state.update({"f_tipo":"NPS","f_val":"Detractor"}); st.rerun()
-
-               with c2:
-                    st.plotly_chart(crear_anillo_maxi_global(df_mes[col_csi_final], "CSI", csi_val, "%"), use_container_width=True, key="anillo_maxi_csi")
-                    limit_exc = 90 if csi_val > 15 else 9
-                    limit_mal = 60 if csi_val > 15 else 6
-                    exc_c = len(df_mes[df_mes[col_csi_final] >= limit_exc])
-                    mal_c = len(df_mes[df_mes[col_csi_final] <= limit_mal])
-                    reg_c = len(df_mes) - exc_c - mal_c
-                    _, b4, b5, b6 = st.columns([0.1, 1, 1, 1])
-                    if b4.button(f"🟢 {exc_c} Exc", key="btn4_csi"):
-                         st.session_state.update({"f_tipo":"CSI","f_val":"Excelente"}); st.rerun()
-                    if b5.button(f"🟡 {reg_c} Reg", key="btn5_csi"):
-                         st.session_state.update({"f_tipo":"CSI","f_val":"Regular"}); st.rerun()
-                    if b6.button(f"🔴 {mal_c} Mal", key="btn6_csi"):
-                         st.session_state.update({"f_tipo":"CSI","f_val":"Malo"}); st.rerun()
-
-               st.write("---")
+               # Conteo real proporcional para los bloques de color
+               detractores = len(validos[validos <= 6])
+               pasivos = len(validos[(validos > 6) & (validos <= 8)])
+               promotores = len(validos[validos >= 9])
                
-               # --- 2. SECCIÓN INFERIOR: CUADRÍCULA DE ANILLOS LIMPIOS ---
-               st.markdown("### Detalle por Pregunta de la Encuesta (Estilo Corporativo)")
+               fig = go.Figure(go.Pie(
+                    labels=['Promotores/Exc', 'Pasivos/Reg', 'Detractores/Mal'],
+                    values=[promotores, pasivos, detractores],
+                    hole=0.74,
+                    marker=dict(colors=['#28a745', '#ffc107', '#dc3545']),
+                    sort=False,
+                    showlegend=False,
+                    hoverinfo='label+value+percent'
+               ))
                
-               cod1, cod2, cod3 = st.columns(3)
-               with cod1:
-                    col_f_turno = df_mes.columns[5]
-                    st.plotly_chart(crear_anillo_corporativo(df_mes[col_f_turno], "Q5 - Facilidad de Agendamiento"), use_container_width=True, key="anillo_q5_agendamiento")
-               with cod2:
-                    col_h_asesor = df_raw.columns[7]
-                    st.plotly_chart(crear_anillo_corporativo(df_mes[col_h_asesor], "Q8 - Cortesía y Competencia Asesor"), use_container_width=True, key="anillo_q8_asesor")
-               with cod3:
-                    st.plotly_chart(crear_anillo_corporativo(df_mes[col_ambiente_J], "Q6 - Calidad Instalaciones y Confort"), use_container_width=True, key="anillo_q6_ambiente")
+               fig.update_layout(
+                    annotations=[
+                         dict(
+                              text=f"<span style='font-size:14px;color:#6c757d;font-weight:bold;'>{titulo}</span><br><b style='font-size:38px;color:#2c3e50;'>{valor_grande:.1f}{sufijo}</b><br><span style='font-size:11px;color:#888;'>Muestra: {total}</span>",
+                              x=0.5, y=0.5, showarrow=False, textalign='center'
+                         )
+                    ],
+                    height=250,
+                    margin=dict(l=10, r=10, t=10, b=10),
+                    paper_bgcolor='rgba(0,0,0,0)',
+                    plot_bgcolor='rgba(0,0,0,0)'
+               )
+               return fig
 
-               st.write("")
-               
-               cod4, cod5, cod6 = st.columns(3)
-               with cod4:
-                    col_l_chapa = df_mes.columns[11]
-                    st.plotly_chart(crear_anillo_corporativo(df_mes[col_l_chapa], "Q12 - Calidad Chapa y Pintura"), use_container_width=True, key="anillo_q12_chapa")
-               with cod5:
-                    col_n_tiempo = df_mes.columns[13]
-                    st.plotly_chart(crear_anillo_corporativo(df_mes[col_n_tiempo], "Q9 - Tiempo de Reparación"), use_container_width=True, key="anillo_q9_tiempo")
-               with cod6:
-                    st.info("📊 **Siguiente pregunta disponible**\n\nEspacio libre en la segunda fila.")             
-               
-               if st.session_state.f_tipo:
-                    st.markdown("---")
-                    col_aud1, col_aud2 = st.columns([3, 1])
-                    with col_aud1:
-                         st.subheader(f"🔍 Auditoría {st.session_state.f_tipo}: {st.session_state.f_val}")
-                    with col_aud2:
-                         if st.button("✖️ Cerrar Auditoría", key="close_aud"):
-                              st.session_state.update({"f_tipo": None, "f_val": None})
-                              st.rerun()
-                    
-                    if st.session_state.f_tipo == "NPS":
-                         if st.session_state.f_val == "Promotor":
-                              df_f = df_mes[df_mes[col_nps_puntaje] >= 9]
-                         elif st.session_state.f_val == "Detractor":
-                              df_f = df_mes[df_mes[col_nps_puntaje] <= 6]
-                         else:
-                              df_f = df_mes[(df_mes[col_nps_puntaje] > 6) & (df_mes[col_nps_puntaje] < 9)]
-                         cols_show = [col_cliente, col_asesor, col_nps_puntaje, col_nps_comentario]
-                    else:
-                         if st.session_state.f_val == "Excelente":
-                              df_f = df_mes[df_mes[col_csi_final] >= limit_exc]
-                         elif st.session_state.f_val == "Malo":
-                              df_f = df_mes[df_mes[col_csi_final] <= limit_mal]
-                         else:
-                              df_f = df_mes[(df_mes[col_csi_final] > limit_mal) & (df_mes[col_csi_final] < limit_exc)]
-                         cols_show = [col_cliente, col_asesor, col_csi_final, col_com_atencion, col_com_calidad, col_com_tiempo]
+          c1, c2 = st.columns(2)
+          
+          with c1:
+               st.plotly_chart(crear_anillo_maxi_global(df_mes[col_nps_puntaje], "NPS", nps_val, "%"), use_container_width=True, key="anillo_maxi_nps")
+               p_c = len(df_mes[df_mes[col_nps_puntaje] >= 9])
+               d_c = len(df_mes[df_mes[col_nps_puntaje] <= 6])
+               pas_c = len(df_mes) - p_c - d_c
+               _, b1, b2, b3 = st.columns([0.1, 1, 1, 1])
+               if b1.button(f"🟢 {p_c} Prom", key="btn1_nps"):
+                    st.session_state.update({"f_tipo":"NPS","f_val":"Promotor"}); st.rerun()
+               if b2.button(f"🟡 {pas_c} Neu", key="btn2_nps"):
+                    st.session_state.update({"f_tipo":"NPS","f_val":"Pasivo"}); st.rerun()
+               if b3.button(f"🔴 {d_c} Det", key="btn3_nps"):
+                    st.session_state.update({"f_tipo":"NPS","f_val":"Detractor"}); st.rerun()
 
-                    st.dataframe(df_f[cols_show].fillna("Sin comentario"), use_container_width=True, hide_index=True)
+          with c2:
+               st.plotly_chart(crear_anillo_maxi_global(df_mes[col_csi_final], "CSI", csi_val, "%"), use_container_width=True, key="anillo_maxi_csi")
+               limit_exc = 90 if csi_val > 15 else 9
+               limit_mal = 60 if csi_val > 15 else 6
+               exc_c = len(df_mes[df_mes[col_csi_final] >= limit_exc])
+               mal_c = len(df_mes[df_mes[col_csi_final] <= limit_mal])
+               reg_c = len(df_mes) - exc_c - mal_c
+               _, b4, b5, b6 = st.columns([0.1, 1, 1, 1])
+               if b4.button(f"🟢 {exc_c} Exc", key="btn4_csi"):
+                    st.session_state.update({"f_tipo":"CSI","f_val":"Excelente"}); st.rerun()
+               if b5.button(f"🟡 {reg_c} Reg", key="btn5_csi"):
+                    st.session_state.update({"f_tipo":"CSI","f_val":"Regular"}); st.rerun()
+               if b6.button(f"🔴 {mal_c} Mal", key="btn6_csi"):
+                    st.session_state.update({"f_tipo":"CSI","f_val":"Malo"}); st.rerun()
 
           st.write("---")
           
           # --- 2. SECCIÓN INFERIOR: CUADRÍCULA DE ANILLOS LIMPIOS ---
           st.markdown("### Detalle por Pregunta de la Encuesta (Estilo Corporativo)")
-
-          # --- FILA 1 DE ANILLOS (Preguntas 1, 2 y 3) ---
+          
           cod1, cod2, cod3 = st.columns(3)
-
           with cod1:
-                col_f_turno = df_mes.columns[5]
-                st.plotly_chart(crear_anillo_corporativo(df_mes[col_f_turno], "Q5 - Facilidad de Agendamiento"), use_container_width=True, key="anillo_q5_agendamiento")
-
+               col_f_turno = df_mes.columns[5]
+               st.plotly_chart(crear_anillo_corporativo(df_mes[col_f_turno], "Q5 - Facilidad de Agendamiento"), use_container_width=True, key="anillo_q5_agendamiento")
           with cod2:
-                col_h_asesor = df_raw.columns[7]
-                st.plotly_chart(crear_anillo_corporativo(df_mes[col_h_asesor], "Q8 - Cortesía y Competencia Asesor"), use_container_width=True, key="anillo_q8_asesor")
-                    
+               col_h_asesor = df_raw.columns[7]
+               st.plotly_chart(crear_anillo_corporativo(df_mes[col_h_asesor], "Q8 - Cortesía y Competencia Asesor"), use_container_width=True, key="anillo_q8_asesor")
           with cod3:
-                st.plotly_chart(crear_anillo_corporativo(df_mes[col_ambiente_J], "Q6 - Calidad Instalaciones y Confort"), use_container_width=True, key="anillo_q6_ambiente")
+               st.plotly_chart(crear_anillo_corporativo(df_mes[col_ambiente_J], "Q6 - Calidad Instalaciones y Confort"), use_container_width=True, key="anillo_q6_ambiente")
 
-          st.write("") # Espacio sutil entre filas
-
-          # --- FILA 2 DE ANILLOS (Preguntas 4 y 5) ---
+          st.write("")
+          
           cod4, cod5, cod6 = st.columns(3)
-
           with cod4:
                col_l_chapa = df_mes.columns[11]
                st.plotly_chart(crear_anillo_corporativo(df_mes[col_l_chapa], "Q12 - Calidad Chapa y Pintura"), use_container_width=True, key="anillo_q12_chapa")
-
           with cod5:
                col_n_tiempo = df_mes.columns[13]
                st.plotly_chart(crear_anillo_corporativo(df_mes[col_n_tiempo], "Q9 - Tiempo de Reparación"), use_container_width=True, key="anillo_q9_tiempo")
-
           with cod6:
-               st.info("📊 **Siguiente pregunta disponible**\n\nEspacio libre en la segunda fila.")
+               st.info("📊 **Siguiente pregunta disponible**\n\nEspacio libre en la segunda fila.")             
+          
+          if st.session_state.f_tipo:
+               st.markdown("---")
+               col_aud1, col_aud2 = st.columns([3, 1])
+               with col_aud1:
+                    st.subheader(f"🔍 Auditoría {st.session_state.f_tipo}: {st.session_state.f_val}")
+               with col_aud2:
+                    if st.button("✖️ Cerrar Auditoría", key="close_aud"):
+                         st.session_state.update({"f_tipo": None, "f_val": None})
+                         st.rerun()
+               
+               if st.session_state.f_tipo == "NPS":
+                    if st.session_state.f_val == "Promotor":
+                         df_f = df_mes[df_mes[col_nps_puntaje] >= 9]
+                    elif st.session_state.f_val == "Detractor":
+                         df_f = df_mes[df_mes[col_nps_puntaje] <= 6]
+                    else:
+                         df_f = df_mes[(df_mes[col_nps_puntaje] > 6) & (df_mes[col_nps_puntaje] < 9)]
+                    cols_show = [col_cliente, col_asesor, col_nps_puntaje, col_nps_comentario]
+               else:
+                    if st.session_state.f_val == "Excelente":
+                         df_f = df_mes[df_mes[col_csi_final] >= limit_exc]
+                    elif st.session_state.f_val == "Malo":
+                         df_f = df_mes[df_mes[col_csi_final] <= limit_mal]
+                    else:
+                         df_f = df_mes[(df_mes[col_csi_final] > limit_mal) & (df_mes[col_csi_final] < limit_exc)]
+                    cols_show = [col_cliente, col_asesor, col_csi_final, col_com_atencion, col_com_calidad, col_com_tiempo]
+
+               st.dataframe(df_f[cols_show].fillna("Sin comentario"), use_container_width=True, hide_index=True)
 
           st.write("---")
-          with cod2:
-              col_h_asesor = df_raw.columns[7]
-              st.plotly_chart(crear_anillo_corporativo(df_mes[col_h_asesor], "Q8 - Cortesía y Competencia Asesor"), use_container_width=True, key="anillo_q8_asesor")
-                  
-          with cod3:
-              st.plotly_chart(crear_anillo_corporativo(df_mes[col_ambiente_J], "Q6 - Calidad Instalaciones y Confort"), use_container_width=True, key="anillo_q6_ambiente")
-
-          st.write("") # Espacio sutil entre filas
-
-          # --- FILA 2 DE ANILLOS (Preguntas 4 y 5) ---
-          cod4, cod5, cod6 = st.columns(3)
-
-          with cod4:
-              col_l_chapa = df_mes.columns[11]
-              st.plotly_chart(crear_anillo_corporativo(df_mes[col_l_chapa], "Q12 - Calidad Chapa y Pintura"), use_container_width=True, key="anillo_q12_chapa")
-
-          with cod5:
-              col_n_tiempo = df_mes.columns[13]
-              st.plotly_chart(crear_anillo_corporativo(df_mes[col_n_tiempo], "Q9 - Tiempo de Reparación"), use_container_width=True, key="anillo_q9_tiempo")
-
-          with cod6:
-              st.info("📊 **Siguiente pregunta disponible**\n\nEspacio libre en la segunda fila.")             
-            
-          st.write("---")             
-                             
-     # --- TAB 2: ASESORES ---
      with tab2:
         st.subheader(f"👤 Desempeño de Asesores - {mes_sel_nombre} {anio_sel}")
         
