@@ -217,24 +217,24 @@ if df_raw is not None:
                     )
                     return fig
      
-               c1, c2 = st.columns(2)
-               
-               with c1:
-                    st.plotly_chart(crear_anillo_maxi_global(df_mes[col_nps_puntaje], "NPS", nps_val, "%"), use_container_width=True, key="anillo_maxi_nps")
-                    p_c = len(df_mes[df_mes[col_nps_puntaje] >= 9])
-                    d_c = len(df_mes[df_mes[col_nps_puntaje] <= 6])
-                    pas_c = len(df_mes) - p_c - d_c
-                    _, b1, b2, b3 = st.columns([0.1, 1, 1, 1])
-                    if b1.button(f"🟢 {p_c} Prom", key="b1_n"):
-                         st.session_state.update({"f_tipo":"NPS","f_val":"Promotor"}); st.rerun()
-                    if b2.button(f"🟡 {pas_c} Neu", key="b2_n"):
-                         st.session_state.update({"f_tipo":"NPS","f_val":"Pasivo"}); st.rerun()
-                    if b3.button(f"🔴 {d_c} Det", key="b3_n"):
-                         st.session_state.update({"f_tipo":"NPS","f_val":"Detractor"}); st.rerun()
-     
-               with c2:
-                    st.plotly_chart(crear_anillo_maxi_global(df_mes[col_csi_final], "CSI", csi_val, "%"), use_container_width=True, key="anillo_maxi_csi")
-                    limit_exc = 90 if csi_val > 15 else 9
+                    c1, c2 = st.columns(2)
+                    
+                    with c1:
+                         st.plotly_chart(crear_anillo_maxi_global(df_mes[col_nps_puntaje], "NPS", nps_val, "%"), use_container_width=True, key="anillo_maxi_nps")
+                         p_c = len(df_mes[df_mes[col_nps_puntaje] >= 9])
+                         d_c = len(df_mes[df_mes[col_nps_puntaje] <= 6])
+                         pas_c = len(df_mes) - p_c - d_c
+                         _, b1, b2, b3 = st.columns([0.1, 1, 1, 1])
+                         if b1.button(f"🟢 {p_c} Prom", key="b1_n"):
+                              st.session_state.update({"f_tipo":"NPS","f_val":"Promotor"}); st.rerun()
+                         if b2.button(f"🟡 {pas_c} Neu", key="b2_n"):
+                              st.session_state.update({"f_tipo":"NPS","f_val":"Pasivo"}); st.rerun()
+                         if b3.button(f"🔴 {d_c} Det", key="b3_n"):
+                              st.session_state.update({"f_tipo":"NPS","f_val":"Detractor"}); st.rerun()
+          
+                    with c2:
+                         st.plotly_chart(crear_anillo_maxi_global(df_mes[col_csi_final], "CSI", csi_val, "%"), use_container_width=True, key="anillo_maxi_csi")
+                         limit_exc = 90 if csi_val > 15 else 9
                     limit_mal = 60 if csi_val > 15 else 6
                     exc_c = len(df_mes[df_mes[col_csi_final] >= limit_exc])
                     mal_c = len(df_mes[df_mes[col_csi_final] <= limit_mal])
