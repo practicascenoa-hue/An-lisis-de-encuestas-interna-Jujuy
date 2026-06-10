@@ -204,7 +204,7 @@ if df_raw is not None:
           margin=dict(l=10, r=10, t=10, b=10),
           paper_bgcolor='rgba(0,0,0,0)',
           plot_bgcolor='rgba(0,0,0,0)'
-     )
+          )
           return fig
      # --- TAB 1: INDICADORES (CON CUADRÍCULA DE ANILLOS CORPORATIVOS) ---
      with tab1:
