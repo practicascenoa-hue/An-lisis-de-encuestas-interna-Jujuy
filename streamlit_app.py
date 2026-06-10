@@ -167,20 +167,18 @@ if df_raw is not None:
                paper_bgcolor='rgba(0,0,0,0)',
                plot_bgcolor='rgba(0,0,0,0)'
           )
-          return fig
-
-     # --- TAB 1: INDICADORES (CON CUADRÍCULA DE ANILLOS CORPORATIVOS) ---
-     with tab1:
-          st.header(f"🎯 Indicadores Clave - {mes_sel_nombre} {anio_sel}")
-                   
-          if len(df_mes) > 0:
-               # --- 1. SECCIÓN SUPERIOR: KPIs GLOBALES (NPS & CSI TRICOLOR) ---
-               st.markdown("### Resumen Ejecutivo")
-               
-               # Cálculos base globales
-               nps_val = df_mes[col_nps_puntaje].mean() * 10
-               csi_raw = df_mes[col_csi_final].mean()
-               csi_val = csi_raw * 100 if csi_raw <= 1.1 else csi_raw
+        fig.update_layout(
+                         annotations=[
+                              dict(
+                                   text=f"<span style='font-size:14px;color:#6c757d;font-weight:bold;'>{titulo}</span><br><b style='font-size:38px;color:#2c3e50;'>{valor_grande:.1f}{sufijo}</b><br><span style='font-size:11px;color:#888;'>Muestra: {total}</span>",
+                                   x=0.5, y=0.5, showarrow=False, textalign='center'
+                              )
+                         ],
+                         height=250,
+                         margin=dict(l=10, r=10, t=10, b=10),
+                         paper_bgcolor='rgba(0,0,0,0)',
+                         plot_bgcolor='rgba(0,0,0,0)'
+                    )
      
                # --- NUEVA FUNCIÓN PARA LOS ANILLOS MAXI DEL RESUMEN EJECUTIVO (ESTILO DONA) ---
                def crear_anillo_maxi_global(valores_serie, titulo, valor_grande, sufijo="%"):
