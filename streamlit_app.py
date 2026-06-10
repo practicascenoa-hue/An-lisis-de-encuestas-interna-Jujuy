@@ -193,7 +193,7 @@ if df_raw is not None:
                hoverinfo='label+value+percent'
           ))
           
-          fig.update_layout(
+           fig.update_layout(
            annotations=[
                 dict(
                      text=f"<span style='font-size:14px;color:#6c757d;font-weight:bold;'>{titulo}</span><br><b style='font-size:38px;color:#2c3e50;'>{valor_grande:.1f}{sufijo}</b><br><span style='font-size:11px;color:#888;'>Muestra: {total}</span>",
@@ -222,7 +222,7 @@ if df_raw is not None:
                c1, c2 = st.columns(2)
                
                with c1:
-                    st.plotly_chart(crear_anillo_maxi_global(df_mes[col_nps_puntaje], "NPS", nps_val, "%"), use_container_width=True, key="anillo_maxi_nps")
+                    st.plotly_chart(crear_anillo_maxi_global(df_mes[col_nps_puntaje], "NPS", nps_val, "%"), use_container_width=True, key="dona_nps_nueva")
                     p_c = len(df_mes[df_mes[col_nps_puntaje] >= 9])
                     d_c = len(df_mes[df_mes[col_nps_puntaje] <= 6])
                     pas_c = len(df_mes) - p_c - d_c
