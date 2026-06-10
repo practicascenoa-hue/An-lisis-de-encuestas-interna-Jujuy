@@ -193,7 +193,7 @@ if df_raw is not None:
                hoverinfo='label+value+percent'
           ))
           
-           fig.update_layout(
+          fig.update_layout(
            annotations=[
                 dict(
                      text=f"<span style='font-size:14px;color:#6c757d;font-weight:bold;'>{titulo}</span><br><b style='font-size:38px;color:#2c3e50;'>{valor_grande:.1f}{sufijo}</b><br><span style='font-size:11px;color:#888;'>Muestra: {total}</span>",
