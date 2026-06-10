@@ -157,16 +157,17 @@ if df_raw is not None:
           ))
           
           fig.update_layout(
-               annotations=[
-                    dict(text=f"<b style='font-size:36px;color:#2c3e50;'>{promedio:.1f}</b>", x=0.5, y=0.6, showarrow=False),
-                    dict(text=f"<span style='font-size:12px;color:#6c757d;'>Respuestas<br><b>{muestra}</b></span>", x=0.5, y=0.35, showarrow=False)
-               ],
-               title=dict(text=f"<b style='font-size:15px;color:#333;'>{titulo}</b>", x=0.5, y=0.95, xanchor='center'),
-               height=220,
-               margin=dict(l=10, r=10, t=40, b=10),
-               paper_bgcolor='rgba(0,0,0,0)',
-               plot_bgcolor='rgba(0,0,0,0)'
-          )
+                annotations=[
+                     dict(
+                          text=f"<span style='font-size:14px;color:#6c757d;font-weight:bold;'>{titulo}</span><br><b style='font-size:38px;color:#2c3e50;'>{valor_grande:.1f}{sufijo}</b><br><span style='font-size:11px;color:#888;'>Muestra: {total}</span>",
+                          x=0.5, y=0.5, showarrow=False, textalign='center'
+                     )
+                ],
+                height=250,
+                margin=dict(l=10, r=10, t=10, b=10),
+                paper_bgcolor='rgba(0,0,0,0)',
+                plot_bgcolor='rgba(0,0,0,0)'
+           )
           return fig
 
      # --- NUEVA FUNCIÓN PARA LOS ANILLOS MAXI DEL RESUMEN EJECUTIVO (ESTILO DONA) ---
