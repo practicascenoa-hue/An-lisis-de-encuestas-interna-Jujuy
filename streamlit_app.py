@@ -180,8 +180,8 @@ if df_raw is not None:
                          plot_bgcolor='rgba(0,0,0,0)'
                     )
      
-               # --- NUEVA FUNCIÓN PARA LOS ANILLOS MAXI DEL RESUMEN EJECUTIVO (ESTILO DONA) ---
-               def crear_anillo_maxi_global(valores_serie, titulo, valor_grande, sufijo="%"):
+          # --- NUEVA FUNCIÓN PARA LOS ANILLOS MAXI DEL RESUMEN EJECUTIVO (ESTILO DONA) ---
+          def crear_anillo_maxi_global(valores_serie, titulo, valor_grande, sufijo="%"):
                     validos = pd.to_numeric(valores_serie, errors='coerce').dropna()
                     total = len(validos)
                     
