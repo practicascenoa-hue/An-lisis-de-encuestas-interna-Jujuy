@@ -137,24 +137,27 @@ if df_raw is not None:
           pasivos = len(validos[(validos > 6) & (validos <= 8)])
           promotores = len(validos[validos >= 9])
           
-          df_pie = pd.DataFrame({
-               "Categoría": ['Excelente/Promotor', 'Regular/Pasivo', 'Malo/Detractor'],
-               "Casos": [promotores, pasivos, detractores]
-          })
-          
-          fig = px.pie(
-               df_pie, names="Categoría", values="Casos", hole=0.76,
-               color="Categoría", color_discrete_map={'Excelente/Promotor': '#28a745', 'Regular/Pasivo': '#ffc107', 'Malo/Detractor': '#dc3545'}
-          )
-          fig.update_layout(
-               title=dict(text=f"<span style='font-size:14px;color:#333;font-weight:bold;'>{titulo}</span><br><b style='font-size:24px;color:#2c3e50;'>{promedio:.1f}</b><br><span style='font-size:11px;color:#888;'>Respuestas: {muestra}</span>", x=0.5, y=0.5, xanchor='center', yanchor='middle'),
-               height=220,
+          fig = go.Figure(go.Pie(
+               labels=['Excelente/Promotor', 'Regular/Pasivo', 'Malo/Detractor'],
+               values=[promotores, pasivos, detractores],
+               hole=0.75,
+               marker=dict(colors=['#28a745', '#ffc107', '#dc3545']),
+               sort=False,
                showlegend=False,
-               margin=dict(l=10, r=10, t=10, b=10),
+               hoverinfo='label+percent'
+          ))
+          
+          fig.update_layout(
+               title=dict(text=f"<b>{titulo}</b>", x=0.5, y=0.95, xanchor='center'),
+               annotations=[
+                    dict(text=f"<b style='font-size:26px;color:#2c3e50;'>{promedio:.1f}</b>", x=0.5, y=0.5, showarrow=False, textalign='center'),
+                    dict(text=f"<span style='font-size:10px;color:#6c757d;'>Respuestas: {muestra}</span>", x=0.5, y=0.2, showarrow=False, textalign='center')
+               ],
+               height=220,
+               margin=dict(l=10, r=10, t=40, b=10),
                paper_bgcolor='rgba(0,0,0,0)',
                plot_bgcolor='rgba(0,0,0,0)'
           )
-          fig.update_traces(hovertemplate="%{label}<br>%{value} respuestas (%{percent})<extra></extra>")
           return fig
 
      # --- NUEVA FUNCIÓN PARA LOS ANILLOS MAXI DEL RESUMEN EJECUTIVO (ESTILO DONA) ---
@@ -169,24 +172,27 @@ if df_raw is not None:
           pasivos = len(validos[(validos > 6) & (validos <= 8)])
           promotores = len(validos[validos >= 9])
           
-          df_maxi = pd.DataFrame({
-               "Clasificación": ['Promotores/Exc', 'Pasivos/Reg', 'Detractores/Mal'],
-               "Puntos": [promotores, pasivos, detractores]
-          })
-          
-          fig = px.pie(
-               df_maxi, names="Clasificación", values="Puntos", hole=0.74,
-               color="Clasificación", color_discrete_map={'Promotores/Exc': '#28a745', 'Pasivos/Reg': '#ffc107', 'Detractores/Mal': '#dc3545'}
-          )
-          fig.update_layout(
-               title=dict(text=f"<span style='font-size:15px;color:#6c757d;font-weight:bold;'>{titulo}</span><br><b style='font-size:36px;color:#2c3e50;'>{valor_grande:.1f}{sufijo}</b><br><span style='font-size:11px;color:#888;'>Muestra: {total}</span>", x=0.5, y=0.5, xanchor='center', yanchor='middle'),
-               height=250,
+          fig = go.Figure(go.Pie(
+               labels=['Promotores/Exc', 'Pasivos/Reg', 'Detractores/Mal'],
+               values=[promotores, pasivos, detractores],
+               hole=0.74,
+               marker=dict(colors=['#28a745', '#ffc107', '#dc3545']),
+               sort=False,
                showlegend=False,
-               margin=dict(l=10, r=10, t=10, b=10),
+               hoverinfo='label+percent'
+          ))
+          
+          fig.update_layout(
+               title=dict(text=f"<b>{titulo}</b>", x=0.5, y=0.95, xanchor='center'),
+               annotations=[
+                    dict(text=f"<b style='font-size:32px;color:#2c3e50;'>{valor_grande:.1f}{sufijo}</b>", x=0.5, y=0.5, showarrow=False, textalign='center'),
+                    dict(text=f"<span style='font-size:10px;color:#6c757d;'>Muestra: {total}</span>", x=0.5, y=0.2, showarrow=False, textalign='center')
+               ],
+               height=250,
+               margin=dict(l=10, r=10, t=40, b=10),
                paper_bgcolor='rgba(0,0,0,0)',
                plot_bgcolor='rgba(0,0,0,0)'
           )
-          fig.update_traces(hovertemplate="%{label}<br>%{value} casos (%{percent})<extra></extra>")
           return fig
      # --- TAB 1: INDICADORES (CON CUADRÍCULA DE ANILLOS CORPORATIVOS) ---
      with tab1:
