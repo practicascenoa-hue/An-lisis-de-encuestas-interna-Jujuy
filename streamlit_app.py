@@ -127,11 +127,12 @@ if df_raw is not None:
      def crear_anillo_corporativo(valores_serie, titulo):
           validos = pd.to_numeric(valores_serie, errors='coerce').dropna()
           muestra = len(validos)
+          
           if muestra == 0:
                fig = go.Figure(go.Pie(values=[1], hole=0.75, marker=dict(colors=['#e9ecef']), showlegend=False, hoverinfo='none'))
                fig.update_layout(title=dict(text=f"<b>{titulo}</b><br><span style='font-size:12px;color:orange;'>Sin Datos</span>", x=0.5, y=0.5))
                return fig
-          
+               
           promedio = validos.mean()
           detractores = len(validos[validos <= 6])
           pasivos = len(validos[(validos > 6) & (validos <= 8)])
@@ -150,8 +151,8 @@ if df_raw is not None:
           fig.update_layout(
                title=dict(text=f"<b>{titulo}</b>", x=0.5, y=0.95, xanchor='center'),
                annotations=[
-                    dict(text=f"<b style='font-size:26px;color:#2c3e50;'>{promedio:.1f}</b>", x=0.5, y=0.5, showarrow=False, textalign='center'),
-                    dict(text=f"<span style='font-size:10px;color:#6c757d;'>Respuestas: {muestra}</span>", x=0.5, y=0.2, showarrow=False, textalign='center')
+                    dict(text=f"<b style='font-size:26px;color:#2c3e50;'>{promedio:.1f}</b>", x=0.5, y=0.5, showarrow=False),
+                    dict(text=f"<span style='font-size:10px;color:#6c757d;'>Respuestas: {muestra}</span>", x=0.5, y=0.2, showarrow=False)
                ],
                height=220,
                margin=dict(l=10, r=10, t=40, b=10),
@@ -164,8 +165,10 @@ if df_raw is not None:
      def crear_anillo_maxi_global(valores_serie, titulo, valor_grande, sufijo="%"):
           validos = pd.to_numeric(valores_serie, errors='coerce').dropna()
           total = len(validos)
+          
           if total == 0:
                fig = go.Figure(go.Pie(values=[1], hole=0.72, marker=dict(colors=['#e9ecef']), showlegend=False))
+               fig.update_layout(title=dict(text=f"<b>{titulo}</b><br><span style='font-size:12px;color:orange;'>Sin Datos</span>", x=0.5, y=0.5))
                return fig
                
           detractores = len(validos[validos <= 6])
@@ -175,7 +178,7 @@ if df_raw is not None:
           fig = go.Figure(go.Pie(
                labels=['Promotores/Exc', 'Pasivos/Reg', 'Detractores/Mal'],
                values=[promotores, pasivos, detractores],
-               hole=0.74,
+               hole=0.72,
                marker=dict(colors=['#28a745', '#ffc107', '#dc3545']),
                sort=False,
                showlegend=False,
@@ -185,8 +188,8 @@ if df_raw is not None:
           fig.update_layout(
                title=dict(text=f"<b>{titulo}</b>", x=0.5, y=0.95, xanchor='center'),
                annotations=[
-                    dict(text=f"<b style='font-size:32px;color:#2c3e50;'>{valor_grande:.1f}{sufijo}</b>", x=0.5, y=0.5, showarrow=False, textalign='center'),
-                    dict(text=f"<span style='font-size:10px;color:#6c757d;'>Muestra: {total}</span>", x=0.5, y=0.2, showarrow=False, textalign='center')
+                    dict(text=f"<b style='font-size:32px;color:#2c3e50;'>{valor_grande:.1f}{sufijo}</b>", x=0.5, y=0.5, showarrow=False),
+                    dict(text=f"<span style='font-size:10px;color:#6c757d;'>Muestra: {total}</span>", x=0.5, y=0.2, showarrow=False)
                ],
                height=250,
                margin=dict(l=10, r=10, t=40, b=10),
