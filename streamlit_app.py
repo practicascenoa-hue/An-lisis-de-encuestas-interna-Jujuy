@@ -177,16 +177,17 @@ if df_raw is not None:
                hoverinfo='label+value+percent'
           ))
           fig.update_layout(
+               annotations=[
+                    dict(
+                         text=f"<b>{titulo}</b><br><span style='font-size:28px; font-weight:bold;'>{valor_grande:.1f}{sufijo}</span><br>Muestra: {total}",
+                         x=0.5, y=0.5, showarrow=False, textalign='center'
+                    )
+               ],
                height=250,
                margin=dict(l=10, r=10, t=10, b=10),
                paper_bgcolor='rgba(0,0,0,0)',
                plot_bgcolor='rgba(0,0,0,0)'
           )
-          
-          # Texto HTML formateado de forma segura en una sola línea limpia
-          texto_centro = f"<span style='font-size:14px;color:#6c757d;font-weight:bold;'>{titulo}</span><br><b style='font-size:38px;color:#2c3e50;'>{valor_grande:.1f}{sufijo}</b><br><span style='font-size:11px;color:#888;'>Muestra: {total}</span>"
-          
-          fig.add_annotation(text=texto_centro, x=0.5, y=0.5, showarrow=False, textalign='center')
           return fig
      # --- TAB 1: INDICADORES (CON CUADRÍCULA DE ANILLOS CORPORATIVOS) ---
      with tab1:
