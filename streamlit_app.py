@@ -143,13 +143,18 @@ if df_raw is not None:
           })
           
           fig = px.pie(
-               df_pie, names="Categoría", values="Casos", hole=0.75,
+               df_pie, names="Categoría", values="Casos", hole=0.76,
                color="Categoría", color_discrete_map={'Excelente/Promotor': '#28a745', 'Regular/Pasivo': '#ffc107', 'Malo/Detractor': '#dc3545'}
           )
           fig.update_layout(
-               title=dict(text=f"<b>{titulo}</b><br>Nota: {promedio:.1f} (N={muestra})", x=0.5, y=0.9),
-               height=220, showlegend=False, margin=dict(l=10, r=10, t=40, b=10)
+               title=dict(text=f"<span style='font-size:14px;color:#333;font-weight:bold;'>{titulo}</span><br><b style='font-size:24px;color:#2c3e50;'>{promedio:.1f}</b><br><span style='font-size:11px;color:#888;'>Respuestas: {muestra}</span>", x=0.5, y=0.5, xanchor='center', yanchor='middle'),
+               height=220,
+               showlegend=False,
+               margin=dict(l=10, r=10, t=10, b=10),
+               paper_bgcolor='rgba(0,0,0,0)',
+               plot_bgcolor='rgba(0,0,0,0)'
           )
+          fig.update_traces(hovertemplate="%{label}<br>%{value} respuestas (%{percent})<extra></extra>")
           return fig
 
      # --- NUEVA FUNCIÓN PARA LOS ANILLOS MAXI DEL RESUMEN EJECUTIVO (ESTILO DONA) ---
@@ -170,13 +175,18 @@ if df_raw is not None:
           })
           
           fig = px.pie(
-               df_maxi, names="Clasificación", values="Puntos", hole=0.72,
+               df_maxi, names="Clasificación", values="Puntos", hole=0.74,
                color="Clasificación", color_discrete_map={'Promotores/Exc': '#28a745', 'Pasivos/Reg': '#ffc107', 'Detractores/Mal': '#dc3545'}
           )
           fig.update_layout(
-               title=dict(text=f"<b>{titulo}: {valor_grande:.1f}{sufijo}</b><br>Muestra: {total}", x=0.5, y=0.9),
-               height=250, showlegend=False, margin=dict(l=10, r=10, t=40, b=10)
+               title=dict(text=f"<span style='font-size:15px;color:#6c757d;font-weight:bold;'>{titulo}</span><br><b style='font-size:36px;color:#2c3e50;'>{valor_grande:.1f}{sufijo}</b><br><span style='font-size:11px;color:#888;'>Muestra: {total}</span>", x=0.5, y=0.5, xanchor='center', yanchor='middle'),
+               height=250,
+               showlegend=False,
+               margin=dict(l=10, r=10, t=10, b=10),
+               paper_bgcolor='rgba(0,0,0,0)',
+               plot_bgcolor='rgba(0,0,0,0)'
           )
+          fig.update_traces(hovertemplate="%{label}<br>%{value} casos (%{percent})<extra></extra>")
           return fig
      # --- TAB 1: INDICADORES (CON CUADRÍCULA DE ANILLOS CORPORATIVOS) ---
      with tab1:
