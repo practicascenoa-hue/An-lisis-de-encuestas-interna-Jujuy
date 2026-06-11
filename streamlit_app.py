@@ -129,8 +129,8 @@ if df_raw is not None:
           muestra = len(validos)
           
           if muestra == 0:
-               fig = go.Figure(go.Pie(values=[1], hole=0.82, marker=dict(colors=['#e9ecef']), showlegend=False, hoverinfo='none'))
-               fig.update_layout(title=dict(text=f"<b>{titulo}</b><br><span style='font-size:12px;color:orange;'>Sin Datos</span>", x=0.5, y=0.5))
+               fig = go.Figure(go.Pie(values=[1], hole=0.85, marker=dict(colors=['#e9ecef']), showlegend=False, hoverinfo='none'))
+               fig.update_layout(title=dict(text=f"<b>{titulo}</b>", x=0.5, y=0.5))
                return fig
                
           promedio = validos.mean()
@@ -141,35 +141,35 @@ if df_raw is not None:
           fig = go.Figure(go.Pie(
                labels=['Excelente/Promotor', 'Regular/Pasivo', 'Malo/Detractor'],
                values=[promotores, pasivos, detractores],
-               hole=0.82,  # Borde muy fino
+               hole=0.84,  # Estilizado y sutil
                marker=dict(colors=['#28a745', '#ffc107', '#dc3545']),
                sort=False,
                showlegend=False,
+               textinfo='none',  # Limpia los textos internos feos
                hoverinfo='label+percent',
-               domain=dict(x=[0.1, 0.9], y=[0, 0.85])  # Control de escala para las secundarias
+               domain=dict(x=[0.15, 0.85], y=[0, 0.85])
           ))
           
           fig.update_layout(
-               title=dict(text=f"<span style='color:#555; font-size:13px;'><b>{titulo}</b></span>", x=0.5, y=0.95, xanchor='center'),
+               title=dict(text=f"<span style='color:#57606f; font-size:12px; font-family:Sans-Serif;'><b>{titulo}</b></span>", x=0.5, y=0.95, xanchor='center'),
                annotations=[
-                    dict(text=f"<b style='font-size:22px;color:#2c3e50;'>{promedio:.1f}</b>", x=0.5, y=0.42, showarrow=False),
-                    dict(text=f"<span style='font-size:10px;color:#888;'>Respuestas: {muestra}</span>", x=0.5, y=0.15, showarrow=False)
+                    dict(text=f"<b style='font-size:20px; color:#2c3e50; font-family:Sans-Serif;'>{promedio:.1f}</b>", x=0.5, y=0.42, showarrow=False),
+                    dict(text=f"<span style='font-size:9px; color:#a4b0be; font-family:Sans-Serif;'>Respuestas: {muestra}</span>", x=0.5, y=0.15, showarrow=False)
                ],
-               height=190,  # Más compacto para que no compita
-               margin=dict(l=5, r=5, t=35, b=5),
+               height=170,  # Bien compacto para que quede subordinado
+               margin=dict(l=5, r=5, t=30, b=5),
                paper_bgcolor='rgba(0,0,0,0)',
                plot_bgcolor='rgba(0,0,0,0)'
           )
           return fig
 
-     # --- NUEVA FUNCIÓN PARA LOS ANILLOS MAXI (MÁXIMA IMPOSICIÓN GERENCIAL) ---
+     # --- NUEVA FUNCIÓN PARA LOS ANILLOS MAXI (MÁXIMA IMPOSICIÓN GERENCIAL Y PREMIUN) ---
      def crear_anillo_maxi_global(valores_serie, titulo, valor_grande, sufijo="%"):
           validos = pd.to_numeric(valores_serie, errors='coerce').dropna()
           total = len(validos)
           
           if total == 0:
-               fig = go.Figure(go.Pie(values=[1], hole=0.60, marker=dict(colors=['#e9ecef']), showlegend=False))
-               fig.update_layout(title=dict(text=f"<b>{titulo}</b><br><span style='font-size:12px;color:orange;'>Sin Datos</span>", x=0.5, y=0.5))
+               fig = go.Figure(go.Pie(values=[1], hole=0.62, marker=dict(colors=['#e9ecef']), showlegend=False))
                return fig
                
           detractores = len(validos[validos <= 6])
@@ -179,27 +179,28 @@ if df_raw is not None:
           fig = go.Figure(go.Pie(
                labels=['Promotores/Exc', 'Pasivos/Reg', 'Detractores/Mal'],
                values=[promotores, pasivos, detractores],
-               hole=0.60,  # Reducido de 0.66 a 0.60 -> La franja de color se vuelve notablemente más gruesa y sólida
+               hole=0.62,  # Equilibrio perfecto entre grosor sólido y espacio central
                marker=dict(colors=['#28a745', '#ffc107', '#dc3545']),
                sort=False,
                showlegend=False,
+               textinfo='none',  # Sacamos los porcentajes sueltos que deforman la dona
                hoverinfo='label+percent',
-               domain=dict(x=[0, 1], y=[0, 0.82])  # Fuerza al anillo principal a expandirse hasta los bordes laterales
+               domain=dict(x=[0, 1], y=[0, 0.85])  # Expansión física total hacia los costados
           ))
           
           fig.update_layout(
-               # Título mucho más grande (22px), imponente, espaciado y en un tono oscuro premium
+               # Tipografía gerencial limpia y con presencia
                title=dict(
-                    text=f"<b style='font-size:22px; color:#1e272e; letter-spacing: 1.5px; font-family:Arial;'>{titulo} GLOBAL</b>", 
+                    text=f"<b style='font-size:24px; color:#2f3542; font-family:Helvetica, Arial, sans-serif; font-weight:800;'>{titulo} GLOBAL</b>", 
                     x=0.5, y=0.98, xanchor='center'
                ),
                annotations=[
-                    # El dato salta a la vista inmediatamente (46px) en el centro de la dona sólida
-                    dict(text=f"<b style='font-size:46px; color:#1a252f; font-family:Arial;'>{valor_grande:.1f}{sufijo}</b>", x=0.5, y=0.42, showarrow=False),
-                    dict(text=f"<b style='font-size:12px; color:#57606f;'>Muestra: {total} encuestas</b>", x=0.5, y=0.12, showarrow=False)
+                    # Impacto visual inmediato del indicador principal (48px)
+                    dict(text=f"<b style='font-size:48px; color:#2f3542; font-family:Helvetica, Arial, sans-serif; font-weight:800;'>{valor_grande:.1f}{sufijo}</b>", x=0.5, y=0.44, showarrow=False),
+                    dict(text=f"<span style='font-size:12px; color:#747d8c; font-family:Helvetica, Arial, sans-serif; font-weight:bold;'>Muestra: {total} casos</span>", x=0.5, y=0.12, showarrow=False)
                ],
-               height=290,  # Aumentamos la altura de la tarjeta de los KPIs principales
-               margin=dict(l=0, r=0, t=45, b=0),  # Eliminamos márgenes para que el anillo use todo el ancho
+               height=340,  # Estiramos de 290 a 340 para que el anillo tome un tamaño físico gigante
+               margin=dict(l=0, r=0, t=40, b=0),
                paper_bgcolor='rgba(0,0,0,0)',
                plot_bgcolor='rgba(0,0,0,0)'
           )
