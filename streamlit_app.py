@@ -34,9 +34,9 @@ st.markdown("""
      }
      /* CAMBIO DE COLOR SEGURO PARA BOTÓN DESCARGA */
      [data-testid="stSidebar"] [data-testid="stDownloadButton"] button {
-          background-color: #2f3542 !important;
+          background-color: #28a745 !important;
           color: white !important;
-          border-color: #2f3542 !important;
+          border-color: #5a6268 !important;
      }
      
      [data-testid="stSidebar"] [data-testid="stDownloadButton"] button:hover {
