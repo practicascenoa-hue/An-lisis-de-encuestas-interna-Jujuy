@@ -217,7 +217,7 @@ if df_raw is not None:
         st.sidebar.download_button(
             label="📊 Descargar (.xlsx)",
             data=excel_bytes,
-            file_name=f"reporte_postventa_{mes_sel_nombre}_{anio_sel}{sufijo_asesor}.xlsx",
+            file_name=f"reporte_encuesta-satisfaccion_{mes_sel_nombre}_{anio_sel}{sufijo_asesor}.xlsx",
             mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
         )
     else:
