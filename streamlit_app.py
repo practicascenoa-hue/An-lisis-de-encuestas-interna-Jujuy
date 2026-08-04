@@ -244,8 +244,7 @@ if df_raw is not None:
     else:
         st.sidebar.info("Sin datos para exportar")
 
-    with c_titulo:
-        st.title("INDICADORES ENCUESTAS DE SATISFACCIÓN")
+    st.title("INDICADORES ENCUESTAS DE SATISFACCIÓN")
     tab1, tab2, tab3, tab4 = st.tabs(["🎯 INDICADORES", "👤 ASESORES", "📊 EVOLUCIÓN MENSUAL", "⚠️ ANÁLISIS DE RECLAMOS"])
 
     # --- FUNCIÓN MAESTRA GLOBAL: ANILLO EVOLUCIONADO CORPORATIVO ---
