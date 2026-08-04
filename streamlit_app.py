@@ -567,43 +567,52 @@ if df_raw is not None:
                     fig_p.update_layout(height=250, margin=dict(t=0,b=0,l=0,r=0), showlegend=False)
                     st.plotly_chart(fig_p, use_container_width=True)
                 
-                st.markdown("**🔍 Temas detectados por Gravedad:**")
-                temas_prioridad = [
-                    ("Calidad Técnica", ["color", "alineado", "ruido", "pintura", "sucio", "lavado"]),
-                    ("Plazos y Tiempos", ["demora", "tardó", "fecha", "espera", "tiempo"]),
-                    ("Infraestructura", ["sala", "baño", "café", "comodidad"]),
-                    ("Atención", ["atencion", "atención", "trato", "explicación"])
-                ]
-                
-                filas_b = []
-                for _, row in df_mes.iterrows():
-                    if row['Intención'] in ["⚠️ RECLAMO CRÍTICO", "💡 OPORTUNIDAD DE MEJORA"]:
-                        texto_com = str(row[col_t_concatenado]).lower()
-                        tema_asignado = None
-                        for nom, keys in temas_prioridad:
-                            if any(p in texto_com for p in keys):
-                                tema_asignado = nom
-                                break 
-                        
-                        if tema_asignado:
-                            t = "Reclamo" if row['Intención'] == "⚠️ RECLAMO CRÍTICO" else "Oportunidad"
-                            filas_b.append({"Tema": tema_asignado, "Tipo": t})
-
-            if filas_b:
-                df_barras = pd.DataFrame(filas_b).groupby(['Tema', 'Tipo']).size().reset_index(name='Casos')
-                fig_b = px.bar(df_barras, x='Casos', y='Tema', orientation='h', color='Tipo', 
-                               color_discrete_map={"Reclamo": "#dc3545", "Oportunidad": "#FFD700"})
-                fig_b.update_layout(showlegend=True, height=350, margin=dict(t=10,b=10,l=0,r=10),
-                                    legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="right", x=1))
-                fig_b.update_traces(width=0.5)
-                st.plotly_chart(fig_b, use_container_width=True)
-
-            with col_der:
-                df_t = df_mes[df_mes['Grupo'] == "Promotores"] if st.session_state.tab4_filter == "Promotor" else (df_mes[df_mes['Grupo'] == "Reclamos"] if st.session_state.tab4_filter == "Reclamo" else df_mes[df_mes['Grupo'] != "Neutral"])
-                st.subheader("Auditoría de Feedback Detallado")
-                for _, row in df_t.iterrows():
-                    cls = "borde-conforme" if row['Intención'] == "✅ CONFORME" else ("borde-oportunidad" if row['Intención'] == "💡 OPORTUNIDAD DE MEJORA" else "borde-critico")
-                    st.markdown(f"""<div class="comentario-card {cls}"><div class="comentario-header">{row[col_cliente]} | {row['Intención']} | Nota: {row[col_nps_puntaje]}</div><div class="comentario-body">{row[col_t_concatenado]}</div></div>""", unsafe_allow_html=True)
+                st.markdown("##### 🔍 Temas detectados por Gravedad:")
+        
+        # Filtrar solo casos que tengan dimensiones/temas asignados
+        df_temas = df_voc[df_voc['Tema'].notna() & (df_voc['Tema'] != '') & (df_voc['Tema'] != 'Sin Clasificar')]
+        
+        if len(df_temas) > 0:
+            # Agrupar por Tema y Gravedad
+            df_barras = df_temas.groupby(['Tema', 'Gravedad']).size().reset_index(name='Casos')
+            
+            # Mapeo de colores para la barra horizontal
+            mapa_colores = {
+                'Conforme': '#28a745',
+                'Oportunidad de Mejora': '#ffc107',
+                'Reclamo Crítico': '#dc3545'
+            }
+            
+            fig_barras = px.bar(
+                df_barras,
+                y='Tema',
+                x='Casos',
+                color='Gravedad',
+                color_discrete_map=mapa_colores,
+                orientation='h',
+                barmode='stack'
+            )
+            
+            fig_barras.update_layout(
+                height=220, # Tamaño compacto y discreto bajo la dona
+                margin=dict(l=10, r=10, t=10, b=30),
+                xaxis_title="Casos",
+                yaxis_title="",
+                legend=dict(
+                    orientation="h",
+                    yanchor="bottom",
+                    y=1.02,
+                    xanchor="right",
+                    x=1,
+                    title_text=""
+                ),
+                paper_bgcolor='rgba(0,0,0,0)',
+                plot_bgcolor='rgba(0,0,0,0)'
+            )
+            
+            st.plotly_chart(fig_barras, use_container_width=True)
+        else:
+            st.caption("ℹ️ No se detectaron observaciones en el período seleccionado.")
         
         # Bloque final: Protocolo de Tratamiento
         st.markdown("---")
