@@ -191,10 +191,10 @@ if df_raw is not None:
     # --- FILTRO POR ASESOR EN SIDEBAR ---
     st.sidebar.markdown("---")
     st.sidebar.header("👤 FILTRO POR ASESOR")
-    lista_asesores = ["Todos los Asesores"] + sorted(df_mes_base[col_asesor].dropna().unique().tolist())
-    asesor_sel = st.sidebar.selectbox("Seleccionar Asesor", lista_asesores)
+    lista_asesores = ["Todos"] + sorted(df_mes_base[col_asesor].dropna().unique().tolist())
+    asesor_sel = st.sidebar.selectbox("Seleccionar nombre", lista_asesores)
 
-    if asesor_sel != "Todos los Asesores":
+    if asesor_sel != "Todos":
         df_mes = df_mes_base[df_mes_base[col_asesor] == asesor_sel].copy()
     else:
         df_mes = df_mes_base.copy()
@@ -216,9 +216,9 @@ if df_raw is not None:
         sufijo_asesor = f"_{asesor_sel.replace(' ', '_')}" if asesor_sel != "Todos los Asesores" else ""
         
         st.sidebar.download_button(
-            label="📁 Descarga",
+            label="📁 Descarga (.xlsx)",
             data=excel_bytes,
-            file_name=f"Reporte_Calidad_{mes_sel_nombre}_{anio_sel}{sufijo_asesor}.xlsx",
+            file_name=f"Reporte_Encuesta de Satisfacción_{mes_sel_nombre}_{anio_sel}{sufijo_asesor}.xlsx",
             mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
             type="primary",
             use_container_width=True
