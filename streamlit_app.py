@@ -191,6 +191,12 @@ if df_raw is not None:
     df_raw['Mes_Num'] = df_raw[col_fecha_nombre].dt.month
     meses_dict = {1:"Enero", 2:"Febrero", 3:"Marzo", 4:"Abril", 5:"Mayo", 6:"Junio", 7:"Julio", 8:"Agosto", 9:"Septiembre", 10:"Octubre", 11:"Noviembre", 12:"Diciembre"}
     
+    # --- LOGO EN BARRA LATERAL ---
+    try:
+        st.sidebar.image("logo.png", use_container_width=True)
+        st.sidebar.markdown("---")
+    except:
+        pass
     st.sidebar.header("📅 FILTROS PERIODO")
     anio_sel = st.sidebar.selectbox("Año", sorted(df_raw['Año'].dropna().unique().astype(int), reverse=True))
     df_anio = df_raw[df_raw['Año'] == anio_sel].copy()
