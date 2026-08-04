@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 import streamlit as st
 import pandas as pd
 import plotly.graph_objects as go
@@ -27,33 +26,44 @@ st.markdown("""
           height: 38px !important;
           border-radius: 8px !important;
      }
-     
-     /* ESTILO DESTACADO PARA EL BOTÓN DE DESCARGA EN SIDEBAR */
-     div.stDownloadButton > button {
-          width: 100% !important;
-          height: 45px !important;
-          background-color: #1D6F42 !important; /* Verde Excel */
-          color: white !important;
-          font-weight: bold !important;
-          font-size: 14px !important;
-          border-radius: 8px !important;
-          border: none !important;
-          box-shadow: 0 4px 6px rgba(0,0,0,0.1) !important;
-          transition: all 0.3s ease !important;
-     }
-     div.stDownloadButton > button:hover {
-          background-color: #155231 !important; /* Verde más oscuro al pasar el mouse */
-          transform: translateY(-2px) !important;
-          box-shadow: 0 6px 12px rgba(0,0,0,0.15) !important;
-     }
-
      button[kind="primary"] {
           background-color: #007bff !important;
           border-color: #007bff !important;
           color: white !important;
           font-weight: bold !important;
      }
-     /* ... (mantiene el resto de tus estilos de CSS) ... */
+     .stTabs [data-baseweb="tab-list"] {
+          gap: 10px;
+          background-color: #f8f9fa;
+          padding: 10px;
+          border-radius: 10px;
+     }
+     .stTabs [data-baseweb="tab"] { font-weight: bold; }
+     
+     /* TARJETAS CON IDENTIDAD DE COLOR PARA LECTURA COMPLETA */
+     .comentario-card {
+          background-color: #ffffff;
+          padding: 15px;
+          border-radius: 8px;
+          margin-bottom: 10px;
+          box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+          border: 1px solid #eee;
+     }
+     .borde-conforme { border-left: 5px solid #28a745; }
+     .borde-oportunidad { border-left: 5px solid #ffc107; }
+     .borde-critico { border-left: 5px solid #dc3545; }
+     
+     .comentario-header { font-weight: bold; color: #333; margin-bottom: 5px; font-size: 14px; }
+     .comentario-body { color: #555; font-size: 13px; line-height: 1.5; }
+
+     /* FORZAR SALTO DE LÍNEA EN TABLAS Y DATAFRAMES */
+     [data-testid="stTable"] td, [data-testid="stDataFrame"] td {
+          white-space: normal !important;
+          word-break: break-word !important;
+          line-height: 1.4 !important;
+     }
+     </style>
+     """, unsafe_allow_html=True)
 
 # --- CARGA DE DATOS ---
 SHEET_URL = "https://docs.google.com/spreadsheets/d/1ER40wQho6sPz24oBvEUmQnsHnAxrnzmP3ppPukMy24Y/export?format=csv&gid=309618647"
@@ -194,7 +204,7 @@ if df_raw is not None:
     csi_raw_calc = df_mes[col_csi_final].mean() if len(df_mes) > 0 else 0
     csi_val_calc = (csi_raw_calc * 100 if csi_raw_calc <= 1.1 else csi_raw_calc) if len(df_mes) > 0 else 0
 
-    # --- SIDEBAR: BOTÓN DE DESCARGA DESTACADO ---
+    # --- SIDEBAR: BOTÓN DE DESCARGA MULTIPESTAÑA EXCEL ---
     st.sidebar.markdown("---")
     st.sidebar.header("📥 EXPORTAR INFORME")
     if len(df_mes) > 0:
@@ -204,21 +214,19 @@ if df_raw is not None:
             col_nps_puntaje, col_t_concatenado, col_cliente
         )
         sufijo_asesor = f"_{asesor_sel.replace(' ', '_')}" if asesor_sel != "Todos los Asesores" else ""
-        
         st.sidebar.download_button(
-            label="📊 Descargar Informe Excel",
+            label="📁(.xlsx)",
             data=excel_bytes,
-            file_name=f"Reporte_Calidad_{mes_sel_nombre}_{anio_sel}{sufijo_asesor}.xlsx",
-            mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-            use_container_width=True
+            file_name=f"reporte_Encuesta Satisfaccion CENOA_{mes_sel_nombre}_{anio_sel}{sufijo_asesor}.xlsx",
+            mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
         )
     else:
         st.sidebar.info("Sin datos para exportar")
 
-    st.title("INDICADORES ENCUESTAS DE SATISFA
-    # --- FUNCIÓN MAESTRA GLOBAL: ANILLO EVOLUCCIÓN")
+    st.title("INDICADORES ENCUESTAS DE SATISFACCIÓN")
     tab1, tab2, tab3, tab4 = st.tabs(["🎯 INDICADORES", "👤 ASESORES", "📊 EVOLUCIÓN MENSUAL", "⚠️ ANÁLISIS DE RECLAMOS"])
-CIONADO CORPORATIVO ---
+
+    # --- FUNCIÓN MAESTRA GLOBAL: ANILLO EVOLUCIONADO CORPORATIVO ---
     def crear_anillo_corporativo(valores_serie, titulo):
         validos = pd.to_numeric(valores_serie, errors='coerce').dropna()
         muestra = len(validos)
@@ -258,7 +266,7 @@ CIONADO CORPORATIVO ---
         )
         return fig
 
-   # --- FUNCIÓN PARA LOS ANILLOS MAXI (CON HOVERTEMPLATE F-STRING) ---
+    # --- FUNCIÓN PARA LOS ANILLOS MAXI (CON MEJORA DE CONTRASTE Y LECTURA) ---
     def crear_anillo_maxi_global(valores_serie, titulo, valor_grande, sufijo="%"):
         validos = pd.to_numeric(valores_serie, errors='coerce').dropna()
         total = len(validos)
@@ -271,15 +279,6 @@ CIONADO CORPORATIVO ---
         pasivos = len(validos[(validos > 6) & (validos <= 8)])
         promotores = len(validos[validos >= 9])
         
-        # NOTA: Agregamos la 'f' al inicio y duplicamos las llaves de Plotly {{label}}, {{value}}, {{percent}}
-        hovertemplate = (
-            "<b>%{label}</b><br>"
-            "Cantidad: <b>%{value}</b><br>"
-            "Proporción: <b>%{percent}</b><br>"
-            f"<i>Muestra Total: {total} casos</i>"
-            "<extra></extra>"
-        )
-
         fig = go.Figure(go.Pie(
             labels=['Promotores/Exc', 'Pasivos/Reg', 'Detractores/Mal'],
             values=[promotores, pasivos, detractores],
@@ -288,8 +287,8 @@ CIONADO CORPORATIVO ---
             sort=False,
             showlegend=False,
             textinfo='none',
-            hovertemplate=hovertemplate,
-            domain=dict(x=[0, 1], y=[0.08, 0.88])
+            hoverinfo='label+percent',
+            domain=dict(x=[0, 1], y=[0, 0.85])
         ))
         
         fig.update_layout(
@@ -298,24 +297,16 @@ CIONADO CORPORATIVO ---
                 x=0.5, y=0.98, xanchor='center'
             ),
             annotations=[
-                dict(
-                    text=f"<b style='font-size:46px; color:#2f3542; font-family:Helvetica, Arial, sans-serif; font-weight:800;'>{valor_grande:.1f}{sufijo}</b>", 
-                    x=0.5, y=0.45, showarrow=False
-                )
+                dict(text=f"<b style='font-size:48px; color:#2f3542; font-family:Helvetica, Arial, sans-serif; font-weight:800;'>{valor_grande:.1f}{sufijo}</b>", x=0.5, y=0.45, showarrow=False),
+                # --- CAMBIO DE CONTRASTE Y VISIBILIDAD ---
+                dict(text=f"<span style='font-size:13px; color:#2f3542; font-family:Helvetica, Arial, sans-serif; font-weight:800; background-color: #f1f2f6; padding: 2px 8px; border-radius: 4px;'>Muestra: {total} casos</span>", x=0.5, y=0.20, showarrow=False)
             ],
-            hoverlabel=dict(
-                bgcolor="#ffffff",
-                bordercolor="#2f3542",
-                font_size=13,
-                font_family="Helvetica, Arial, sans-serif",
-                align="left"
-            ),
             height=340,
-            margin=dict(l=10, r=10, t=40, b=15),
+            margin=dict(l=0, r=0, t=40, b=0),
             paper_bgcolor='rgba(0,0,0,0)',
             plot_bgcolor='rgba(0,0,0,0)'
         )
-        return fig        
+        return fig
     # --- TAB 1: INDICADORES ---
     with tab1:
         st.header(f"🎯 Indicadores Clave - {mes_sel_nombre} {anio_sel} " + (f"({asesor_sel})" if asesor_sel != "Todos los Asesores" else ""))
@@ -457,7 +448,7 @@ CIONADO CORPORATIVO ---
                     hide_index=True
                 )
 
-        # --- TAB 3: EVOLUCIÓN ---
+    # --- TAB 3: EVOLUCIÓN ---
     with tab3:
         st.subheader(f"Evolución Mensual {anio_sel}")
         df_v = df_anio.groupby('Mes_Num').agg({col_fecha_nombre: 'count', col_csi_final: 'mean', col_nps_puntaje: 'mean'}).reset_index()
@@ -468,12 +459,12 @@ CIONADO CORPORATIVO ---
 
     # --- TAB 4: RECLAMOS ---
     with tab4:
-       with st.expander("ℹ️ PROTOCOLO VOC (voz del cliente)"):
-            st.markdown(r"""
+        with st.expander("ℹ️ PROTOCOLO VOC (voz del cliente)"):
+            st.markdown("""
             **Este panel clasifica las encuestas mediante un algoritmo de detección de palabras clave y jerarquía de NPS.**
             
             ### 1. El Semáforo de Gestión
-            * 🔴 **Reclamo Crítico:** Clientes con **NPS <= 6**. Es una alerta de insatisfacción que requiere contacto inmediato.
+            * 🔴 **Reclamo Crítico:** Clientes con **NPS ≤ 6**. Es una alerta de insatisfacción que requiere contacto inmediato.
             * 🟡 **Oportunidad de Mejora:** Clientes **Promotores (NPS 9-10)** que dejaron una sugerencia puntual sobre procesos.
             * 🟢 **Conforme:** Clientes **Promotores (NPS 9-10)** con comentarios 100% positivos o elogios directos.
             
