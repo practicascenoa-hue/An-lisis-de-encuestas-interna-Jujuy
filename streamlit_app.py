@@ -569,46 +569,67 @@ if df_raw is not None:
                 
                 st.markdown("##### 🔍 Temas detectados por Gravedad:")
         
-        # Filtrar solo casos que tengan dimensiones/temas asignados
-        df_temas = df_mes[df_mes['Tema'].notna() & (df_mes['Tema'] != '') & (df_mes['Tema'] != 'Sin Clasificar')]
-        
-        if len(df_temas) > 0:
-            # Agrupar por Tema y Gravedad
-            df_barras = df_temas.groupby(['Tema', 'Gravedad']).size().reset_index(name='Casos')
+        # 1. Identificar automáticamente la columna que contiene los temas/dimensiones
+        col_tema = None
+        posibles_nombres_tema = ['Tema', 'TEMA', 'dimension', 'Dimension', 'DIMENSION', 'Categoria', 'Categoría']
+        for col in posibles_nombres_tema:
+            if col in df_mes.columns:
+                col_tema = col
+                break
+                
+        # 2. Identificar la columna de Gravedad
+        col_grav = None
+        posibles_nombres_grav = ['Gravedad', 'GRAVEDAD', 'Semaforo', 'Semáforo', 'Tipo']
+        for col in posibles_nombres_grav:
+            if col in df_mes.columns:
+                col_grav = col
+                break
+
+        # 3. Dibujar el gráfico solo si existen ambas columnas y hay datos válidos
+        if col_tema and col_grav:
+            df_temas = df_mes[df_mes[col_tema].notna() & (df_mes[col_tema] != '') & (df_mes[col_tema] != 'Sin Clasificar')]
             
-            # Mapeo de colores para la barra horizontal
-            mapa_colores = {
-                'Conforme': '#28a745',
-                'Oportunidad de Mejora': '#ffc107',
-                'Reclamo Crítico': '#dc3545'
-            }
-            
-            fig_barras = px.bar(
-                df_barras,
-                y='Tema',
-                x='Casos',
-                color='Gravedad',
-                color_discrete_map=mapa_colores,
-                orientation='h',
-                barmode='stack'
-            )
-            
-            fig_barras.update_layout(
-                height=220, # Tamaño compacto y discreto bajo la dona
-                margin=dict(l=10, r=10, t=10, b=30),
-                xaxis_title="Casos",
-                yaxis_title="",
-                legend=dict(
-                    orientation="h",
-                    yanchor="bottom",
-                    y=1.02,
-                    xanchor="right",
-                    x=1,
-                    title_text=""
-                ),
-                paper_bgcolor='rgba(0,0,0,0)',
-                plot_bgcolor='rgba(0,0,0,0)'
-            )
+            if len(df_temas) > 0:
+                df_barras = df_temas.groupby([col_tema, col_grav]).size().reset_index(name='Casos')
+                
+                mapa_colores = {
+                    'Conforme': '#28a745',
+                    'Oportunidad de Mejora': '#ffc107',
+                    'Reclamo Crítico': '#dc3545'
+                }
+                
+                fig_barras = px.bar(
+                    df_barras,
+                    y=col_tema,
+                    x='Casos',
+                    color=col_grav,
+                    color_discrete_map=mapa_colores,
+                    orientation='h',
+                    barmode='stack'
+                )
+                
+                fig_barras.update_layout(
+                    height=220,
+                    margin=dict(l=10, r=10, t=10, b=30),
+                    xaxis_title="Casos",
+                    yaxis_title="",
+                    legend=dict(
+                        orientation="h",
+                        yanchor="bottom",
+                        y=1.02,
+                        xanchor="right",
+                        x=1,
+                        title_text=""
+                    ),
+                    paper_bgcolor='rgba(0,0,0,0)',
+                    plot_bgcolor='rgba(0,0,0,0)'
+                )
+                
+                st.plotly_chart(fig_barras, use_container_width=True)
+            else:
+                st.caption("ℹ️ No se detectaron observaciones para el período seleccionado.")
+        else:
+            st.caption("ℹ️ No se detectaron observaciones para el período seleccionado.")
             
             st.plotly_chart(fig_barras, use_container_width=True)
         else:
