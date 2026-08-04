@@ -266,7 +266,7 @@ if df_raw is not None:
         )
         return fig
 
-   # --- FUNCIÓN PARA LOS ANILLOS MAXI (LIMPISO Y CON HOVER DINÁMICO) ---
+   # --- FUNCIÓN PARA LOS ANILLOS MAXI (TARJETA FLOTANTE AMPLIADA Y LEGIBLE) ---
     def crear_anillo_maxi_global(valores_serie, titulo, valor_grande, sufijo="%"):
         validos = pd.to_numeric(valores_serie, errors='coerce').dropna()
         total = len(validos)
@@ -279,8 +279,14 @@ if df_raw is not None:
         pasivos = len(validos[(validos > 6) & (validos <= 8)])
         promotores = len(validos[validos >= 9])
         
-        # Formateamos el texto del Tooltip (al pasar el mouse)
-        hovertemplate = f"<b>%{{label}}</b><br>Cantidad: %{{value}}<br>Proporción: %{{percent}}<br><i>Muestra Total: {total} casos</i><extra></extra>"
+        # Formato de texto con espacios limpios entre líneas
+        hovertemplate = (
+            "<b>%{{label}}</b><br>"
+            "Cantidad: <b>%{{value}}</b><br>"
+            "Proporción: <b>%{{percent}}</b><br>"
+            "<i>Muestra Total: {total} casos</i>"
+            "<extra></extra>"
+        )
 
         fig = go.Figure(go.Pie(
             labels=['Promotores/Exc', 'Pasivos/Reg', 'Detractores/Mal'],
@@ -290,8 +296,8 @@ if df_raw is not None:
             sort=False,
             showlegend=False,
             textinfo='none',
-            hovertemplate=hovertemplate, # Muestra la info detallada solo al pasar el mouse
-            domain=dict(x=[0, 1], y=[0, 0.85])
+            hovertemplate=hovertemplate,
+            domain=dict(x=[0, 1], y=[0.08, 0.88]) # Levantamos un poco la dona para dar espacio inferior
         ))
         
         fig.update_layout(
@@ -300,14 +306,21 @@ if df_raw is not None:
                 x=0.5, y=0.98, xanchor='center'
             ),
             annotations=[
-                # Únicamente el valor grande perfectamente centrado en la dona
                 dict(
                     text=f"<b style='font-size:46px; color:#2f3542; font-family:Helvetica, Arial, sans-serif; font-weight:800;'>{valor_grande:.1f}{sufijo}</b>", 
-                    x=0.5, y=0.40, showarrow=False
+                    x=0.5, y=0.45, showarrow=False
                 )
             ],
+            # CONFIGURACIÓN DEL CUADRO FLOTANTE (Para que no se corte el texto)
+            hoverlabel=dict(
+                bgcolor="#ffffff",
+                bordercolor="#2f3542",
+                font_size=13,
+                font_family="Helvetica, Arial, sans-serif",
+                align="left"
+            ),
             height=340,
-            margin=dict(l=0, r=0, t=40, b=0),
+            margin=dict(l=10, r=10, t=40, b=15),
             paper_bgcolor='rgba(0,0,0,0)',
             plot_bgcolor='rgba(0,0,0,0)'
         )
