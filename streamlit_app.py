@@ -567,25 +567,23 @@ if df_raw is not None:
                     fig_p.update_layout(height=250, margin=dict(t=0,b=0,l=0,r=0), showlegend=False)
                     st.plotly_chart(fig_p, use_container_width=True)
                 
-                st.markdown("##### 🔍 Temas detectados por Gravedad:")
+               st.markdown("##### 🔍 Temas detectados por Gravedad:")
         
         # 1. Identificar automáticamente la columna que contiene los temas/dimensiones
         col_tema = None
-        posibles_nombres_tema = ['Tema', 'TEMA', 'dimension', 'Dimension', 'DIMENSION', 'Categoria', 'Categoría']
-        for col in posibles_nombres_tema:
+        for col in ['Tema', 'TEMA', 'dimension', 'Dimension', 'DIMENSION', 'Categoria', 'Categoría']:
             if col in df_mes.columns:
                 col_tema = col
                 break
                 
         # 2. Identificar la columna de Gravedad
         col_grav = None
-        posibles_nombres_grav = ['Gravedad', 'GRAVEDAD', 'Semaforo', 'Semáforo', 'Tipo']
-        for col in posibles_nombres_grav:
+        for col in ['Gravedad', 'GRAVEDAD', 'Semaforo', 'Semáforo', 'Tipo']:
             if col in df_mes.columns:
                 col_grav = col
                 break
 
-        # 3. Dibujar el gráfico solo si existen ambas columnas y hay datos válidos
+        # 3. Dibujar el gráfico si existen las columnas y hay datos
         if col_tema and col_grav:
             df_temas = df_mes[df_mes[col_tema].notna() & (df_mes[col_tema] != '') & (df_mes[col_tema] != 'Sin Clasificar')]
             
@@ -631,10 +629,6 @@ if df_raw is not None:
         else:
             st.caption("ℹ️ No se detectaron observaciones para el período seleccionado.")
             
-            st.plotly_chart(fig_barras, use_container_width=True)
-        else:
-            st.caption("ℹ️ No se detectaron observaciones en el período seleccionado.")
-        
         # Bloque final: Protocolo de Tratamiento
         st.markdown("---")
         st.subheader("📋 Protocolo de Tratamiento sugerido")
