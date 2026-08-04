@@ -150,7 +150,7 @@ if df_raw is not None:
     if len(df_mes) > 0:
         excel_bytes = generar_excel_resumen(df_mes, mes_sel_nombre, anio_sel, nps_val_calc, csi_val_calc)
         st.sidebar.download_button(
-            label="📊 Descargar Excel del Mes",
+            label="📊 Excel del mes",
             data=excel_bytes,
             file_name=f"reporte_postventa_{mes_sel_nombre}_{anio_sel}.xlsx",
             mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
