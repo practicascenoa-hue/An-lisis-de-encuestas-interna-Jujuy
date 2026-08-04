@@ -266,7 +266,7 @@ if df_raw is not None:
         )
         return fig
 
-   # --- FUNCIÓN PARA LOS ANILLOS MAXI (TARJETA FLOTANTE AMPLIADA Y LEGIBLE) ---
+   # --- FUNCIÓN PARA LOS ANILLOS MAXI (CON HOVERTEMPLATE F-STRING) ---
     def crear_anillo_maxi_global(valores_serie, titulo, valor_grande, sufijo="%"):
         validos = pd.to_numeric(valores_serie, errors='coerce').dropna()
         total = len(validos)
@@ -279,12 +279,12 @@ if df_raw is not None:
         pasivos = len(validos[(validos > 6) & (validos <= 8)])
         promotores = len(validos[validos >= 9])
         
-        # Formato de texto con espacios limpios entre líneas
+        # NOTA: Agregamos la 'f' al inicio y duplicamos las llaves de Plotly {{label}}, {{value}}, {{percent}}
         hovertemplate = (
-            "<b>%{{label}}</b><br>"
-            "Cantidad: <b>%{{value}}</b><br>"
-            "Proporción: <b>%{{percent}}</b><br>"
-            "<i>Muestra Total: {total} casos</i>"
+            "<b>%{label}</b><br>"
+            "Cantidad: <b>%{value}</b><br>"
+            "Proporción: <b>%{percent}</b><br>"
+            f"<i>Muestra Total: {total} casos</i>"
             "<extra></extra>"
         )
 
@@ -297,7 +297,7 @@ if df_raw is not None:
             showlegend=False,
             textinfo='none',
             hovertemplate=hovertemplate,
-            domain=dict(x=[0, 1], y=[0.08, 0.88]) # Levantamos un poco la dona para dar espacio inferior
+            domain=dict(x=[0, 1], y=[0.08, 0.88])
         ))
         
         fig.update_layout(
@@ -311,7 +311,6 @@ if df_raw is not None:
                     x=0.5, y=0.45, showarrow=False
                 )
             ],
-            # CONFIGURACIÓN DEL CUADRO FLOTANTE (Para que no se corte el texto)
             hoverlabel=dict(
                 bgcolor="#ffffff",
                 bordercolor="#2f3542",
