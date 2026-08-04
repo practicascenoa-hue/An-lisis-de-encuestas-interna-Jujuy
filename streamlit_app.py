@@ -211,7 +211,7 @@ if df_raw is not None:
                    
           if len(df_mes) > 0:
                # --- 1. SECCIÓN SUPERIOR: KPIs GLOBALES (NPS & CSI TRICOLOR) ---
-               st.markdown("### Resumen Ejecutivo")
+               st.markdown("### Resumen: ")
                
                # Cálculos base globales
                nps_val = df_mes[col_nps_puntaje].mean() * 10
@@ -251,7 +251,7 @@ if df_raw is not None:
                st.write("---")
                
                # --- 2. SECCIÓN INFERIOR: CUADRÍCULA DE ANILLOS LIMPIOS ---
-               st.markdown("### Detalle por Pregunta de la Encuesta (Estilo Corporativo)")
+               st.markdown("### Indicador por Pregunta de la Encuesta: ")
                
                cod1, cod2, cod3 = st.columns(3)
                with cod1:
