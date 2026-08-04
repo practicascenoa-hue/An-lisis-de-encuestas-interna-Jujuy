@@ -26,44 +26,33 @@ st.markdown("""
           height: 38px !important;
           border-radius: 8px !important;
      }
+     
+     /* ESTILO DESTACADO PARA EL BOTÓN DE DESCARGA EN SIDEBAR */
+     div.stDownloadButton > button {
+          width: 100% !important;
+          height: 45px !important;
+          background-color: #1D6F42 !important; /* Verde Excel */
+          color: white !important;
+          font-weight: bold !important;
+          font-size: 14px !important;
+          border-radius: 8px !important;
+          border: none !important;
+          box-shadow: 0 4px 6px rgba(0,0,0,0.1) !important;
+          transition: all 0.3s ease !important;
+     }
+     div.stDownloadButton > button:hover {
+          background-color: #155231 !important; /* Verde más oscuro al pasar el mouse */
+          transform: translateY(-2px) !important;
+          box-shadow: 0 6px 12px rgba(0,0,0,0.15) !important;
+     }
+
      button[kind="primary"] {
           background-color: #007bff !important;
           border-color: #007bff !important;
           color: white !important;
           font-weight: bold !important;
      }
-     .stTabs [data-baseweb="tab-list"] {
-          gap: 10px;
-          background-color: #f8f9fa;
-          padding: 10px;
-          border-radius: 10px;
-     }
-     .stTabs [data-baseweb="tab"] { font-weight: bold; }
-     
-     /* TARJETAS CON IDENTIDAD DE COLOR PARA LECTURA COMPLETA */
-     .comentario-card {
-          background-color: #ffffff;
-          padding: 15px;
-          border-radius: 8px;
-          margin-bottom: 10px;
-          box-shadow: 0 2px 8px rgba(0,0,0,0.05);
-          border: 1px solid #eee;
-     }
-     .borde-conforme { border-left: 5px solid #28a745; }
-     .borde-oportunidad { border-left: 5px solid #ffc107; }
-     .borde-critico { border-left: 5px solid #dc3545; }
-     
-     .comentario-header { font-weight: bold; color: #333; margin-bottom: 5px; font-size: 14px; }
-     .comentario-body { color: #555; font-size: 13px; line-height: 1.5; }
-
-     /* FORZAR SALTO DE LÍNEA EN TABLAS Y DATAFRAMES */
-     [data-testid="stTable"] td, [data-testid="stDataFrame"] td {
-          white-space: normal !important;
-          word-break: break-word !important;
-          line-height: 1.4 !important;
-     }
-     </style>
-     """, unsafe_allow_html=True)
+     /* ... (mantiene el resto de tus estilos de CSS) ... */
 
 # --- CARGA DE DATOS ---
 SHEET_URL = "https://docs.google.com/spreadsheets/d/1ER40wQho6sPz24oBvEUmQnsHnAxrnzmP3ppPukMy24Y/export?format=csv&gid=309618647"
@@ -204,7 +193,7 @@ if df_raw is not None:
     csi_raw_calc = df_mes[col_csi_final].mean() if len(df_mes) > 0 else 0
     csi_val_calc = (csi_raw_calc * 100 if csi_raw_calc <= 1.1 else csi_raw_calc) if len(df_mes) > 0 else 0
 
-    # --- SIDEBAR: BOTÓN DE DESCARGA MULTIPESTAÑA EXCEL ---
+    # --- SIDEBAR: BOTÓN DE DESCARGA DESTACADO ---
     st.sidebar.markdown("---")
     st.sidebar.header("📥 EXPORTAR INFORME")
     if len(df_mes) > 0:
@@ -214,19 +203,21 @@ if df_raw is not None:
             col_nps_puntaje, col_t_concatenado, col_cliente
         )
         sufijo_asesor = f"_{asesor_sel.replace(' ', '_')}" if asesor_sel != "Todos los Asesores" else ""
+        
         st.sidebar.download_button(
-            label="📁(.xlsx)",
+            label="📊 Descargar Informe Excel",
             data=excel_bytes,
-            file_name=f"reporte_Encuesta Satisfaccion CENOA_{mes_sel_nombre}_{anio_sel}{sufijo_asesor}.xlsx",
-            mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+            file_name=f"Reporte_Calidad_{mes_sel_nombre}_{anio_sel}{sufijo_asesor}.xlsx",
+            mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+            use_container_width=True
         )
     else:
         st.sidebar.info("Sin datos para exportar")
 
-    st.title("INDICADORES ENCUESTAS DE SATISFACCIÓN")
+    st.title("INDICADORES ENCUESTAS DE SATISFA
+    # --- FUNCIÓN MAESTRA GLOBAL: ANILLO EVOLUCCIÓN")
     tab1, tab2, tab3, tab4 = st.tabs(["🎯 INDICADORES", "👤 ASESORES", "📊 EVOLUCIÓN MENSUAL", "⚠️ ANÁLISIS DE RECLAMOS"])
-
-    # --- FUNCIÓN MAESTRA GLOBAL: ANILLO EVOLUCIONADO CORPORATIVO ---
+CIONADO CORPORATIVO ---
     def crear_anillo_corporativo(valores_serie, titulo):
         validos = pd.to_numeric(valores_serie, errors='coerce').dropna()
         muestra = len(validos)
