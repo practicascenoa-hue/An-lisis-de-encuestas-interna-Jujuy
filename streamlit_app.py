@@ -206,7 +206,7 @@ if df_raw is not None:
 
     # --- SIDEBAR: BOTÓN DE DESCARGA MULTIPESTAÑA EXCEL ---
     st.sidebar.markdown("---")
-    st.sidebar.header("📥 EXPORTAR INFORME COMPLETO")
+    st.sidebar.header("📥 EXPORTAR INFORME")
     if len(df_mes) > 0:
         excel_bytes = generar_excel_resumen(
             df_mes, df_anio, mes_sel_nombre, anio_sel, 
@@ -215,9 +215,9 @@ if df_raw is not None:
         )
         sufijo_asesor = f"_{asesor_sel.replace(' ', '_')}" if asesor_sel != "Todos los Asesores" else ""
         st.sidebar.download_button(
-            label="📊 Descargar (.xlsx)",
+            label="📁(.xlsx)",
             data=excel_bytes,
-            file_name=f"reporte_encuesta-satisfaccion_{mes_sel_nombre}_{anio_sel}{sufijo_asesor}.xlsx",
+            file_name=f"reporte_Encuesta Satisfaccion_{mes_sel_nombre}_{anio_sel}{sufijo_asesor}.xlsx",
             mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
         )
     else:
