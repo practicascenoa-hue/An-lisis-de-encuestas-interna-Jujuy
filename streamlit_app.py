@@ -567,7 +567,7 @@ if df_raw is not None:
                     fig_p.update_layout(height=250, margin=dict(t=0,b=0,l=0,r=0), showlegend=False)
                     st.plotly_chart(fig_p, use_container_width=True)
                 
-              st.markdown("##### 🔍 Temas detectados por Gravedad:")
+                st.markdown("##### 🔍 Temas detectados por Gravedad:")
         
         # 1. Identificar automáticamente la columna que contiene los temas/dimensiones
         col_tema = None
