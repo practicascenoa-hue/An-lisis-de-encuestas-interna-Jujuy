@@ -6,7 +6,7 @@ import re
 import io
 
 # 1. Configuración de página
-st.set_page_config(page_title="DASHBOARD POSTVENTA", layout="wide")
+st.set_page_config(page_title="ENCUESTAS DE SATISFACCIÓN CENOA", layout="wide")
 
 # Inicializar estados de sesión para filtros y botones
 if "f_tipo" not in st.session_state:
@@ -238,7 +238,15 @@ if df_raw is not None:
     else:
         st.sidebar.info("Sin datos para exportar")
 
-    st.title("INDICADORES ENCUESTAS DE SATISFACCIÓN")
+   # --- ENCABEZADO CON LOGO Y TÍTULO ---
+    c_logo, c_titulo = st.columns([1, 4])
+    with c_logo:
+        try:
+            st.image("logo.png", width=130)
+        except:
+            pass
+    with c_titulo:
+        st.title("INDICADORES ENCUESTAS DE SATISFACCIÓN")
     tab1, tab2, tab3, tab4 = st.tabs(["🎯 INDICADORES", "👤 ASESORES", "📊 EVOLUCIÓN MENSUAL", "⚠️ ANÁLISIS DE RECLAMOS"])
 
     # --- FUNCIÓN MAESTRA GLOBAL: ANILLO EVOLUCIONADO CORPORATIVO ---
