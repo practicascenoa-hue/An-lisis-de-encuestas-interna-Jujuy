@@ -266,7 +266,7 @@ if df_raw is not None:
         )
         return fig
 
-    # --- FUNCIÓN PARA LOS ANILLOS MAXI (CON MEJORA DE CONTRASTE Y LECTURA) ---
+   # --- FUNCIÓN PARA LOS ANILLOS MAXI (LIMPISO Y CON HOVER DINÁMICO) ---
     def crear_anillo_maxi_global(valores_serie, titulo, valor_grande, sufijo="%"):
         validos = pd.to_numeric(valores_serie, errors='coerce').dropna()
         total = len(validos)
@@ -279,6 +279,9 @@ if df_raw is not None:
         pasivos = len(validos[(validos > 6) & (validos <= 8)])
         promotores = len(validos[validos >= 9])
         
+        # Formateamos el texto del Tooltip (al pasar el mouse)
+        hovertemplate = f"<b>%{{label}}</b><br>Cantidad: %{{value}}<br>Proporción: %{{percent}}<br><i>Muestra Total: {total} casos</i><extra></extra>"
+
         fig = go.Figure(go.Pie(
             labels=['Promotores/Exc', 'Pasivos/Reg', 'Detractores/Mal'],
             values=[promotores, pasivos, detractores],
@@ -287,7 +290,7 @@ if df_raw is not None:
             sort=False,
             showlegend=False,
             textinfo='none',
-            hoverinfo='label+percent',
+            hovertemplate=hovertemplate, # Muestra la info detallada solo al pasar el mouse
             domain=dict(x=[0, 1], y=[0, 0.85])
         ))
         
@@ -297,17 +300,18 @@ if df_raw is not None:
                 x=0.5, y=0.98, xanchor='center'
             ),
             annotations=[
-                dict(text=f"<b style='font-size:48px; color:#2f3542; font-family:Helvetica, Arial, sans-serif; font-weight:800;'>{valor_grande:.1f}{sufijo}</b>", x=0.5, y=0.45, showarrow=False),
-                # --- CAMBIO DE CONTRASTE Y VISIBILIDAD ---
-                dict(text=f"<span style='font-size:13px; color:#2f3542; font-family:Helvetica, Arial, sans-serif; font-weight:800; background-color: #f1f2f6; padding: 2px 8px; border-radius: 4px;'>Muestra: {total} casos</span>", x=0.5, y=0.20, showarrow=False)
+                # Únicamente el valor grande perfectamente centrado en la dona
+                dict(
+                    text=f"<b style='font-size:46px; color:#2f3542; font-family:Helvetica, Arial, sans-serif; font-weight:800;'>{valor_grande:.1f}{sufijo}</b>", 
+                    x=0.5, y=0.40, showarrow=False
+                )
             ],
             height=340,
             margin=dict(l=0, r=0, t=40, b=0),
             paper_bgcolor='rgba(0,0,0,0)',
             plot_bgcolor='rgba(0,0,0,0)'
         )
-        return fig
-        
+        return fig        
     # --- TAB 1: INDICADORES ---
     with tab1:
         st.header(f"🎯 Indicadores Clave - {mes_sel_nombre} {anio_sel} " + (f"({asesor_sel})" if asesor_sel != "Todos los Asesores" else ""))
