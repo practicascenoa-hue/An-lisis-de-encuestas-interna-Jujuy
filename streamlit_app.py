@@ -204,7 +204,7 @@ if df_raw is not None:
     csi_raw_calc = df_mes[col_csi_final].mean() if len(df_mes) > 0 else 0
     csi_val_calc = (csi_raw_calc * 100 if csi_raw_calc <= 1.1 else csi_raw_calc) if len(df_mes) > 0 else 0
 
-    # --- SIDEBAR: BOTÓN DE DESCARGA MULTIPESTAÑA EXCEL ---
+    # --- SIDEBAR: BOTÓN DE DESCARGA NATIVO Y LIMPIO ---
     st.sidebar.markdown("---")
     st.sidebar.header("📥 EXPORTAR INFORME")
     if len(df_mes) > 0:
@@ -214,11 +214,14 @@ if df_raw is not None:
             col_nps_puntaje, col_t_concatenado, col_cliente
         )
         sufijo_asesor = f"_{asesor_sel.replace(' ', '_')}" if asesor_sel != "Todos los Asesores" else ""
+        
         st.sidebar.download_button(
-            label="📁(.xlsx)",
+            label="📊 Descargar Informe Excel (.xlsx)",
             data=excel_bytes,
-            file_name=f"reporte_Encuesta Satisfaccion CENOA_{mes_sel_nombre}_{anio_sel}{sufijo_asesor}.xlsx",
-            mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+            file_name=f"Reporte_Calidad_{mes_sel_nombre}_{anio_sel}{sufijo_asesor}.xlsx",
+            mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+            type="primary",
+            use_container_width=True
         )
     else:
         st.sidebar.info("Sin datos para exportar")
