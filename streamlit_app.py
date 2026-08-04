@@ -224,7 +224,7 @@ if df_raw is not None:
 
     # --- SIDEBAR: BOTÓN DE DESCARGA NATIVO Y LIMPIO ---
     st.sidebar.markdown("---")
-    st.sidebar.header("📤 EXPORTE RESUMEN")
+    st.sidebar.header(" ")
     if len(df_mes) > 0:
         excel_bytes = generar_excel_resumen(
             df_mes, df_anio, mes_sel_nombre, anio_sel, 
@@ -234,7 +234,7 @@ if df_raw is not None:
         sufijo_asesor = f"_{asesor_sel.replace(' ', '_')}" if asesor_sel != "Todos los Asesores" else ""
         
         st.sidebar.download_button(
-            label="📁 Descarga (.xlsx)",
+            label="📁 Descarga resumen (.xlsx)",
             data=excel_bytes,
             file_name=f"Reporte_Encuesta de Satisfacción_{mes_sel_nombre}_{anio_sel}{sufijo_asesor}.xlsx",
             mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
