@@ -216,7 +216,7 @@ if df_raw is not None:
         sufijo_asesor = f"_{asesor_sel.replace(' ', '_')}" if asesor_sel != "Todos los Asesores" else ""
         
         st.sidebar.download_button(
-            label="📊 Descargar Informe Excel (.xlsx)",
+            label="📁 Descarga",
             data=excel_bytes,
             file_name=f"Reporte_Calidad_{mes_sel_nombre}_{anio_sel}{sufijo_asesor}.xlsx",
             mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
