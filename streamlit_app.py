@@ -217,7 +217,7 @@ if df_raw is not None:
         st.sidebar.download_button(
             label="📁(.xlsx)",
             data=excel_bytes,
-            file_name=f"reporte_Encuesta Satisfaccion_{mes_sel_nombre}_{anio_sel}{sufijo_asesor}.xlsx",
+            file_name=f"reporte_Encuesta Satisfaccion CENOA_{mes_sel_nombre}_{anio_sel}{sufijo_asesor}.xlsx",
             mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
         )
     else:
@@ -266,7 +266,7 @@ if df_raw is not None:
         )
         return fig
 
-    # --- FUNCIÓN PARA LOS ANILLOS MAXI ---
+    # --- FUNCIÓN PARA LOS ANILLOS MAXI (CON MEJORA DE CONTRASTE Y LECTURA) ---
     def crear_anillo_maxi_global(valores_serie, titulo, valor_grande, sufijo="%"):
         validos = pd.to_numeric(valores_serie, errors='coerce').dropna()
         total = len(validos)
@@ -297,8 +297,9 @@ if df_raw is not None:
                 x=0.5, y=0.98, xanchor='center'
             ),
             annotations=[
-                dict(text=f"<b style='font-size:48px; color:#2f3542; font-family:Helvetica, Arial, sans-serif; font-weight:800;'>{valor_grande:.1f}{sufijo}</b>", x=0.5, y=0.44, showarrow=False),
-                dict(text=f"<span style='font-size:12px; color:#747d8c; font-family:Helvetica, Arial, sans-serif; font-weight:bold;'>Muestra: {total} casos</span>", x=0.5, y=0.12, showarrow=False)
+                dict(text=f"<b style='font-size:48px; color:#2f3542; font-family:Helvetica, Arial, sans-serif; font-weight:800;'>{valor_grande:.1f}{sufijo}</b>", x=0.5, y=0.45, showarrow=False),
+                # --- CAMBIO DE CONTRASTE Y VISIBILIDAD ---
+                dict(text=f"<span style='font-size:13px; color:#2f3542; font-family:Helvetica, Arial, sans-serif; font-weight:800; background-color: #f1f2f6; padding: 2px 8px; border-radius: 4px;'>Muestra: {total} casos</span>", x=0.5, y=0.20, showarrow=False)
             ],
             height=340,
             margin=dict(l=0, r=0, t=40, b=0),
@@ -306,7 +307,7 @@ if df_raw is not None:
             plot_bgcolor='rgba(0,0,0,0)'
         )
         return fig
-
+        
     # --- TAB 1: INDICADORES ---
     with tab1:
         st.header(f"🎯 Indicadores Clave - {mes_sel_nombre} {anio_sel} " + (f"({asesor_sel})" if asesor_sel != "Todos los Asesores" else ""))
