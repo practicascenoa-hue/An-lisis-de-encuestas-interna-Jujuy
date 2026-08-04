@@ -457,26 +457,14 @@ CIONADO CORPORATIVO ---
                     hide_index=True
                 )
 
-    # --- TAB 3: EVOLUCIÓN ---
-    with st.expander("ℹ️ PROTOCOLO VOC (voz del cliente)"):
-            st.markdown("""
-**Este panel clasifica las encuestas mediante un algoritmo de detección de palabras clave y jerarquía de NPS.**
-
-### 1. El Semáforo de Gestión
-* **Reclamo Crítico (🔴):** Clientes con **NPS <= 6**. Es una alerta de insatisfacción que requiere contacto inmediato.
-* **Oportunidad de Mejora (🟡):** Clientes **Promotores (NPS 9-10)** que dejaron una sugerencia puntual sobre procesos.
-* **Conforme (🟢):** Clientes **Promotores (NPS 9-10)** con comentarios 100% positivos o elogios directos.
-
-### 2. Dimensiones de Calidad
-* **Calidad Técnica:** Estado de la unidad, pintura, alineación y limpieza final.
-* **Plazos y Tiempos:** Cumplimiento de fechas y tiempos de espera en sucursal.
-* **Infraestructura:** Comodidad de la sala, estado de baños y servicios.
-* **Atención y Trato:** Amabilidad, claridad técnica y calidad de comunicación del asesor.
-
-### 3. Regla de Jerarquía Única
-Para evitar duplicar datos en el gráfico de barras, si un cliente menciona varios temas, el sistema prioriza el impacto operativo en este orden:
-**1. Técnico > 2. Tiempos > 3. Infraestructura > 4. Atención.**
-""")
+        # --- TAB 3: EVOLUCIÓN ---
+    with tab3:
+        st.subheader(f"Evolución Mensual {anio_sel}")
+        df_v = df_anio.groupby('Mes_Num').agg({col_fecha_nombre: 'count', col_csi_final: 'mean', col_nps_puntaje: 'mean'}).reset_index()
+        df_v.columns = ['Mes_Num', 'Cant', 'CSI', 'NPS']
+        df_v['NPS'] = df_v['NPS'] * 10
+        df_v['Mes'] = df_v['Mes_Num'].map(meses_dict)
+        st.plotly_chart(px.bar(df_v, y='Mes', x='Cant', orientation='h', text='Cant', color='Cant', color_continuous_scale='Sunset'), use_container_width=True)
 
     # --- TAB 4: RECLAMOS ---
     with tab4:
