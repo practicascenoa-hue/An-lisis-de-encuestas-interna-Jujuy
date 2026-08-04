@@ -191,7 +191,7 @@ if df_raw is not None:
     df_raw['Mes_Num'] = df_raw[col_fecha_nombre].dt.month
     meses_dict = {1:"Enero", 2:"Febrero", 3:"Marzo", 4:"Abril", 5:"Mayo", 6:"Junio", 7:"Julio", 8:"Agosto", 9:"Septiembre", 10:"Octubre", 11:"Noviembre", 12:"Diciembre"}
     
-    st.sidebar.header("FILTROS PERIODO")
+    st.sidebar.header("📅 FILTROS PERIODO")
     anio_sel = st.sidebar.selectbox("Año", sorted(df_raw['Año'].dropna().unique().astype(int), reverse=True))
     df_anio = df_raw[df_raw['Año'] == anio_sel].copy()
     
@@ -218,7 +218,7 @@ if df_raw is not None:
 
     # --- SIDEBAR: BOTÓN DE DESCARGA NATIVO Y LIMPIO ---
     st.sidebar.markdown("---")
-    st.sidebar.header("📥 EXPORTAR INFORME")
+    st.sidebar.header("📤 EXPORTE RESUMEN")
     if len(df_mes) > 0:
         excel_bytes = generar_excel_resumen(
             df_mes, df_anio, mes_sel_nombre, anio_sel, 
