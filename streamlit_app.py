@@ -266,7 +266,7 @@ if df_raw is not None:
         )
         return fig
 
-    # --- FUNCIÓN PARA LOS ANILLOS MAXI (CON MEJORA DE CONTRASTE Y LECTURA) ---
+    # --- FUNCIÓN PARA LOS ANILLOS MAXI (CON HOVERTEMPLATE F-STRING) ---
     def crear_anillo_maxi_global(valores_serie, titulo, valor_grande, sufijo="%"):
         validos = pd.to_numeric(valores_serie, errors='coerce').dropna()
         total = len(validos)
@@ -279,6 +279,15 @@ if df_raw is not None:
         pasivos = len(validos[(validos > 6) & (validos <= 8)])
         promotores = len(validos[validos >= 9])
         
+        # NOTA: Agregamos la 'f' al inicio y duplicamos las llaves de Plotly {{label}}, {{value}}, {{percent}}
+        hovertemplate = (
+            "<b>%{label}</b><br>"
+            "Cantidad: <b>%{value}</b><br>"
+            "Proporción: <b>%{percent}</b><br>"
+            f"<i>Muestra Total: {total} casos</i>"
+            "<extra></extra>"
+        )
+
         fig = go.Figure(go.Pie(
             labels=['Promotores/Exc', 'Pasivos/Reg', 'Detractores/Mal'],
             values=[promotores, pasivos, detractores],
@@ -287,8 +296,8 @@ if df_raw is not None:
             sort=False,
             showlegend=False,
             textinfo='none',
-            hoverinfo='label+percent',
-            domain=dict(x=[0, 1], y=[0, 0.85])
+            hovertemplate=hovertemplate,
+            domain=dict(x=[0, 1], y=[0.08, 0.88])
         ))
         
         fig.update_layout(
@@ -297,12 +306,20 @@ if df_raw is not None:
                 x=0.5, y=0.98, xanchor='center'
             ),
             annotations=[
-                dict(text=f"<b style='font-size:48px; color:#2f3542; font-family:Helvetica, Arial, sans-serif; font-weight:800;'>{valor_grande:.1f}{sufijo}</b>", x=0.5, y=0.45, showarrow=False),
-                # --- CAMBIO DE CONTRASTE Y VISIBILIDAD ---
-                dict(text=f"<span style='font-size:13px; color:#2f3542; font-family:Helvetica, Arial, sans-serif; font-weight:800; background-color: #f1f2f6; padding: 2px 8px; border-radius: 4px;'>Muestra: {total} casos</span>", x=0.5, y=0.20, showarrow=False)
+                dict(
+                    text=f"<b style='font-size:46px; color:#2f3542; font-family:Helvetica, Arial, sans-serif; font-weight:800;'>{valor_grande:.1f}{sufijo}</b>", 
+                    x=0.5, y=0.45, showarrow=False
+                )
             ],
+            hoverlabel=dict(
+                bgcolor="#ffffff",
+                bordercolor="#2f3542",
+                font_size=13,
+                font_family="Helvetica, Arial, sans-serif",
+                align="left"
+            ),
             height=340,
-            margin=dict(l=0, r=0, t=40, b=0),
+            margin=dict(l=10, r=10, t=40, b=15),
             paper_bgcolor='rgba(0,0,0,0)',
             plot_bgcolor='rgba(0,0,0,0)'
         )
