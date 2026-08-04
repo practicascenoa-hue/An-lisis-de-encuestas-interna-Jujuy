@@ -485,7 +485,7 @@ Para evitar duplicar datos en el gráfico de barras, si un cliente menciona vari
             **Este panel clasifica las encuestas mediante un algoritmo de detección de palabras clave y jerarquía de NPS.**
             
             ### 1. El Semáforo de Gestión
-            * \U0001F534 **Reclamo Crítico:** Clientes con **NPS ≤ 6**. Es una alerta de insatisfacción que requiere contacto inmediato.
+            * \U0001F534 **Reclamo Crítico:** Clientes con **NPS <= 6**. Es una alerta de insatisfacción que requiere contacto inmediato.
             * \U0001F7E1 **Oportunidad de Mejora:** Clientes **Promotores (NPS 9-10)** que dejaron una sugerencia puntual sobre procesos.
             * \U0001F7E2 **Conforme:** Clientes **Promotores (NPS 9-10)** con comentarios 100% positivos o elogios directos.
             
