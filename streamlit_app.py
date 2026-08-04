@@ -188,7 +188,7 @@ if df_raw is not None:
     mes_sel_num = [k for k, v in meses_dict.items() if v == mes_sel_nombre][0]
     df_mes_base = df_anio[df_anio['Mes_Num'] == mes_sel_num].copy()
 
-    # --- NUEVO FILTRO POR ASESOR EN SIDEBAR ---
+    # --- FILTRO POR ASESOR EN SIDEBAR ---
     st.sidebar.markdown("---")
     st.sidebar.header("👤 FILTRO POR ASESOR")
     lista_asesores = ["Todos los Asesores"] + sorted(df_mes_base[col_asesor].dropna().unique().tolist())
@@ -215,7 +215,7 @@ if df_raw is not None:
         )
         sufijo_asesor = f"_{asesor_sel.replace(' ', '_')}" if asesor_sel != "Todos los Asesores" else ""
         st.sidebar.download_button(
-            label="📊 Descargar Libro Excel Completo (.xlsx)",
+            label="📊 Descargar (.xlsx)",
             data=excel_bytes,
             file_name=f"reporte_postventa_{mes_sel_nombre}_{anio_sel}{sufijo_asesor}.xlsx",
             mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
