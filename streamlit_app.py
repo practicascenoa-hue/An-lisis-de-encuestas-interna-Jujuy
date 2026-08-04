@@ -570,7 +570,7 @@ if df_raw is not None:
                 st.markdown("##### 🔍 Temas detectados por Gravedad:")
         
         # Filtrar solo casos que tengan dimensiones/temas asignados
-        df_temas = df_voc[df_voc['Tema'].notna() & (df_voc['Tema'] != '') & (df_voc['Tema'] != 'Sin Clasificar')]
+        df_temas = df_mes[df_mes['Tema'].notna() & (df_mes['Tema'] != '') & (df_mes['Tema'] != 'Sin Clasificar')]
         
         if len(df_temas) > 0:
             # Agrupar por Tema y Gravedad
