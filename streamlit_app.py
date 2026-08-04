@@ -32,6 +32,18 @@ st.markdown("""
           color: white !important;
           font-weight: bold !important;
      }
+     /* CAMBIO DE COLOR SEGURO PARA BOTÓN DESCARGA */
+     [data-testid="stSidebar"] [data-testid="stDownloadButton"] button {
+          background-color: #2f3542 !important;
+          color: white !important;
+          border-color: #2f3542 !important;
+     }
+     
+     [data-testid="stSidebar"] [data-testid="stDownloadButton"] button:hover {
+          background-color: #1e222b !important;
+          border-color: #1e222b !important;
+          color: white !important;
+     }
      .stTabs [data-baseweb="tab-list"] {
           gap: 10px;
           background-color: #f8f9fa;
