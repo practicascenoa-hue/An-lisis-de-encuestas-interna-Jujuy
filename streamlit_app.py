@@ -79,11 +79,12 @@ def load_data():
     except: 
         return None, None
 
-# --- FUNCIÓN PARA GENERAR REPORTE EXCEL EN MEMORIA ---
-def generar_excel_resumen(df_mes_sel, mes_nombre, anio_val, nps_val, csi_val):
+# --- FUNCIÓN PARA GENERAR REPORTE EXCEL MULTIPESTAÑA CON ESTILOS ---
+def generar_excel_resumen(df_mes_sel, df_anio_sel, mes_nombre, anio_val, nps_val, csi_val, col_asesor, col_seguimiento, col_nps_puntaje, col_t_concatenado, col_cliente):
     output = io.BytesIO()
     with pd.ExcelWriter(output, engine='openpyxl') as writer:
-        # Hoja 1: Resumen de Indicadores
+        
+        # 1. RESUMEN KPIS GLOBALES
         resumen_kpis = {
             "Indicador Global": ["Período Evaluado", "NPS Global", "CSI Global", "Total Respuestas"],
             "Resultado": [f"{mes_nombre} {anio_val}", f"{nps_val:.1f}%", f"{csi_val:.1f}%", len(df_mes_sel)],
@@ -91,9 +92,57 @@ def generar_excel_resumen(df_mes_sel, mes_nombre, anio_val, nps_val, csi_val):
         }
         pd.DataFrame(resumen_kpis).to_excel(writer, sheet_name="Resumen KPIs", index=False)
         
-        # Hoja 2: Base Filtrada del Mes
-        df_mes_sel.to_excel(writer, sheet_name="Respuestas del Mes", index=False)
+        # 2. RENDIMIENTO POR ASESOR
+        if len(df_mes_sel) > 0 and col_asesor in df_mes_sel.columns:
+            col_h_asesor = df_mes_sel.columns[7]
+            df_temp = df_mes_sel.copy()
+            df_temp['Q8_Num'] = pd.to_numeric(df_temp[col_h_asesor], errors='coerce')
+            df_temp['Sigue_Num'] = df_temp[col_seguimiento].apply(lambda x: 1 if str(x).lower().strip() == 'sí' else 0)
+            
+            df_res_asesores = df_temp.groupby(col_asesor).agg(
+                Total_Encuestas=(col_asesor, 'size'),
+                Recibio_Seg_Count=('Sigue_Num', 'sum'),
+                Nota_Q8_Prom=('Q8_Num', 'mean')
+            ).reset_index()
+            
+            df_res_asesores['% Cumplimiento Seg.'] = (df_res_asesores['Recibio_Seg_Count'] / df_res_asesores['Total_Encuestas'] * 100).round(1).astype(str) + "%"
+            df_res_asesores['Nota Cortesía (Q8)'] = df_res_asesores['Nota_Q8_Prom'].apply(lambda x: f"{x:.2f}" if pd.notna(x) else "Sin notas")
+            
+            cols_as = [col_asesor, 'Total_Encuestas', '% Cumplimiento Seg.', 'Nota Cortesía (Q8)']
+            df_res_asesores[cols_as].sort_values('Total_Encuestas', ascending=False).to_excel(writer, sheet_name="Rendimiento Asesores", index=False)
+
+        # 3. EVOLUCIÓN ANUAL
+        if len(df_anio_sel) > 0:
+            meses_map = {1:"Enero", 2:"Febrero", 3:"Marzo", 4:"Abril", 5:"Mayo", 6:"Junio", 7:"Julio", 8:"Agosto", 9:"Septiembre", 10:"Octubre", 11:"Noviembre", 12:"Diciembre"}
+            df_v = df_anio_sel.groupby('Mes_Num').agg({'Marca temporal': 'count'}).reset_index()
+            df_v.columns = ['Mes_Num', 'Total Encuestas']
+            df_v['Mes'] = df_v['Mes_Num'].map(meses_map)
+            df_v[['Mes', 'Total Encuestas']].to_excel(writer, sheet_name="Evolución Anual", index=False)
+
+        # 4. RECLAMOS Y SUGERENCIAS
+        if len(df_mes_sel) > 0:
+            df_reclamos = df_mes_sel[df_mes_sel[col_nps_puntaje] <= 8].copy()
+            if not df_reclamos.empty:
+                cols_rec = [col_cliente, col_asesor, col_nps_puntaje, col_t_concatenado]
+                cols_validas = [c for c in cols_rec if c in df_reclamos.columns]
+                df_reclamos[cols_validas].to_excel(writer, sheet_name="Reclamos y Sugerencias", index=False)
+
+        # 5. BASE COMPLETA
+        df_mes_sel.to_excel(writer, sheet_name="Base Completa Mes", index=False)
         
+        # --- APLICAR COLORES A LAS PESTAÑAS EN EXCEL ---
+        wb = writer.book
+        colors = {
+            "Resumen KPIs": "007BFF",         # Azul
+            "Rendimiento Asesores": "28A745", # Verde
+            "Evolución Anual": "17A2B8",      # Cian
+            "Reclamos y Sugerencias": "DC3545",# Rojo Alerta
+            "Base Completa Mes": "6C757D"     # Gris
+        }
+        for sheet_name, color_hex in colors.items():
+            if sheet_name in wb.sheetnames:
+                wb[sheet_name].sheet_properties.tabColor = color_hex
+
     return output.getvalue()
 
 df_raw, col_fecha_nombre = load_data()
@@ -137,22 +186,38 @@ if df_raw is not None:
     meses_nros = sorted(df_anio['Mes_Num'].dropna().unique().astype(int))
     mes_sel_nombre = st.sidebar.selectbox("Mes", [meses_dict[m] for m in meses_nros])
     mes_sel_num = [k for k, v in meses_dict.items() if v == mes_sel_nombre][0]
-    df_mes = df_anio[df_anio['Mes_Num'] == mes_sel_num].copy()
+    df_mes_base = df_anio[df_anio['Mes_Num'] == mes_sel_num].copy()
+
+    # --- NUEVO FILTRO POR ASESOR EN SIDEBAR ---
+    st.sidebar.markdown("---")
+    st.sidebar.header("👤 FILTRO POR ASESOR")
+    lista_asesores = ["Todos los Asesores"] + sorted(df_mes_base[col_asesor].dropna().unique().tolist())
+    asesor_sel = st.sidebar.selectbox("Seleccionar Asesor", lista_asesores)
+
+    if asesor_sel != "Todos los Asesores":
+        df_mes = df_mes_base[df_mes_base[col_asesor] == asesor_sel].copy()
+    else:
+        df_mes = df_mes_base.copy()
 
     # --- CÁLCULO DE VALORES GLOBALES PARA EXPORTACIÓN ---
     nps_val_calc = df_mes[col_nps_puntaje].mean() * 10 if len(df_mes) > 0 else 0
     csi_raw_calc = df_mes[col_csi_final].mean() if len(df_mes) > 0 else 0
     csi_val_calc = (csi_raw_calc * 100 if csi_raw_calc <= 1.1 else csi_raw_calc) if len(df_mes) > 0 else 0
 
-    # --- SIDEBAR: BOTÓN DE DESCARGA EXCEL ---
+    # --- SIDEBAR: BOTÓN DE DESCARGA MULTIPESTAÑA EXCEL ---
     st.sidebar.markdown("---")
-    st.sidebar.header("📥 EXPORTAR DATOS")
+    st.sidebar.header("📥 EXPORTAR INFORME COMPLETO")
     if len(df_mes) > 0:
-        excel_bytes = generar_excel_resumen(df_mes, mes_sel_nombre, anio_sel, nps_val_calc, csi_val_calc)
+        excel_bytes = generar_excel_resumen(
+            df_mes, df_anio, mes_sel_nombre, anio_sel, 
+            nps_val_calc, csi_val_calc, col_asesor, col_seguimiento, 
+            col_nps_puntaje, col_t_concatenado, col_cliente
+        )
+        sufijo_asesor = f"_{asesor_sel.replace(' ', '_')}" if asesor_sel != "Todos los Asesores" else ""
         st.sidebar.download_button(
-            label="📊 Excel del mes",
+            label="📊 Descargar Libro Excel Completo (.xlsx)",
             data=excel_bytes,
-            file_name=f"reporte_postventa_{mes_sel_nombre}_{anio_sel}.xlsx",
+            file_name=f"reporte_postventa_{mes_sel_nombre}_{anio_sel}{sufijo_asesor}.xlsx",
             mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
         )
     else:
@@ -244,7 +309,7 @@ if df_raw is not None:
 
     # --- TAB 1: INDICADORES ---
     with tab1:
-        st.header(f"🎯 Indicadores Clave - {mes_sel_nombre} {anio_sel}")
+        st.header(f"🎯 Indicadores Clave - {mes_sel_nombre} {anio_sel} " + (f"({asesor_sel})" if asesor_sel != "Todos los Asesores" else ""))
                  
         if len(df_mes) > 0:
             st.markdown("###  ")
