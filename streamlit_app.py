@@ -76,7 +76,22 @@ def load_data():
                df[col_fecha] = pd.to_datetime(df[col_fecha], dayfirst=True, errors='coerce')
           return df.dropna(how='all'), col_fecha
      except: return None, None
- 
+# --- FUNCIÓN PARA GENERAR REPORTE EXCEL EN MEMORIA ---
+def generar_excel_resumen(df_mes_sel, mes_nombre, anio_val, nps_val, csi_val):
+    output = io.BytesIO()
+    with pd.ExcelWriter(output, engine='openpyxl') as writer:
+        # Hoja 1: Resumen de Indicadores
+        resumen_kpis = {
+            "Indicador Global": ["Período Evaluado", "NPS Global", "CSI Global", "Total Respuestas"],
+            "Resultado": [f"{mes_nombre} {anio_val}", f"{nps_val:.1f}%", f"{csi_val:.1f}%", len(df_mes_sel)],
+            "Objetivo / Meta": ["-", "> 70.0%", "> 85.0%", "-"]
+        }
+        pd.DataFrame(resumen_kpis).to_excel(writer, sheet_name="Resumen KPIs", index=False)
+        
+        # Hoja 2: Base Filtrada del Mes
+        df_mes_sel.to_excel(writer, sheet_name="Respuestas del Mes", index=False)
+        
+    return output.getvalue() 
 df_raw, col_fecha_nombre = load_data()
  
 if df_raw is not None:
