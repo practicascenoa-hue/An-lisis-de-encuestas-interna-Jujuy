@@ -34,7 +34,7 @@ st.markdown("""
      }
      /* CAMBIO DE COLOR SEGURO PARA BOTÓN DESCARGA */
      [data-testid="stSidebar"] [data-testid="stDownloadButton"] button {
-          background-color: #28a745 !important;
+          background-color: #6c757d !important;
           color: white !important;
           border-color: #5a6268 !important;
      }
