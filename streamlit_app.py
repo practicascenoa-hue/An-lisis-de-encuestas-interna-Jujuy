@@ -244,13 +244,6 @@ if df_raw is not None:
     else:
         st.sidebar.info("Sin datos para exportar")
 
-   # --- ENCABEZADO CON LOGO Y TÍTULO ---
-    c_logo, c_titulo = st.columns([1, 4])
-    with c_logo:
-        try:
-            st.image("logo.png", width=130)
-        except:
-            pass
     with c_titulo:
         st.title("INDICADORES ENCUESTAS DE SATISFACCIÓN")
     tab1, tab2, tab3, tab4 = st.tabs(["🎯 INDICADORES", "👤 ASESORES", "📊 EVOLUCIÓN MENSUAL", "⚠️ ANÁLISIS DE RECLAMOS"])
