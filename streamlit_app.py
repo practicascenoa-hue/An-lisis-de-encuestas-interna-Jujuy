@@ -401,15 +401,14 @@ if df_raw is not None:
    
             st.write("")
             
-            cod4, cod5, cod6 = st.columns(3)
+            cod4, cod5 = st.columns(3)
             with cod4:
                 col_l_chapa = df_mes.columns[11]
                 st.plotly_chart(crear_anillo_corporativo(df_mes[col_l_chapa], "Q12 - Calidad Chapa y Pintura"), use_container_width=True, key="anillo_q12_chapa")
             with cod5:
                 col_n_tiempo = df_mes.columns[13]
                 st.plotly_chart(crear_anillo_corporativo(df_mes[col_n_tiempo], "Q9 - Tiempo de Reparación"), use_container_width=True, key="anillo_q9_tiempo")
-            with cod6:
-                st.info("")             
+                      
             
             if st.session_state.f_tipo:
                 st.markdown("---")
