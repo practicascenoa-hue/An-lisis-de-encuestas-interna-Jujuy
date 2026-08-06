@@ -441,22 +441,34 @@ if df_raw is not None:
    
             st.write("---")
 
-    # --- TAB 2: ASESORES ---
+   # --- TAB 2: ASESORES ---
     with tab2:
         st.subheader(f"👤 Desempeño de Asesores - {mes_sel_nombre} {anio_sel}")
         
         if len(df_mes) > 0:
             df_as = df_mes.groupby(col_asesor).size().reset_index(name='Encuestas')
-           st.plotly_chart(px.bar(df_as, x=col_asesor, y='Encuestas', text='Encuestas', color='Encuestas', color_continuous_scale='Blues'), use_container_width=True, key="bar_asesores_vol")
             
-            st.markdown("---")
+            # --- GRÁFICO CON BARRAS ESTILIZADAS Y ESPACIEDO CORRECTO ---
+            fig_as = px.bar(
+                df_as, 
+                x=col_asesor, 
+                y='Encuestas', 
+                text='Encuestas', 
+                color='Encuestas', 
+                color_continuous_scale='Blues'
+            )
+            fig_as.update_traces(width=0.25, textposition='outside')
+            fig_as.update_layout(
+                height=300,
+                margin=dict(l=10, r=10, t=20, b=20),
+                paper_bgcolor='rgba(0,0,0,0)',
+                plot_bgcolor='rgba(0,0,0,0)',
+                coloraxis_showscale=False,
+                xaxis_title="",
+                yaxis_title="Cantidad de Encuestas"
+            )
             
-            ca, cb = st.columns([1, 2])
-            
-            with ca:
-                res_p = df_mes[col_seguimiento].fillna("N/C").value_counts().reset_index()
-                st.plotly_chart(px.pie(res_p, names=res_p.columns[0], values='count', hole=0.4), use_container_width=True, key="pie_seguimiento_global")
-            
+            st.plotly_chart(fig_as, use_container_width=True, key="bar_asesores_vol")            
             with cb:
                 col_h_asesor = df_mes.columns[7]
                 df_mes['Q8_Num'] = pd.to_numeric(df_mes[col_h_asesor], errors='coerce')
