@@ -569,10 +569,10 @@ if df_raw is not None:
                 
                 st.markdown("**🔍 Temas detectados por Gravedad:**")
                 temas_prioridad = [
-                    ("Calidad Técnica", ["color", "alineado", "ruido", "pintura", "sucio", "lavado"]),
-                    ("Plazos y Tiempos", ["demora", "tardó", "fecha", "espera", "tiempo"]),
-                    ("Infraestructura", ["sala", "baño", "café", "comodidad"]),
-                    ("Atención", ["atencion", "atención", "trato", "explicación"])
+                    ("Calidad Técnica", ["color", "alineado", "ruido", "pintura", "sucio", "lavado", "limpieza", "chapa", "detalle", "reparacion", "reparación"]),
+                    ("Plazos y Tiempos", ["demora", "tardó", "tardo", "fecha", "espera", "tiempo", "retraso", "horario", "entrega", "tarde", "anticipado"]),
+                    ("Infraestructura", ["sala", "baño", "baños", "café", "cafe", "comodidad", "wifi", "silla", "asiento", "instalacion", "instalaciones"]),
+                    ("Atención", ["atencion", "atención", "trato", "explicación", "explicacion", "informado", "comunicación", "comunicacion", "asesor", "respuesta", "aviso"])
                 ]
                 
                 filas_b = []
@@ -580,23 +580,34 @@ if df_raw is not None:
                     if row['Intención'] in ["⚠️ RECLAMO CRÍTICO", "💡 OPORTUNIDAD DE MEJORA"]:
                         texto_com = str(row[col_t_concatenado]).lower()
                         tema_asignado = None
+                        
+                        # 1. Búsqueda por palabras clave
                         for nom, keys in temas_prioridad:
                             if any(p in texto_com for p in keys):
                                 tema_asignado = nom
                                 break 
                         
-                        if tema_asignado:
-                            t = "Reclamo" if row['Intención'] == "⚠️ RECLAMO CRÍTICO" else "Oportunidad"
-                            filas_b.append({"Tema": tema_asignado, "Tipo": t})
+                        # 2. Respaldo: Si no coincide ninguna palabra clave, asignar por defecto
+                        if not tema_asignado:
+                            if any(w in texto_com for w in ["retraso", "informado", "aviso", "comunicacion"]):
+                                tema_asignado = "Plazos y Tiempos"
+                            else:
+                                tema_asignado = "Atención"
+                        
+                        t = "Reclamo" if row['Intención'] == "⚠️ RECLAMO CRÍTICO" else "Oportunidad"
+                        filas_b.append({"Tema": tema_asignado, "Tipo": t})
 
-            if filas_b:
-                df_barras = pd.DataFrame(filas_b).groupby(['Tema', 'Tipo']).size().reset_index(name='Casos')
-                fig_b = px.bar(df_barras, x='Casos', y='Tema', orientation='h', color='Tipo', 
-                               color_discrete_map={"Reclamo": "#dc3545", "Oportunidad": "#FFD700"})
-                fig_b.update_layout(showlegend=True, height=350, margin=dict(t=10,b=10,l=0,r=10),
-                                    legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="right", x=1))
-                fig_b.update_traces(width=0.5)
-                st.plotly_chart(fig_b, use_container_width=True)
+                # TODO ESTE BLOQUE AHORA ESTÁ INDENTADO DENTRO DE 'with col_izq:'
+                if filas_b:
+                    df_barras = pd.DataFrame(filas_b).groupby(['Tema', 'Tipo']).size().reset_index(name='Casos')
+                    fig_b = px.bar(df_barras, x='Casos', y='Tema', orientation='h', color='Tipo', 
+                                   color_discrete_map={"Reclamo": "#dc3545", "Oportunidad": "#FFD700"})
+                    fig_b.update_layout(showlegend=True, height=280, margin=dict(t=10,b=10,l=0,r=10),
+                                        legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="right", x=1))
+                    fig_b.update_traces(width=0.5)
+                    st.plotly_chart(fig_b, use_container_width=True)
+                else:
+                    st.caption("ℹ️ No se detectaron observaciones para el período seleccionado.")
 
             with col_der:
                 df_t = df_mes[df_mes['Grupo'] == "Promotores"] if st.session_state.tab4_filter == "Promotor" else (df_mes[df_mes['Grupo'] == "Reclamos"] if st.session_state.tab4_filter == "Reclamo" else df_mes[df_mes['Grupo'] != "Neutral"])
