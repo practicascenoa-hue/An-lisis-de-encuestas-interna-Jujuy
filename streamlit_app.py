@@ -409,7 +409,7 @@ if df_raw is not None:
                 col_n_tiempo = df_mes.columns[13]
                 st.plotly_chart(crear_anillo_corporativo(df_mes[col_n_tiempo], "Q9 - Tiempo de Reparación"), use_container_width=True, key="anillo_q9_tiempo")
             with cod6:
-                st.info("📊 **Siguiente pregunta disponible**\n\nEspacio libre en la segunda fila.")             
+                st.info("")             
             
             if st.session_state.f_tipo:
                 st.markdown("---")
