@@ -447,33 +447,15 @@ if df_raw is not None:
         
         if len(df_mes) > 0:
             df_as = df_mes.groupby(col_asesor).size().reset_index(name='Encuestas')
-            # --- GRÁFICO DE ASESORES ESTILIZADO Y COMPACTO ---
-            fig_as = px.bar(
-                df_as, 
-                x=col_asesor, 
-                y='Encuestas', 
-                text='Encuestas', 
-                color='Encuestas', 
-                color_continuous_scale='Blues'
-            )
+           st.plotly_chart(px.bar(df_as, x=col_asesor, y='Encuestas', text='Encuestas', color='Encuestas', color_continuous_scale='Blues'), use_container_width=True, key="bar_asesores_vol")
             
-            # Control de ancho de barra y altura
-            fig_as.update_traces(
-                width=0.25, # Hace la barra estilizada y delgada
-                textposition='outside'
-            )
+            st.markdown("---")
             
-            fig_as.update_layout(
-                height=300, # Altura equilibrada
-                margin=dict(l=10, r=10, t=20, b=20),
-                paper_bgcolor='rgba(0,0,0,0)',
-                plot_bgcolor='rgba(0,0,0,0)',
-                coloraxis_showscale=False, # Oculta la barra de color lateral innecesaria
-                xaxis_title="",
-                yaxis_title="Cantidad de Encuestas"
-            )
+            ca, cb = st.columns([1, 2])
             
-            st.plotly_chart(fig_as, use_container_width=True, key="bar_asesores_vol")
+            with ca:
+                res_p = df_mes[col_seguimiento].fillna("N/C").value_counts().reset_index()
+                st.plotly_chart(px.pie(res_p, names=res_p.columns[0], values='count', hole=0.4), use_container_width=True, key="pie_seguimiento_global")
             
             with cb:
                 col_h_asesor = df_mes.columns[7]
